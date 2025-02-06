@@ -1,0 +1,250 @@
+#!/usr/bin/env bash
+
+usage() {
+    echo
+    echo "$(ansi bold Generate an age public key pair and optional documentation)."
+    echo
+    echo "Usage: $(ansi bold_blue sage ${scriptName}) [OPTIONS] [NAME]"
+    echo
+    echo "If no name is specified it defaults to 'age'."
+    echo
+    echo "Private keys are encrypted and strong passphrases are $(ansi bold_green highly) encouraged; advice and an opportunity to"
+    echo "generate one will be offered."
+    echo
+    echo "A customized PDF file can be generated containing your keys, in encrypted form, to serve as a backup for you and/or your"
+    echo "successors. Keys are represented as a QR code and again in a text format — when printed, such representations are often"
+    echo "called \"paper keys\". Detailed usage instructions are included, personalized with information (e.g. emergency contacts)"
+    echo "that you supply in a separate file."
+    echo
+    echo "Use of the paper key $(ansi italic will require) the encryption passphrase. Space is provided for you to record it by hand, but this"
+    echo "should only be done when the documents is stored is a secure location such as a safe deposit box of fire safe."
+    echo
+    echo "Options"
+    echo
+    echo "    -f, --force                   Overwrite existing files."
+    echo "    --no-verify                   Do not verify keys."
+    echo "    --no-advice                   Do not show passphrase advice."
+    echo "    -q, --quick                   Do not verify keys or show passphrase advice."
+    echo "    -d, --document SUBSTITUTIONS  Generate a PDF using the SUBSTITUTIONS file. Try it using the example file below."
+    echo "    -t, --template TEMPLATE       Use the TEMPLATE markdown file instead of the default for PDF generation."
+    echo "    -c, --css CSS                 Apply style overrides from the CSS file for PDF generation."
+    echo "    -h, --help                    Display usage and exit."
+    echo
+    echo "Paper Key Customization"
+    echo
+    echo "Substitutions are performed with simple key/value pairs defined in a file such as:"
+    echo
+    echo "    ${exampleSubstitutionsFile}"
+    echo
+    echo "Substitution keys are brace delimited within a template file, where the default is:"
+    echo
+    echo "    ${templateFile}"
+    echo
+    echo "Substitution keys with an underscore prefix are reserved for system use."
+    echo
+    echo "Default styles can be extended using the --css option to override the base CSS rules in:"
+    echo
+    echo "    ${cssMainFile}"
+    echo
+    bye "${@}"
+}
+
+main() {
+    init "${@}"
+    createKeys
+    if [[ ${substitutionsFile} ]]; then
+        prepareMarkdown
+        if [[ ${document} ]]; then
+            createDocument
+        fi
+    fi
+    echo
+}
+
+init() {
+    readonly scriptName=$(basename "${0}")
+    readonly exampleSubstitutionsFile="${SAGE_ETC_DIR}/key-doc-example-substitutions.sh"
+    readonly cssMainFile="${SAGE_ETC_DIR}/key-doc.css"
+    readonly logoFile="${SAGE_ETC_DIR}/phoggy.png"
+    readonly markdownFileName='note.md'
+    readonly qrFileName='qr.png'
+
+    templateFile="${SAGE_ETC_DIR}/key-doc-template.md"
+    cssOverrideFile=
+    substitutionsFile=
+    tempMarkdownFile=
+
+    prefix=
+    document=
+    force=
+    tempMarkdownFile=
+    tempQRFile=
+    armoredKey=
+    showKeyAdvice=yes
+    verifyKeys=yes
+
+    while ((${#} > 0)); do
+        case "${1}" in
+            -d | --document) shift; setSubstitutionsFile "${1}" ;;
+            -t | --template) shift; setFileVar templateFile "${1}" "TEMPLATE" ;;
+            -c | --css) shift; setFileVar cssOverrideFile "${1}" "CSS" ;;
+            --no-verify) unset verifyKeys ;;
+            --no-advice) unset showKeyAdvice ;;
+            -q | --quick) unset showKeyAdvice verifyKeys ;;
+            -f | --force) force=yes ;;
+            -h | --help) usage ;;
+            --version) version "${VERSION}" ;;
+            *) setPrefix "${1}" ;;
+            esac
+        shift
+    done
+
+    [[ ${prefix} ]] || prefix='my'
+    privateKeyFile="${prefix}-age.key"
+    publicKeyFile="${prefix}-public-age.key"
+    documentsFile="${prefix}-key.pdf"
+
+    [[ ${force} ]] || assertFileDoesNotExist "${privateKeyFile}"
+    [[ ${force} ]] || assertFileDoesNotExist "${publicKeyFile}"
+    rm "${publicKeyFile}" "${privateKeyFile}" 2> /dev/null
+}
+
+setPrefix() {
+    [[ ${prefix} ]] && usage "name can only be specified once"
+    prefix="${1}"
+}
+
+setSubstitutionsFile() {
+    local file="${1}"
+    [[ ${file} == 'example' ]] && file="${exampleSubstitutionsFile}"
+    setFileVar substitutionsFile "${file}" "SUBSTITUTIONS"
+    [[ ${force} ]] || assertFileDoesNotExist "${documentsFile}"
+    require 'core/pdf'
+    require 'core/readpass'
+}
+
+createKeys() {
+    echo
+    echo "$(ansi bold Generating keys)"
+    if [[ ${showKeyAdvice} ]]; then
+        echo
+        showAgeKeyPairAdvice
+        local reply
+        read -t ${inputTimeout} -p "Would you like help generating a passphrase? (y/n): " reply
+        echo
+        [[ ${reply,,} == 'y' ]] && generatePass
+    fi
+    createAgeKeyPair "${privateKeyFile}" "${publicKeyFile}" || fail
+    echo
+    echo "Public key (aka 'recipient') file: $(ansi cyan ${publicKeyFile})"
+    echo "Private key (aka 'identity') file: $(ansi cyan ${privateKeyFile}) (also contains public key)"
+
+    if [[ ${verifyKeys} ]]; then
+        echo
+        echo "$(ansi bold Verifying keys)"
+        echo
+        verifyAgeKeyPair "${privateKeyFile}" "${publicKeyFile}"
+        echo "A file encrypted with $(ansi cyan ${publicKeyFile}) decrypts with passphrase and $(ansi cyan ${privateKeyFile}): $(ansi bold_green verified) "
+    fi
+}
+
+generatePass() {
+    echo "in generatePass()"
+
+}
+
+prepareMarkdown() {
+    tempMarkdownFile=$(tempDirPath ${markdownFileName})
+
+    armorAgeFile "${privateKeyFile}" armoredKey
+
+    tempQRFile=$(tempDirPath ${qrFileName})
+    createCRCode || fail
+    assertFileExists "${tempQRFile}"
+
+    author=$(generateMarkdown "${templateFile}" "${substitutionsFile}" "${tempMarkdownFile}") || fail
+    assertFileExists "${tempMarkdownFile}"
+
+    document=yes
+}
+
+generateMarkdown() {
+    local template="${1}"
+    local substitutions="${2}"
+    local output="${3}"
+
+    # strip any lines that don't look like valid env vars to avoid potential side effects and source that
+    local substitutions=$(cat "${substitutions}" | grep '^[_[:alpha:]][_[:alpha:][:digit:]]*[=].*$')
+    source <(echo ${substitutions})
+
+    # set built-n substitutions
+    local _LOGO_PATH="${logoFile}"
+    local _DATE="$(date "+%B %d, %Y %r %Z")"
+    local _QR_CODE="![QR code](${tempQRFile})"
+    local _ARMORED_KEY="${armoredKey}"
+
+    local markdown="$(cat ${template})"
+    local substitutionsSource="${markdown}"
+    local substitutions=()
+    while [[ ${substitutionsSource} =~ ([^{]*)\}(.*) ]]; do
+        substitutions+=("${BASH_REMATCH[1]}")
+        substitutionsSource="${BASH_REMATCH[2]}"
+    done
+    for key in "${substitutions[@]}"; do
+        [[ -v "${key}" ]] || fail "${key} not set in ${substitutions}"
+        local value="${!key}"
+        if [[ ${key} == 'CONTACTS' ]]; then
+            # transform the ';' separated contacts into a markdown list
+            value=
+            local contacts contact
+            IFS=';' read -r -a contacts <<<"${CONTACTS}"
+            for contact in "${contacts[@]}"; do
+                value+="${newline}- ${contact#"${contact%%[![:space:]]*}"}"
+            done
+        fi
+        markdown=${markdown/\{${key}\}/${value}}
+    done
+    echo "${markdown}" >${output}
+    # echo "${markdown}" > temp.md # TODO REMOVE!
+    echo "${AUTHOR}"
+}
+
+createCRCode() {
+    echo "${armoredKey}" | qrencode -l H -o "${tempQRFile}"
+}
+
+createDocument() {
+    echo
+    echo "$(ansi bold Generating documentation)"
+    echo
+    local options="--css ${cssMainFile}"
+    [[ ${cssOverrideFile} ]] && options+=" --css ${cssOverrideFile}"
+
+    # Options, see https://wkhtmltopdf.org/usage/wkhtmltopdf.txt
+    # TODO: add footer with page numbers, date and sage version
+    ## options+=" --pdf-engine-opt=--enable-local-file-access"
+    #    options+=" --pdf-engine-opt=--footer-font-name --pdf-engine-opt=arial"
+    #    options+=" --pdf-engine-opt=--footer-font-size --pdf-engine-opt=10"
+    #    options+=" --pdf-engine-opt=--footer-left --pdf-engine-opt=[date]"
+    #    options+=" --pdf-engine-opt=--footer-right --pdf-engine-opt=[page]/[topage]"
+    #    # options+=" --pdf-engine-opt=--footer-html --pdf-engine-opt=./footer.html"
+
+    #    pandoc -f gfm -t html5 ${options} "${tempMarkdownFile}" -o "${documentsFile}" || fail
+    pandoc -f gfm -t html5 --metadata pagetitle="x" ${options} "${tempMarkdownFile}" -o "${documentsFile}" || fail
+
+    # Set metadata and encrypt with a strong password
+
+    local ownerPW="$(generatePassword)"
+    local userPW='' # or else will have to enter to view!
+    cpdf -set-title "Public/Private Key Pair Backup" "${documentsFile}" -o "${documentsFile}" 2>/dev/null || fail
+    cpdf -set-author "${author}" "${documentsFile}" -o "${documentsFile}" 2>/dev/null || fail
+    cpdf -set-creator "${SAGE_VERSION}, ${SAGE_PROJECT_URL}" "${documentsFile}" -o "${documentsFile}" 2>/dev/null || fail
+    cpdf -set-subject "${prefix} keys" "${documentsFile}" -o "${documentsFile}" 2>/dev/null || fail
+    cpdf -encrypt AES256 "${ownerPW}" "${userPW}" -no-edit -no-encrypt-metadata "${documentsFile}" -o "${documentsFile}" 2>/dev/null || fail
+    echo
+    echo "Keys documented in $(ansi cyan ${documentsFile})"
+}
+
+source "${HOME}/.rayvn/boot.sh" 2>/dev/null || { echo 'rayvn not installed' && exit 0; }
+require 'core/age'
+main "${@}"

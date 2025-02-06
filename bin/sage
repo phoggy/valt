@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# shellcheck disable=SC2155
+
+declare -grx SAGE_VERSION='sage 0.1.0'
+
+usage() {
+    echo
+    echo "$(ansi bold Sage public key file encryption, using) $(ansi cyan rage) (see $(ansi blue ${rageProjectUrl}))."
+    echo
+    echo "Usage: $(ansi bold_blue ${scriptName}) [OPTIONS] $(ansi italic COMMAND)"
+    echo
+    echo "Options"
+    echo
+    echo "    -h, --help            Display usage and exit."
+    echo "    -v, --version         Display version and exit."
+    echo "    --visibility MODE     Set password/phrase input visibility: 'none', 'hide', or 'show' (default)."
+    echo
+    echo "Commands"
+    echo
+    echo "    pass                  Generate and/or evaluate password/passphrase strength."
+    echo "    keys                  Generate a public key pair, with encrypted private key."
+    echo "    encrypt               Encrypt one or more files or directories."
+    echo "    decrypt               Decrypt a '.age' file."
+    echo
+    echo "Environment Variables"
+    echo
+    echo "    SAGE_VISIBILITY       Set default visibility mode."
+    echo "    SAGE_TIMEOUT          Set input timeout, in seconds. Defaults to 30."
+    echo
+    echo "Run $(ansi bold_blue ${scriptName}) $(ansi italic COMMAND) $(ansi bold_blue --help) for more information on a command."
+    echo
+    bye "${@}"
+}
+
+main() {
+    init "${@}"
+    if [[ ${command} ]]; then
+        #echo "RUN: ${command} ${commandOptions}"
+       ${command} ${commandOptions}
+    else
+        #echo "usage"
+        usage
+    fi
+}
+
+init() {
+    assertBashVersion
+    readonly scriptName="$(basename "${0}")"
+    readonly scriptDir="$(dirname "${0}")"
+    readonly scriptRootDir="$(realpath "${scriptDir}/..")"
+    readonly rageProjectUrl='https://github.com/str4d/rage'
+    [[ ${1} ]] || usage
+
+    # Global constants
+
+    declare -grx SAGE_PROJECT_URL='https://github.com/phoggy/sage'
+    declare -grx SAGE_ETC_DIR="${scriptRootDir}/etc"
+    declare -grx PINENTRY_PROGRAM="${SAGE_ETC_DIR}/pinentry-sage"
+    declare -grx webPasswordGenUrl='https://bitwarden.com/password-generator/'
+    declare -grx webHaveIBeenPwnedUrl="https://haveibeenpwned.com/Passwords"
+    declare -grx webXkcdPasswordsUrl="https://xkcd.com/936/"
+
+    # Global options
+
+    declare -gx passwordVisibility="${SAGE_VISIBILITY:-show}"           # none|hide|show
+    declare -gx expertMode="${SAGE_EXPERT_MODE:-}"                      # any value enables
+    declare -grx proxyPinEntry="${SAGE_PIN_ENTRY}"                      # e.g. 'pinentry-mac', space separated list
+    declare -grx inputTimeout="${SAGE_INPUT_TIMEOUT:-30}"               # seconds
+
+    # Arguments
+
+    command=
+    commandOptions=
+
+    # Parse input
+
+    while (( ${#} > 0 )); do
+        case "${1}" in
+            -h | --help) [[ ${command} ]] && appendVar commandOptions "${1}" || usage ;;
+            -v | --version) version "${SAGE_VERSION}" ;;
+            --expert) expertMode=true ;; # TODO update usage when implemented
+            --debug) setDebug ;;
+            --visibility) shift; passwordVisibility="${1}" ;;
+            pass) setCommand pass ;;
+            keys) setCommand keys ;;
+            encrypt) setCommand encrypt ;;
+            decrypt) setCommand decrypt ;;
+            *) appendVar commandOptions "${1}" ;;
+        esac
+        shift
+    done
+
+    if [[ ${debugLogFile} ]]; then
+        {
+            declare -p passwordVisibility
+            declare -p expertMode
+            declare -p proxyPinEntry
+            declare -p command
+            declare -p commandOptions
+        } >> ${debugLogFile}
+    fi
+
+    assertValidVisibility
+    [[ ${command} ]] || usage "missing command"
+}
+
+setCommand() {
+    command="${SAGE_ETC_DIR}/${1}"
+}
+
+assertValidVisibility() {
+    case "${passwordVisibility}" in
+        none | hide | show) ;;
+        *) usage "unknown visibility mode: '${passwordVisibility}'"
+    esac
+}
+
+setDebug() {
+    if [[ ! ${debugLogFile} ]]; then
+        declare -grx debugLogFile='/tmp/debug.log'
+        echo > "${debugLogFile}"
+        echo "debug log: ${debugLogFile}"
+    fi
+}
+
+[[ ${SAGE_DEBUG} ]] && setDebug
+source "${HOME}/.rayvn/boot.sh" 2>/dev/null || { echo 'rayvn not installed' && exit 0; }
+require 'core/age'
+main "${@}"
+
+
+

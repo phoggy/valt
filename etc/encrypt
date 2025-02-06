@@ -1,0 +1,174 @@
+#!/usr/bin/env bash
+
+readonly VERSION='encrypt 0.1.0'
+
+usage() {
+    echo
+    echo "$(ansi bold Encrypt one or more files or directories)."
+    echo
+    echo "Usage: $(ansi bold_blue sage ${scriptName}) [OPTIONS] -r RECIPIENT PATH..."
+    echo
+    echo "If a single file is specified, it is encrypted as '<name>[-<timestamp>].age', where <name> defaults to the file name."
+    echo "Otherwise, a compressed and encrypted tar file is produced as '<name>[-<timestamp>].tar.xz.age', where name defaults"
+    echo "to 'vault'".
+    echo
+    echo "Options:"
+    echo
+    echo "    -r, --recipient RECIPIENT      Encrypt to the specified RECIPIENT (public key). May be repeated."
+    echo "    -R, --recipients-file PATH     Encrypt to the recipients (public keys) listed at PATH. May be repeated."
+    echo "    -n, --name NAME                Specify the output file name prefix."
+    echo "    -t, --timestamp                Add a timestamp to the output file name."
+    echo "    -z, --timezone NAME            Specify the timezone to use for timestamps, e.g. 'America/Los_Angeles'."
+    echo "    -v, --verify IDENTITY          Use the identity file (private key) at IDENTITY to verify the encrypted file."
+    echo "    -f, --force                    Replace any existing output file without asking."
+    echo "    -d, --delete                   Delete input file(s) after verification (ignored otherwise)."
+    echo "    -h, --help                     Display usage and exit."
+    echo "    --version                      Display version and exit."
+    bye "${@}"
+}
+
+main() {
+    init "${@}"
+    encryptFile
+}
+
+init() {
+    readonly scriptName=$(basename "${0}")
+
+    # Files
+    files=()
+
+    # Options
+    recipients=
+    name=
+    addTimeStamp=
+    timeZoneName='UTC'
+    verifyKeyFile=
+    force=
+    deleteOriginal=
+
+    # Computed
+    description=   # a description of the input
+    inputFile=     # either the input file or the temporary tar file.
+    outputFile=    # the generated output file path.
+    isArchive=     # if output file is an archive
+
+    while (( ${#} > 0 )); do
+        case "${1}" in
+            -r|--recipient) shift; appendVar recipients "-r ${1}" ;;
+            -R|--recipients-file) shift; assertFile "${1}" "recipients file"; appendVar recipients "-R ${1}" ;;
+            -n|--name) shift; name="${1}" ;;
+            -t|--timestamp) addTimeStamp='yes' ;;
+            -z|--timezone) shift; timeZoneName="${1}" ;;
+            -v|--verify) shift; assertFile "${1}" "private key file"; verifyKeyFile="${1}" ;;
+            -f|--force) force="yes" ;;
+            -d|--delete) deleteOriginal='yes' ;;
+            -h|--help) usage ;;
+            --version) version "${VERSION}" ;;
+            -*) usage "Unknown option: ${1}" ;;
+            *) addFile "${1}"
+        esac
+        shift
+    done
+
+    [[ ${recipients} ]] || fail "no recipients specified"
+    [[ ${verifyKeyFile} ]] || unset deleteOriginal
+    initializeFiles
+}
+
+initializeFiles() {
+    local baseName
+    local extension=
+    inputCount=${#files[@]}
+    (( ${inputCount} == 0 )) && usage "no files provided"
+    if (( ${#files[@]} == 1 )) && [[ -f ${files[0]} ]]; then
+        inputFile="${files[0]}"
+        [[ ${name} ]] || name="$(basename ${inputFile})"
+        description="${name} file"
+        extension="${ageFileExtension}"
+        unset isArchive
+    else
+        [[ ${name} ]] || name="vault"
+        description="${name}"
+        inputFile="$(tempDirPath ${name}.${tarFileExtension})"
+        extension="${tarFileExtension}.${ageFileExtension}"
+        echo "Building ${description}"
+        tar -Jcf "${inputFile}" "${files[@]}" || fail
+        isArchive='yes'
+    fi
+    if [[ ${name} ]]; then
+        baseName="${name}"
+    else
+        baseName=$(basename "${inputFile}" | cut -d. -f1)
+    fi
+    [[ ${addTimeStamp} ]] && baseName+="-$(TZ=${timeZoneName} date +%Y-%m-%d_%H.%M)"
+    outputFile="${baseName}.${extension}"
+}
+
+addFile() {
+    local file="${1}"
+    [[ -e ${file} ]] || fail "${file} not found"
+    [[ -f ${file} || -d ${file} ]] || fail "${file} is not a file or directory"
+    files+=("${file}")
+}
+
+encryptFile() {
+    [[ -f ${outputFile} ]] && replaceOutputFile "${outputFile}"
+    echo "Encrypting ${description} to $(ansi cyan ${outputFile})"
+    rage --encrypt ${recipients} "${inputFile}" -o "${outputFile}"
+    verifyEncryptedFile
+    deleteOriginalFile
+}
+
+verifyEncryptedFile() {
+    if [[ ${verifyKeyFile} ]]; then
+        local decryptedFile="$(tempDirPath file)"
+        local verifyDir="$(tempDirPath file-content)"
+        echo "Verifying $(ansi cyan ${outputFile})"
+        decrypt -i "${verifyKeyFile}" ${outputFile} -o "${decryptedFile}" -u "${verifyDir}" -f -q || fail
+
+        if [[ ${isArchive} ]]; then
+            local file i
+            for (( i=0; i < ${inputCount}; i++ )); do
+                file="${files[${i}]}"
+                echo -n "  checking $(ansi bold ${file})... "
+                [[ -e ${verifyDir}/${file} ]] || fail "missing!"
+                diff -r "${file}" ${verifyDir}/${file} &> /dev/null || fail "do not match!"
+                echo "$(ansi bold_green ok)"
+            done
+        else
+            echo -n "  checking $(ansi bold ${files[0]})... "
+            diff -r "${files[0]}" ${decryptedFile} &> /dev/null || fail "do not match!"
+            echo "$(ansi bold_green ok)"
+        fi
+        echo "Decrypted $(ansi cyan ${outputFile}) is $(ansi bold_green verified)"
+    fi
+}
+
+deleteOriginalFile() {
+    if [[ ${deleteOriginal} ]]; then
+        local file i
+        for (( i=0; i < ${inputCount}; i++ )); do
+            file="${files[${i}]}"
+            rm -rf "${file}"
+            echo "Deleted $(ansi bold ${file})"
+        done
+    fi
+}
+
+replaceOutputFile() {
+    local reply
+    local outputFile="${1}"
+    if [[ ! ${force} ]]; then
+        echo "$(ansi bold ${outputFile}) already exists."
+        read -p "$(ansi red Replace all output files?) y/n: " reply
+        [[ ${reply} != "y" ]] && exit 0
+        force="yes"
+    fi
+    rm -rf "${outputFile}" || fail
+    echo "Deleted $(ansi bold ${outputFile})"
+}
+
+source "${HOME}/.rayvn/boot.sh" 2>/dev/null || { echo 'rayvn not installed' && exit 0; }
+require 'core/age'
+main "${@}"
