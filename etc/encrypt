@@ -115,9 +115,11 @@ addFile() {
 encryptFile() {
     [[ -f ${outputFile} ]] && replaceOutputFile "${outputFile}"
     echo "Encrypting ${description} to $(ansi cyan ${outputFile})"
+    enablePinEntry
     rage --encrypt ${recipients} "${inputFile}" -o "${outputFile}"
     verifyEncryptedFile
     deleteOriginalFile
+    disablePinEntry
 }
 
 verifyEncryptedFile() {

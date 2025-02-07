@@ -55,7 +55,6 @@ init() {
 
     declare -grx SAGE_PROJECT_URL='https://github.com/phoggy/sage'
     declare -grx SAGE_ETC_DIR="${scriptRootDir}/etc"
-    declare -grx PINENTRY_PROGRAM="${SAGE_ETC_DIR}/pinentry-sage"
     declare -grx webPasswordGenUrl='https://bitwarden.com/password-generator/'
     declare -grx webHaveIBeenPwnedUrl="https://haveibeenpwned.com/Passwords"
     declare -grx webXkcdPasswordsUrl="https://xkcd.com/936/"
@@ -64,7 +63,6 @@ init() {
 
     declare -gx passwordVisibility="${SAGE_VISIBILITY:-show}"           # none|hide|show
     declare -gx expertMode="${SAGE_EXPERT_MODE:-}"                      # any value enables
-    declare -grx proxyPinEntry="${SAGE_PIN_ENTRY}"                      # e.g. 'pinentry-mac', space separated list
     declare -grx inputTimeout="${SAGE_INPUT_TIMEOUT:-30}"               # seconds
 
     # Arguments
@@ -124,7 +122,7 @@ setDebug() {
 }
 
 [[ ${SAGE_DEBUG} ]] && setDebug
-source "${HOME}/.rayvn/boot.sh" 2>/dev/null || { echo 'rayvn not installed' && exit 0; }
+source "${HOME}/.rayvn/boot.sh" 2> /dev/null || { echo 'rayvn not installed' && exit 0; }
 require 'core/age'
 main "${@}"
 
