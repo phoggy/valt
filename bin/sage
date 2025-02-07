@@ -45,6 +45,8 @@ main() {
 
 init() {
     assertBashVersion
+    useRavenPinEntry
+
     readonly scriptName="$(basename "${0}")"
     readonly scriptDir="$(dirname "${0}")"
     readonly scriptRootDir="$(realpath "${scriptDir}/..")"

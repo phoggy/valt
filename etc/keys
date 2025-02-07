@@ -145,7 +145,7 @@ createKeys() {
         echo
         verifyAgeKeyPair "${privateKeyFile}" "${publicKeyFile}"
         echo
-        echo "A file encrypted with $(ansi cyan ${publicKeyFile}) decrypts with passphrase and $(ansi cyan ${privateKeyFile}): $(ansi bold_green verified) "
+        echo "$(ansi bold_green Verified) that a file encrypted with $(ansi cyan ${publicKeyFile}) decrypts with passphrase and $(ansi cyan ${privateKeyFile})."
     fi
 }
 

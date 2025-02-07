@@ -30,7 +30,6 @@ main() {
 
 init() {
     readonly scriptName=$(basename "${0}")
-    useRayvnPinEntry
 
     file=
     force=
