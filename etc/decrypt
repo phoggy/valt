@@ -30,6 +30,7 @@ main() {
 
 init() {
     readonly scriptName=$(basename "${0}")
+    useRayvnPinEntry
 
     file=
     force=
@@ -75,9 +76,7 @@ progress() {
 decryptFile() {
     [[ -f ${decryptedFile} ]] && replaceOutputFile "${decryptedFile}"
     progress "Decrypting $(ansi cyan ${file}) to $(ansi bold ${decryptedFile})"
-    enablePinEntry
     rage -d ${identities} "${file}" -o "${decryptedFile}" 2> >(redStream) || fail
-    disablePinEntry
 }
 
 unpackFile() {

@@ -144,13 +144,14 @@ createKeys() {
         echo "$(ansi bold Verifying keys)"
         echo
         verifyAgeKeyPair "${privateKeyFile}" "${publicKeyFile}"
+        echo
         echo "A file encrypted with $(ansi cyan ${publicKeyFile}) decrypts with passphrase and $(ansi cyan ${privateKeyFile}): $(ansi bold_green verified) "
     fi
 }
 
 generatePass() {
-    echo "in generatePass()"
-
+    echo "$(ansi bold_yellow TODO): implement generatePass()!" # TODO!!
+    echo
 }
 
 prepareMarkdown() {
