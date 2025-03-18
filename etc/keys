@@ -119,8 +119,8 @@ setSubstitutionsFile() {
     [[ ${file} == 'example' ]] && file="${exampleSubstitutionsFile}"
     setFileVar substitutionsFile "${file}" "SUBSTITUTIONS"
     [[ ${force} ]] || assertFileDoesNotExist "${documentsFile}"
-    require 'core/pdf'
-    require 'core/readpass'
+    require 'rayvn/pdf'
+    require 'rayvn/readpass'
 }
 
 createKeys() {
@@ -247,5 +247,5 @@ createDocument() {
 }
 
 source "${HOME}/.rayvn/boot.sh" 2>/dev/null || { echo 'rayvn not installed' && exit 0; }
-require 'core/age'
+require 'rayvn/age'
 main "${@}"
