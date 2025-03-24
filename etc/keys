@@ -170,13 +170,11 @@ prepareMarkdown() {
 }
 
 generateMarkdown() {
-    local template="${1}"
-    local substitutions="${2}"
-    local output="${3}"
+    local templateFile="${1}"
+    local substitutionsFile="${2}"
+    local outputFile="${3}"
 
-    # strip any lines that don't look like valid env vars to avoid potential side effects and source that
-    local substitutions=$(cat "${substitutions}" | grep '^[_[:alpha:]][_[:alpha:][:digit:]]*[=].*$')
-    source <(echo ${substitutions})
+    sourceEnvFile "${substitutionsFile}"
 
     # set built-n substitutions
     local _LOGO_PATH="${logoFile}"
@@ -184,15 +182,15 @@ generateMarkdown() {
     local _QR_CODE="![QR code](${tempQRFile})"
     local _ARMORED_KEY="${armoredKey}"
 
-    local markdown="$(cat ${template})"
+    local markdown="$(cat ${templateFile})"
     local substitutionsSource="${markdown}"
-    local substitutions=()
+    local substitutionsFile=()
     while [[ ${substitutionsSource} =~ ([^{]*)\}(.*) ]]; do
-        substitutions+=("${BASH_REMATCH[1]}")
+        substitutionsFile+=("${BASH_REMATCH[1]}")
         substitutionsSource="${BASH_REMATCH[2]}"
     done
-    for key in "${substitutions[@]}"; do
-        [[ -v "${key}" ]] || fail "${key} not set in ${substitutions}"
+    for key in "${substitutionsFile[@]}"; do
+        [[ -v "${key}" ]] || fail "${key} not set in ${substitutionsFile}"
         local value="${!key}"
         if [[ ${key} == 'CONTACTS' ]]; then
             # transform the ';' separated contacts into a markdown list
@@ -205,7 +203,7 @@ generateMarkdown() {
         fi
         markdown=${markdown/\{${key}\}/${value}}
     done
-    echo "${markdown}" >${output}
+    echo "${markdown}" >${outputFile}
     # echo "${markdown}" > temp.md # TODO REMOVE!
     echo "${AUTHOR}"
 }
