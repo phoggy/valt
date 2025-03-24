@@ -1,1 +1,39 @@
-binaries = sage
+# rayvn package attributes
+
+initFoo() {
+    local myFoo=MINE
+    echo "myFoo: ${myFoo}"
+}
+projectName='sage'
+projectVersion='0.1.0'
+projectHasLibraries=false
+projectBinaries=('sage')
+
+
+# This is a single-line comment
+userName="JohnDoe"  # Variable for username
+userAge=25
+
+# A multi-line variable assignment (array or string)
+userDetails=(
+  "John"
+  "Doe"
+  "25"
+)
+
+# Another single-line variable
+userCountry="USA" # Country of residence
+
+# Another comment
+userProfession="Software Engineer"  # Job title
+
+# A multi-line string (with spaces and line breaks)
+userBio="I am a passionate developer
+who loves to solve complex problems
+and build efficient software."
+
+# Another comment
+userStatus="Active"
+
+
+initFoo
