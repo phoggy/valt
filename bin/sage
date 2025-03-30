@@ -48,15 +48,14 @@ init() {
     useRayvnPinEntry
 
     readonly scriptName="$(basename "${0}")"
-    readonly scriptDir="$(dirname "${0}")"
-    readonly scriptRootDir="$(realpath "${scriptDir}/..")"
+    readonly scriptHome=$(realpath "$(dirname "${0}/../../..")")
+
     readonly rageProjectUrl='https://github.com/str4d/rage'
-    [[ ${1} ]] || usage
 
     # Global constants
 
     declare -grx SAGE_PROJECT_URL='https://github.com/phoggy/sage'
-    declare -grx SAGE_ETC_DIR="${scriptRootDir}/etc"
+    declare -grx SAGE_ETC_DIR="${scriptHome}/etc"
     declare -grx webPasswordGenUrl='https://bitwarden.com/password-generator/'
     declare -grx webHaveIBeenPwnedUrl="https://haveibeenpwned.com/Passwords"
     declare -grx webXkcdPasswordsUrl="https://xkcd.com/936/"
@@ -74,10 +73,12 @@ init() {
 
     # Parse input
 
+    [[ ${1} ]] || usage
+
     while (( ${#} > 0 )); do
         case "${1}" in
             -h | --help) [[ ${command} ]] && appendVar commandOptions "${1}" || usage ;;
-            -v | --version) version "${SAGE_VERSION}" ;;
+            -v | --version) version "${scriptHome}"; exit 0 ;;
             --expert) expertMode=true ;; # TODO update usage when implemented
             --debug) setDebug ;;
             --visibility) shift; passwordVisibility="${1}" ;;
@@ -125,7 +126,9 @@ setDebug() {
 
 [[ ${SAGE_DEBUG} ]] && setDebug
 source "${HOME}/.rayvn/boot.sh" &> /dev/null || { echo 'rayvn not installed'; exit 1; }
+require 'rayvn/core'
 require 'rayvn/age'
+
 main "${@}"
 
 
