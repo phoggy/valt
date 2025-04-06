@@ -1,4 +1,4 @@
-# rayvn package attributes
+# rayvn package
 
 initFoo() {
     local myFoo=MINE
@@ -6,6 +6,7 @@ initFoo() {
 }
 projectName='sage'
 projectVersion='0.1.0'
+projectReleaseDate='2025-04-06_12.00.38_PDT'
 projectHasLibraries=false
 projectBinaries=('sage')
 
