@@ -1,12 +1,15 @@
 # rayvn package
 
+# TODO: move 'extra' declarations into test!
+
 initFoo() {
     local myFoo=MINE
     echo "myFoo: ${myFoo}"
 }
+
 projectName='sage'
-projectVersion='0.1.0'
-projectReleaseDate='2025-04-06_12.00.38_PDT'
+projectVersion='0.1.0+'
+projectReleaseDate=''
 projectHasLibraries=false
 projectBinaries=('sage')
 
