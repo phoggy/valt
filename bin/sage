@@ -80,7 +80,7 @@ init() {
             -h | --help) [[ ${command} ]] && appendVar commandOptions "${1}" || usage ;;
             -v | --version) version "${scriptHome}"; exit 0 ;;
             --expert) expertMode=true ;; # TODO update usage when implemented
-            --debug) setDebug ;;
+            --debug) require 'rayvn/debug' ;;
             --visibility) shift; passwordVisibility="${1}" ;;
             pass) setCommand pass ;;
             keys) setCommand keys ;;
@@ -91,15 +91,7 @@ init() {
         shift
     done
 
-    if [[ ${debugLogFile} ]]; then
-        {
-            declare -p passwordVisibility
-            declare -p expertMode
-            declare -p proxyPinEntry
-            declare -p command
-            declare -p commandOptions
-        } >> ${debugLogFile}
-    fi
+    debugVars passwordVisibility expertMode proxyPinEntry command commandOptions
 
     assertValidVisibility
     [[ ${command} ]] || usage "missing command"
@@ -116,19 +108,11 @@ assertValidVisibility() {
     esac
 }
 
-setDebug() {
-    if [[ ! ${debugLogFile} ]]; then
-        declare -grx debugLogFile='/tmp/debug.log'
-        echo > "${debugLogFile}"
-        echo "debug log: ${debugLogFile}"
-    fi
-}
-
-[[ ${SAGE_DEBUG} ]] && setDebug
-
 # Boot rayvn with initial required libraries
 
 source rayvn.up 'rayvn/core' 'rayvn/age'
+
+[[ ${SAGE_DEBUG} ]] && require 'rayvn/debug'
 
 main "${@}"
 
