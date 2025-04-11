@@ -125,9 +125,10 @@ setDebug() {
 }
 
 [[ ${SAGE_DEBUG} ]] && setDebug
-source "${HOME}/.rayvn/boot.sh" &> /dev/null || { echo 'rayvn not installed'; exit 1; }
-require 'rayvn/core'
-require 'rayvn/age'
+
+# Boot rayvn with initial required libraries
+
+source rayvn.up 'rayvn/core' 'rayvn/age'
 
 main "${@}"
 
