@@ -80,7 +80,9 @@ init() {
             -h | --help) [[ ${command} ]] && appendVar commandOptions "${1}" || usage ;;
             -v | --version) version "${scriptHome}"; exit 0 ;;
             --expert) expertMode=true ;; # TODO update usage when implemented
-            --debug) require 'rayvn/debug' ;;
+            --debug) setDebug showOnExit ;;
+            --debug-new) setDebug clearLog showOnExit ;;
+            --debug-out) setDebug noLog ;;
             --visibility) shift; passwordVisibility="${1}" ;;
             pass) setCommand pass ;;
             keys) setCommand keys ;;
@@ -110,9 +112,9 @@ assertValidVisibility() {
 
 # Boot rayvn with initial required libraries
 
-source rayvn.up 'rayvn/core' 'rayvn/age'
+source rayvn.up 'rayvn/core' 'rayvn/age' 'rayvn/debug'
 
-[[ ${SAGE_DEBUG} ]] && require 'rayvn/debug'
+# [[ ${SAGE_DEBUG} ]] && setDebug ${SAGE_DEBUG} # TODO move to init
 
 main "${@}"
 
