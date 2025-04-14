@@ -220,7 +220,7 @@ createDocument() {
     [[ ${cssOverrideFile} ]] && options+=" --css ${cssOverrideFile}"
 
     # Options, see https://wkhtmltopdf.org/usage/wkhtmltopdf.txt
-    # TODO: add footer with page numbers, date and sage version
+    # TODO: add footer with page numbers, date and valt version
     ## options+=" --pdf-engine-opt=--enable-local-file-access"
     #    options+=" --pdf-engine-opt=--footer-font-name --pdf-engine-opt=arial"
     #    options+=" --pdf-engine-opt=--footer-font-size --pdf-engine-opt=10"

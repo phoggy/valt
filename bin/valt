@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2155
 
-declare -grx SAGE_VERSION='sage 0.1.0'
-
 usage() {
     echo
-    echo "$(ansi bold Sage public key file encryption, using) $(ansi cyan rage) (see $(ansi blue ${rageProjectUrl}))."
+    echo "$(ansi bold Public key encryption of files and directories, using) $(ansi cyan rage) (see $(ansi blue ${rageProjectUrl}))."
     echo
     echo "Usage: $(ansi bold_blue ${scriptName}) [OPTIONS] $(ansi italic COMMAND)"
     echo
@@ -20,7 +18,7 @@ usage() {
     echo "    pass                  Generate and/or evaluate password/passphrase strength."
     echo "    keys                  Generate a public key pair, with encrypted private key."
     echo "    encrypt               Encrypt one or more files or directories."
-    echo "    decrypt               Decrypt a '.age' file."
+    echo "    decrypt               Decrypt an '.valt' file."
     echo
     echo "Environment Variables"
     echo
@@ -77,17 +75,18 @@ init() {
 
     while (( ${#} > 0 )); do
         case "${1}" in
-            -h | --help) [[ ${command} ]] && appendVar commandOptions "${1}" || usage ;;
-            -v | --version) version "${scriptHome}"; exit 0 ;;
-            --expert) expertMode=true ;; # TODO update usage when implemented
-            --debug) setDebug showOnExit ;;
-            --debug-new) setDebug clearLog showOnExit ;;
-            --debug-out) setDebug noLog ;;
-            --visibility) shift; passwordVisibility="${1}" ;;
             pass) setCommand pass ;;
             keys) setCommand keys ;;
             encrypt) setCommand encrypt ;;
             decrypt) setCommand decrypt ;;
+            --expert) expertMode=true ;; # TODO update usage when implemented
+            --visibility) shift; passwordVisibility="${1}" ;;
+            -v) version "${valtHome}"; exit 0 ;;
+            --version) version "${valtHome}" true; exit 0 ;;
+            --debug) setDebug showOnExit ;;
+            --debug-new) setDebug clearLog showOnExit ;;
+            --debug-out) setDebug noLog ;;
+            -h | --help) [[ ${command} ]] && appendVar commandOptions "${1}" || usage ;;
             *) appendVar commandOptions "${1}" ;;
         esac
         shift
