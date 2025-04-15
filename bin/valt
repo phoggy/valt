@@ -22,8 +22,8 @@ usage() {
     echo
     echo "Environment Variables"
     echo
-    echo "    SAGE_VISIBILITY       Set default visibility mode."
-    echo "    SAGE_TIMEOUT          Set input timeout, in seconds. Defaults to 30."
+    echo "    VALT_VISIBILITY       Set default visibility mode."
+    echo "    VALT_TIMEOUT          Set input timeout, in seconds. Defaults to 30."
     echo
     echo "Run $(ansi bold_blue ${scriptName}) $(ansi italic COMMAND) $(ansi bold_blue --help) for more information on a command."
     echo
@@ -52,17 +52,17 @@ init() {
 
     # Global constants
 
-    declare -grx SAGE_PROJECT_URL='https://github.com/phoggy/sage'
-    declare -grx SAGE_ETC_DIR="${scriptHome}/etc"
+    declare -grx VALT_PROJECT_URL='https://github.com/phoggy/sage'
+    declare -grx VALT_ETC_DIR="${scriptHome}/etc"
     declare -grx webPasswordGenUrl='https://bitwarden.com/password-generator/'
     declare -grx webHaveIBeenPwnedUrl="https://haveibeenpwned.com/Passwords"
     declare -grx webXkcdPasswordsUrl="https://xkcd.com/936/"
 
     # Global options
 
-    declare -gx passwordVisibility="${SAGE_VISIBILITY:-show}"           # none|hide|show
-    declare -gx expertMode="${SAGE_EXPERT_MODE:-}"                      # any value enables
-    declare -grx inputTimeout="${SAGE_INPUT_TIMEOUT:-30}"               # seconds
+    declare -gx passwordVisibility="${VALT_VISIBILITY:-show}"           # none|hide|show
+    declare -gx expertMode="${VALT_EXPERT_MODE:-}"                      # any value enables
+    declare -grx inputTimeout="${VALT_INPUT_TIMEOUT:-30}"               # seconds
 
     # Arguments
 
@@ -99,7 +99,7 @@ init() {
 }
 
 setCommand() {
-    command="${SAGE_ETC_DIR}/${1}"
+    command="${VALT_ETC_DIR}/${1}"
 }
 
 assertValidVisibility() {
@@ -113,7 +113,7 @@ assertValidVisibility() {
 
 source rayvn.up 'rayvn/core' 'rayvn/age' 'rayvn/debug'
 
-# [[ ${SAGE_DEBUG} ]] && setDebug ${SAGE_DEBUG} # TODO move to init
+# [[ ${VALT_DEBUG} ]] && setDebug ${VALT_DEBUG} # TODO move to init
 
 main "${@}"
 

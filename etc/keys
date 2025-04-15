@@ -63,13 +63,13 @@ main() {
 
 init() {
     readonly scriptName=$(basename "${0}")
-    readonly exampleSubstitutionsFile="${SAGE_ETC_DIR}/key-doc-example-substitutions.sh"
-    readonly cssMainFile="${SAGE_ETC_DIR}/key-doc.css"
-    readonly logoFile="${SAGE_ETC_DIR}/phoggy.png"
+    readonly exampleSubstitutionsFile="${VALT_ETC_DIR}/key-doc-example-substitutions.sh"
+    readonly cssMainFile="${VALT_ETC_DIR}/key-doc.css"
+    readonly logoFile="${VALT_ETC_DIR}/phoggy.png"
     readonly markdownFileName='note.md'
     readonly qrFileName='qr.png'
 
-    templateFile="${SAGE_ETC_DIR}/key-doc-template.md"
+    templateFile="${VALT_ETC_DIR}/key-doc-template.md"
     cssOverrideFile=
     substitutionsFile=
     tempMarkdownFile=
@@ -237,7 +237,7 @@ createDocument() {
     local userPW='' # or else will have to enter to view!
     cpdf -set-title "Public/Private Key Pair Backup" "${documentsFile}" -o "${documentsFile}" 2>/dev/null || fail
     cpdf -set-author "${author}" "${documentsFile}" -o "${documentsFile}" 2>/dev/null || fail
-    cpdf -set-creator "${SAGE_VERSION}, ${SAGE_PROJECT_URL}" "${documentsFile}" -o "${documentsFile}" 2>/dev/null || fail
+    cpdf -set-creator "${VALT_VERSION}, ${VALT_PROJECT_URL}" "${documentsFile}" -o "${documentsFile}" 2>/dev/null || fail
     cpdf -set-subject "${prefix} keys" "${documentsFile}" -o "${documentsFile}" 2>/dev/null || fail
     cpdf -encrypt AES256 "${ownerPW}" "${userPW}" -no-edit -no-encrypt-metadata "${documentsFile}" -o "${documentsFile}" 2>/dev/null || fail
     echo
