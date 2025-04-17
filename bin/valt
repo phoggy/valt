@@ -42,12 +42,9 @@ main() {
 }
 
 init() {
-    assertBashVersion
     useRayvnPinEntry
-
     readonly scriptName="$(basename "${0}")"
     readonly scriptHome=$(realpath "$(dirname "${0}/../../..")")
-
     readonly rageProjectUrl='https://github.com/str4d/rage'
 
     # Global constants
@@ -81,8 +78,8 @@ init() {
             decrypt) setCommand decrypt ;;
             --expert) expertMode=true ;; # TODO update usage when implemented
             --visibility) shift; passwordVisibility="${1}" ;;
-            -v) version "${valtHome}"; exit 0 ;;
-            --version) version "${valtHome}" true; exit 0 ;;
+            -v) version "${scriptHome}"; exit 0 ;;
+            --version) version "${scriptHome}" true; exit 0 ;;
             --debug) setDebug showOnExit ;;
             --debug-new) setDebug clearLog showOnExit ;;
             --debug-out) setDebug noLog ;;

@@ -171,6 +171,6 @@ replaceOutputFile() {
     echo "Deleted $(ansi bold ${outputFile})"
 }
 
-source "${HOME}/.rayvn/boot.sh" 2>/dev/null || { echo 'rayvn not installed' && exit 0; }
-require 'rayvn/age'
+source rayvn.up 'rayvn/core' 'rayvn/age'
+
 main "${@}"

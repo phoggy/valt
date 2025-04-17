@@ -244,6 +244,6 @@ createDocument() {
     echo "Keys documented in $(ansi cyan ${documentsFile})"
 }
 
-source "${HOME}/.rayvn/boot.sh" 2>/dev/null || { echo 'rayvn not installed' && exit 0; }
-require 'rayvn/age'
+source rayvn.up 'rayvn/core' 'rayvn/age' 'rayvn/safe-env'
+
 main "${@}"
