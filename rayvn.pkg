@@ -5,7 +5,7 @@ projectVersion='0.1.0+'
 projectReleaseDate=''
 projectBinaries=('valt')
 
-declare -grxA projectDependencies=(
+declare -grxA projectDependencies=( # TODO this belongs in valt
 
     [pandoc_min]='3.1'
     [pandoc_brew]=true

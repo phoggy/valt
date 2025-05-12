@@ -7,7 +7,7 @@ usage() {
     echo
     echo "$(ansi bold Encrypt one or more files or directories)."
     echo
-    echo "Usage: $(ansi bold_blue sage ${scriptName}) [OPTIONS] -r RECIPIENT PATH..."
+    echo "Usage: $(ansi bold_blue valt encrypt ${scriptName}) [OPTIONS] -r RECIPIENT PATH..."
     echo
     echo "If a single file is specified, it is encrypted as '<name>[-<timestamp>].age', where <name> defaults to the file name."
     echo "Otherwise, a compressed and encrypted tar file is produced as '<name>[-<timestamp>].tar.xz.age', where name defaults"
@@ -43,11 +43,13 @@ init() {
     # Options
     recipients=
     name=
-    addTimeStamp=
     timeZoneName='UTC'
     verifyKeyFile=
-    force=
-    deleteOriginal=
+
+    # Flags
+    declare -gi deleteOriginal=0
+    declare -gi addTimeStamp=0
+    declare -gi force=0
 
     # Computed
     description=   # a description of the input
@@ -60,13 +62,12 @@ init() {
             -r|--recipient) shift; appendVar recipients "-r ${1}" ;;
             -R|--recipients-file) shift; assertFile "${1}" "recipients file"; appendVar recipients "-R ${1}" ;;
             -n|--name) shift; name="${1}" ;;
-            -t|--timestamp) addTimeStamp='yes' ;;
+            -t|--timestamp) addTimeStamp=1 ;;
             -z|--timezone) shift; timeZoneName="${1}" ;;
             -v|--verify) shift; assertFile "${1}" "private key file"; verifyKeyFile="${1}" ;;
-            -f|--force) force="yes" ;;
-            -d|--delete) deleteOriginal='yes' ;;
+            -f|--force) force=1 ;;
+            -d|--delete) deleteOriginal=1 ;;
             -h|--help) usage ;;
-            --version) version "${VERSION}" ;;
             -*) usage "Unknown option: ${1}" ;;
             *) addFile "${1}"
         esac
@@ -74,7 +75,7 @@ init() {
     done
 
     [[ ${recipients} ]] || fail "no recipients specified"
-    [[ ${verifyKeyFile} ]] || unset deleteOriginal
+    [[ ${verifyKeyFile} ]] || deleteOriginal=0
     initializeFiles
 }
 
@@ -103,7 +104,7 @@ initializeFiles() {
     else
         baseName=$(basename "${inputFile}" | cut -d. -f1)
     fi
-    [[ ${addTimeStamp} ]] && baseName+="-$(TZ=${timeZoneName} date +%Y-%m-%d_%H.%M)"
+    (( addTimeStamp )) && baseName+="-$(TZ=${timeZoneName} date +%Y-%m-%d_%H.%M)"
     outputFile="${baseName}.${extension}"
 }
 
@@ -148,7 +149,7 @@ verifyEncryptedFile() {
 }
 
 deleteOriginalFile() {
-    if [[ ${deleteOriginal} ]]; then
+    if (( deleteOriginal )); then
         local file i
         for (( i=0; i < ${inputCount}; i++ )); do
             file="${files[${i}]}"
@@ -161,16 +162,16 @@ deleteOriginalFile() {
 replaceOutputFile() {
     local reply
     local outputFile="${1}"
-    if [[ ! ${force} ]]; then
+    if (( ! force )); then
         echo "$(ansi bold ${outputFile}) already exists."
         read -p "$(ansi red Replace all output files?) y/n: " reply
         [[ ${reply} != "y" ]] && exit 0
-        force="yes"
+        force=1
     fi
     rm -rf "${outputFile}" || fail
     echo "Deleted $(ansi bold ${outputFile})"
 }
 
-source rayvn.up 'rayvn/core' 'rayvn/age'
+source rayvn.up --add valt 'rayvn/core' 'rayvn/age'
 
 main "${@}"

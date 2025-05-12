@@ -78,8 +78,8 @@ init() {
             decrypt) setCommand decrypt ;;
             --expert) expertMode=true ;; # TODO update usage when implemented
             --visibility) shift; passwordVisibility="${1}" ;;
-            -v) version valt; exit 0 ;;
-            --version) version valt true; exit 0 ;;
+            -v) projectVersion valt; exit 0 ;;
+            --version) projectVersion valt true; exit 0 ;;
             --debug) setDebug showOnExit ;;
             --debug-new) setDebug clearLog showOnExit ;;
             --debug-out) setDebug noLog ;;

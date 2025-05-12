@@ -1,3 +1,8 @@
-AUTHOR='Bob'
-CLOSING='Happy trails(!)'
-CONTACTS='Joe joe@nowwhere.com, 414-555-1212; Fred xxx@yyy.com;  Wilma NNN-NNN-NNNN'
+#!/usr/bin/env bash
+
+author='Bob Barker'
+closing='Happy trails(!)'
+contacts=(
+    'Billy Bob. 555-555-1212, billy_bob@gmail.com, 14 Main Street, Small Town, AR, 95466'
+    'Aunt Martha. 555-555-1212, martha@aol.com, 14 Main Street, Small Town, AR, 95466'
+)

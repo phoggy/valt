@@ -4,9 +4,9 @@ readonly VERSION='decrypt 0.1.0'
 
 usage() {
     echo
-    echo "$(ansi bold Decrypt a file using age)."
+    echo "$(ansi bold Decrypt a file using an age private key)."
     echo
-    echo "Usage: $(ansi bold_blue sage ${scriptName}) [OPTIONS] -i IDENTITY PATH"
+    echo "Usage: $(ansi bold_blue valt decrypt ${scriptName}) [OPTIONS] -i IDENTITY PATH"
     echo
     echo "Decrypted tar files will be unpacked by default into a new directory using the filename without any extension."
     echo
@@ -32,23 +32,25 @@ init() {
     readonly scriptName=$(basename "${0}")
 
     file=
-    force=
-    unpack=yes
     unpackDir=
     identities=
     decryptedFile=
-    quiet=
+
+    # Flags
+
+    declare -gi force=0
+    declare -gi unpack=1
+    declare -gi quiet=0
 
     while (( ${#} > 0 )); do
         case "${1}" in
             -i|--identity) shift; assertFile "${1}"; appendVar identities "-i ${1}" ;;
             -u|--unpack-dir) shift; unpackDir="${1}" ;;
-            -n|--no-unpack) unset unpack ;;
+            -n|--no-unpack) unpack=0 ;;
             -o|--output) shift; decryptedFile="${1}" ;;
-            -f|--force) force="yes" ;;
-            -q|--quiet) quiet="yes" ;;
+            -f|--force) force=1 ;;
+            -q|--quiet) quiet=1 ;;
             -h | --help) usage ;;
-            --version) version "${VERSION}" ;;
             -*) usage "Unknown arg: ${1}" ;;
            *) setFile "${1}"
         esac
@@ -69,7 +71,7 @@ setFile() {
 }
 
 progress() {
-    [[ ${quiet} ]] || echo "${*}"
+    (( quiet )) || echo "${*}"
 }
 
 decryptFile() {
@@ -79,7 +81,7 @@ decryptFile() {
 }
 
 unpackFile() {
-    if [[ ${unpack} ]]; then
+    if (( unpack )); then
         if tar tf "${decryptedFile}" &> /dev/null; then
             setUnpackDir
             progress "Unpacking $(ansi cyan ${decryptedFile}) to $(ansi bold ${unpackDir})"
@@ -99,16 +101,16 @@ setUnpackDir() {
 replaceOutputFile() {
     local reply
     local target="${1}"
-    if [[ ! ${force} ]]; then
+    if (( ! force )); then
         echo "$(ansi bold ${target}) already exists."
         read -p "$(ansi red Replace all output files?) y/n: " reply
         [[ ${reply} != "y" ]] && exit 0
-        force="yes"
+        force=1
     fi
     rm -rf "${target}" || fail
     progress "Deleted $(ansi bold ${target})"
 }
 
-source rayvn.up 'rayvn/core' 'rayvn/age'
+source rayvn.up --add valt 'rayvn/core' 'rayvn/age'
 
 main "${@}"
