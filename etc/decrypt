@@ -29,6 +29,7 @@ main() {
 }
 
 init() {
+    allNewFilesUserOnly
     readonly scriptName=$(basename "${0}")
 
     file=

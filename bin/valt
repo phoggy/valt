@@ -33,15 +33,14 @@ usage() {
 main() {
     init "${@}"
     if [[ ${command} ]]; then
-        #echo "RUN: ${command} ${commandOptions}"
        ${command} ${commandOptions}
     else
-        #echo "usage"
         usage
     fi
 }
 
 init() {
+    allNewFilesUserOnly
     useValtPinEntry
     readonly scriptName="$(basename "${0}")"
     readonly scriptHome=$(realpath "$(dirname "${0}/../../..")")

@@ -34,8 +34,10 @@ main() {
 }
 
 init() {
-    readonly scriptName=$(basename "${0}")
+    allNewFilesUserOnly
     useValtPinEntry
+    readonly scriptName=$(basename "${0}")
+
 
     # Files
     files=()

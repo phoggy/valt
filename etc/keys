@@ -62,8 +62,7 @@ main() {
 }
 
 init() {
-    umask 0077 # Ensure that all files we create are only accessible by the current user!
-
+    allNewFilesUserOnly
     readonly scriptName=$(basename "${0}")
     readonly exampleSubstitutionsFile="${VALT_ETC_DIR}/key-doc-example-substitutions.sh"
     readonly cssMainFileName="key-doc.css"
