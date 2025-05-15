@@ -301,6 +301,6 @@ generateHtml() {
     echo "${author}"
 }
 
-source rayvn.up --add valt 'rayvn/core' 'rayvn/age' 'rayvn/safe-env' 'rayvn/pdf' 'rayvn/readpass'
+source rayvn.up --add valt 'rayvn/core' 'rayvn/safe-env' 'valt/pdf' 'valt/age' 'valt/password'
 
 main "${@}"

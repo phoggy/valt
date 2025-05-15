@@ -1,0 +1,174 @@
+#!/usr/bin/env bash
+
+# Library supporting password/phrase generation
+# Intended for use via: require 'valt/passwords'
+
+require 'rayvn/core' 'valt/pwned'
+
+# TODO: don't display strength (via mrld) as it is inaccurate. Just pick a threshold and warn is week if below.
+
+declare -grxA valt_password_dependencies=(
+
+    [phraze_min]='0.3.18'
+    [phraze_brew]=true   # TODO
+    [phraze_brew_tap]='' # TODO
+    [phraze_install]='https://github.com/sts10/phraze'
+    [phraze_version]='versionExtract'
+
+    [mrld_min]='0.1.0'
+    [mrld_brew]=true
+    [mrld_brew_tap]='phoggy/mrld'
+    [mrld_install]='https://github.com/phoggy/mrld'
+    [mrld_version]='versionExtract'
+)
+
+_init_valt_password() {
+    assertExecutables valt_password_dependencies
+}
+
+generatePassword() {
+    local -i minLength="${1:-24}"
+    local -i maxLength="${2:-32}"
+    local -i passwordLength=$(( ${minLength} + ( ${RANDOM} % ( ${maxLength} - ${minLength} ) ) ))
+    local charSet=( a b c d e f g h i j k l m n o p q r s t u v w x y z A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \
+                    0 1 2 3 4 5 6 7 8 9 '!' '@' '#' '$' '%' '^' '&' '*' )
+    local -i charSetLen=${#charSet[@]}
+    local -i i
+    local -i index
+    local password=''
+
+    for (( i = 0; i < ${passwordLength}; i++ )); do
+        _randomIndex ${charSetLen} index
+        password+=${charSet[${index}]}
+    done
+    echo "${password}"
+}
+
+generatePassphrase() {
+    local -i wordCount="${1:-5}"
+    local separator="${2:- }"
+    local list='l' # Use Orchard Street Long List (17,576 words)
+    phraze  --list "${list}" --sep "${separator}" --words "${wordCount}"
+}
+
+readVerifiedPassword() {
+    local p1 p2
+    local -n resultVar="${1}"
+    local timeout="${2:-30}"
+    readPassword "Password" p1 "${timeout}" true || fail
+    [[ ${p1} == '' ]] && fail "cancelled"
+    readPassword "  Verify" p2 "${timeout}" false || fail
+    [[ ${p1} == "${p2}" ]] || fail "entries do not match"
+    resultVar="${p1}"
+}
+
+readPassword() {
+    local result count=0 mask key
+    local prompt="$(ansi cyan "${1}: ")"
+    local -n resultVar="${2}"
+    local timeout="${3:-30}"
+    local checkResult="${4:-true}"
+    local cancelled=
+    local visible=true
+    local show=true
+    local score=
+    local pwned=
+    resultVar=''
+
+    case ${passwordVisibility} in
+        none) unset visible show; prompt="$(ansi cyan "${1}") $(ansi dim [hidden]) " ;;
+        hide) unset show ;;
+        show) show=true ;;
+        *) fail "unknown visibility mode: ${passwordVisibility}"
+    esac
+
+    # Prompt and disable typing echo on the terminal
+
+    echo -n "${prompt}" > ${terminal}
+
+    # Process one character at a time
+
+    while :; do
+        [[ ${visible} ]] && echo -n "${mask}" > ${terminal}
+        IFS= read -s -n 1 -t ${timeout} key < ${terminal}
+
+        if (( $? >= 128  )); then                # timeout
+            cancelled=true
+            break
+        elif [[ ${key} =~ [[:print:]] ]]; then   # valid character
+            count=$((count+1))
+            [[ ${show} ]] && mask=${key} || mask='*'
+            result+=${key}
+        elif [[ ${key} == $'\177' ]]; then       # backspace
+            if (( ${count} > 0 )); then
+                count=$((count-1))
+                mask=$'\b \b'
+                result="${result%?}"
+            else
+                mask=''
+            fi
+        elif [[ ${key} == $'\e' ]] ; then        # ESC
+            cancelled=true;
+            break
+        elif [[ ${key} == '' ]] ; then           # enter
+            break
+        fi
+    done
+
+    # Mask password if we did not do so above
+
+    if [[ ${show} ]]; then
+        printRepeat $'\b' ${count}
+        printRepeat '*' ${count}
+    fi
+
+    [[ ${result} == '' ]] && cancelled=true
+
+    if [[ ! ${cancelled} ]]; then
+
+        # Check result if requested
+
+        if [[ ${checkResult} == true ]]; then
+            IFS=',' read -r -a score <<< "$(echo "${result}" | mrld -t)"
+            echo -n "  ⮕  ${score[0]} (${score[1]}/4), ${score[2]} to crack" > ${terminal}
+            hasNotBeenPwned "${result}"; pwned=${?}
+        fi
+    fi
+    print # complete the line
+
+    # Return the result if not cancelled and not pwned
+
+#print "pwned: ${pwned}, expertMode: ${expertMode}"
+    if [[ ! ${cancelled} ]]; then
+        if [[ ${pwned} == 1 ]]; then
+            warn "Could not check if this password/phrase has been breached!"
+            if [[ ${expertMode} ]]; then
+                resultVar="${result}"
+            fi
+        elif [[ ${pwned} == 2 ]]; then
+            error "This password/phrase is present in a large set of breached passwords so is not safe to use!"
+        else
+            resultVar="${result}"
+        fi
+    fi
+}
+
+_randomIndex() {
+    local -i maxIndex="${1}"
+    local -n resultInt=${2}
+    local -i randomInt
+
+    if [[ ! ${checkedDevUrandom} ]]; then
+        declare -grx hasDevUrandom=$(ls /dev/urandom > /dev/null && echo -n 'true' || echo -n '')
+        declare -grx checkedDevUrandom='true'
+        if [[ ! ${hasDevUrandom} ]]; then
+            warn "generated passwords/phrases *may* not be random enough: use ${webPasswordGenUrl}"
+        fi
+    fi
+    if [[ ${hasDevUrandom} ]]; then
+        randomInt=$(head -c4 /dev/urandom | od -An -tu4)
+    else
+        randomInt=${SRANDOM}
+    fi
+    resultInt=$(( ${randomInt} % ${maxIndex} ))
+}

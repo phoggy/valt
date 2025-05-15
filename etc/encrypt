@@ -35,7 +35,7 @@ main() {
 
 init() {
     readonly scriptName=$(basename "${0}")
-    useRayvnPinEntry
+    useValtPinEntry
 
     # Files
     files=()
@@ -172,6 +172,6 @@ replaceOutputFile() {
     echo "Deleted $(ansi bold ${outputFile})"
 }
 
-source rayvn.up --add valt 'rayvn/core' 'rayvn/age'
+source rayvn.up --add valt 'rayvn/core' 'valt/age'
 
 main "${@}"

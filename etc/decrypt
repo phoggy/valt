@@ -111,6 +111,6 @@ replaceOutputFile() {
     progress "Deleted $(ansi bold ${target})"
 }
 
-source rayvn.up --add valt 'rayvn/core' 'rayvn/age'
+source rayvn.up --add valt 'rayvn/core' 'valt/age'
 
 main "${@}"

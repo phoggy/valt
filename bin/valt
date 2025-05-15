@@ -42,7 +42,7 @@ main() {
 }
 
 init() {
-    useRayvnPinEntry
+    useValtPinEntry
     readonly scriptName="$(basename "${0}")"
     readonly scriptHome=$(realpath "$(dirname "${0}/../../..")")
     readonly rageProjectUrl='https://github.com/str4d/rage'
@@ -108,7 +108,7 @@ assertValidVisibility() {
 
 # Boot rayvn with initial required libraries
 
-source rayvn.up --add 'valt' 'rayvn/core' 'rayvn/age' 'rayvn/debug'
+source rayvn.up --add 'valt' 'rayvn/core' 'rayvn/debug' 'valt/age'
 
 # [[ ${VALT_DEBUG} ]] && setDebug ${VALT_DEBUG} # TODO move to init
 
