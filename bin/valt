@@ -57,7 +57,7 @@ init() {
 
     # Global options
 
-    declare -gx passwordVisibility="${VALT_VISIBILITY:-show}"           # none|hide|show
+    declare -gx passwordVisibility="${VALT_VISIBILITY:-none}"           # none|hide|show
     declare -gx expertMode="${VALT_EXPERT_MODE:-}"                      # any value enables
     declare -grx inputTimeout="${VALT_INPUT_TIMEOUT:-30}"               # seconds
 

@@ -56,12 +56,14 @@ main() {
     init "${@}"
     createKeys
     if [[ ${substitutionsFile} ]]; then
-        createDocument
+        createKeyDocument
     fi
     echo
 }
 
 init() {
+    umask 0077 # Ensure that all files we create are only accessible by the current user!
+
     readonly scriptName=$(basename "${0}")
     readonly exampleSubstitutionsFile="${VALT_ETC_DIR}/key-doc-example-substitutions.sh"
     readonly cssMainFileName="key-doc.css"
@@ -101,15 +103,16 @@ init() {
         shift
     done
 
-    privateKeyFile="${prefix}.key"
-    publicKeyFile="${prefix}-public.key"
-    documentsFile="${prefix}-key.pdf"
+    privateKeyFile="${PWD}/${prefix}.key"
+    publicKeyFile="${PWD}/${prefix}-public.key"
+    documentsFile="${PWD}/${prefix}-key.pdf"
 
-    (( force )) || {
+    if (( force )); then
+        rm "${publicKeyFile}" "${privateKeyFile}" 2> /dev/null
+    else
         assertFileDoesNotExist "${privateKeyFile}"
         assertFileDoesNotExist "${publicKeyFile}"
-    }
-    rm "${publicKeyFile}" "${privateKeyFile}" 2> /dev/null
+    fi
 }
 
 setPrefix() {
@@ -155,7 +158,7 @@ generatePass() {
     echo
 }
 
-createDocument() {
+createKeyDocument() {
     local options=
     echo
     echo "$(ansi bold Generating documentation)"
@@ -195,20 +198,20 @@ generatePdf() {
     author="$(generateHtml "${htmlFile}")"
     assertFileExists "${htmlFile}"
 
-    # Move to work dir
+    # Move to work dir so that relative paths in html work correctly
 
     cd ${workDir} || fail
 
     # Convert html to pdf
 
     wkhtmltopdf --enable-local-file-access \
-                --footer-left "${author} Private Key" \
-                --footer-center "$(date '+%B %e, %Y')" \
-                --footer-right "Page [page] of [topage]" \
-                --footer-font-name "Helvetica, Arial, sans-serif" \
-                --footer-font-size 8 \
-                --margin-bottom 15mm \
-                "${htmlFile}" "${documentsFile}"
+        --footer-left "${author} Private Key" \
+        --footer-center "$(date '+%B %e, %Y')" \
+        --footer-right "Page [page] of [topage]" \
+        --footer-font-name "Helvetica, Arial, sans-serif" \
+        --footer-font-size 8 \
+        --margin-bottom 15mm \
+        "${htmlFile}" "${documentsFile}"
 
     # Set metadata and encrypt with a strong password
 
@@ -217,18 +220,27 @@ generatePdf() {
     local creator="$(projectVersion valt), ${valtProjectUrl}"
     local subject="File decryption."
     local keywords="${author}, valt, private key, backup, encryption, decryption, security"
-    local ownerPW="$(phraze)" # TODO: use private key pass so owner could modify this doc??
-    local userPW='' # must be empty or else will have to enter to view!
 
-    cpdf -set-title "${title}" ${documentsFile} AND \
-         -set-author "${author}" AND \
-         -set-creator "${creator}" AND \
-         -set-subject "${subject}" AND \
-         -set-keywords "${keywords}" AND \
-         -no-edit AND \
-         -no-encrypt-metadata AND \
-         -encrypt AES256 "${ownerPW}" "${userPW}" \
-         -o "${documentsFile}" || fail
+    exiftool \
+        -Title="${title}" \
+        -Author="${author}" \
+        -Subject="${subject}" \
+        -Keywords="${keywords}" \
+        -Creator="${creator}" \
+        -overwrite_original \
+        "${documentsFile}"  > /dev/null
+
+    # Encrypt with a strong owner password so that permissions cannot be changed, ensuring
+    # that the user password is empty so viewing does not require a password. The owner
+    # password should never be required. Note that if we ever want actual form fields,
+    # the --modify option must be changed to allow filling.
+
+    local ownerPW="$(phraze)"
+    local userPW=''
+
+    qpdf ${documentsFile} \
+        --encrypt "${userPW}" "${ownerPW}" 256 --modify=none -- \
+        --replace-input
 }
 
 generateHtml() {
