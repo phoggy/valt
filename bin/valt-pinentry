@@ -166,6 +166,7 @@ getPin() {
         done
         if (( retries <= 0 )); then
             respond "${mismatchedPinError}"
+            secureEraseVars p1 p2
             return
         fi
         respond "${pinRepeatedResponse}"
@@ -173,8 +174,9 @@ getPin() {
 
     # Got it
 
- 	respond "D ${p1}"
-	respond ${noError}
+    respond "D ${p1}"
+    secureEraseVars p1 p2
+    respond ${noError}
 }
 
 onSetTimeout() {

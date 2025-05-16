@@ -68,67 +68,72 @@ readPassword() {
     local -n resultVar="${2}"
     local timeout="${3:-30}"
     local checkResult="${4:-true}"
-    local cancelled=
-    local visible=true
-    local show=true
+    local -i cancelled=0
+    local -i visible=1
+    local -i show=1
+    local -i pwned=
     local score=
-    local pwned=
     resultVar=''
 
     case ${passwordVisibility} in
-        none) unset visible show; prompt="$(ansi cyan "${1}") $(ansi dim [hidden]) " ;;
-        hide) unset show ;;
-        show) show=true ;;
+        none) visible=0; show=0; prompt="$(ansi cyan "${1}") $(ansi dim [hidden]) " ;;
+        hide) show=0 ;;
+        show) show=1 ;;
         *) fail "unknown visibility mode: ${passwordVisibility}"
     esac
 
-    # Prompt and disable typing echo on the terminal
+    # Prompt
 
     echo -n "${prompt}" > ${terminal}
 
-    # Process one character at a time
+    if (( ! visible )); then
+        read -rs result < ${terminal}
+    else
 
-    while :; do
-        [[ ${visible} ]] && echo -n "${mask}" > ${terminal}
-        IFS= read -s -n 1 -t ${timeout} key < ${terminal}
+        # Process one character at a time
 
-        if (( $? >= 128  )); then                # timeout
-            cancelled=true
-            break
-        elif [[ ${key} =~ [[:print:]] ]]; then   # valid character
-            count=$((count+1))
-            [[ ${show} ]] && mask=${key} || mask='*'
-            result+=${key}
-        elif [[ ${key} == $'\177' ]]; then       # backspace
-            if (( ${count} > 0 )); then
-                count=$((count-1))
-                mask=$'\b \b'
-                result="${result%?}"
-            else
-                mask=''
+        while :; do
+            (( visible )) && echo -n "${mask}" > ${terminal}
+            IFS= read -s -n 1 -t ${timeout} key < ${terminal}
+
+            if (( $? >= 128  )); then                # timeout
+                cancelled=true
+                break
+            elif [[ ${key} =~ [[:print:]] ]]; then   # valid character
+                count=$((count+1))
+                (( show )) && mask=${key} || mask='*'
+                result+=${key}
+            elif [[ ${key} == $'\177' ]]; then       # backspace
+                if (( ${count} > 0 )); then
+                    count=$((count-1))
+                    mask=$'\b \b'
+                    result="${result%?}"
+                else
+                    mask=''
+                fi
+            elif [[ ${key} == $'\e' ]] ; then        # ESC
+                cancelled=true;
+                break
+            elif [[ ${key} == '' ]] ; then           # enter
+                break
             fi
-        elif [[ ${key} == $'\e' ]] ; then        # ESC
-            cancelled=true;
-            break
-        elif [[ ${key} == '' ]] ; then           # enter
-            break
+        done
+
+        # Mask password if we did not do so above
+
+        if (( show )); then
+            printRepeat $'\b' ${count}
+            printRepeat '*' ${count}
         fi
-    done
-
-    # Mask password if we did not do so above
-
-    if [[ ${show} ]]; then
-        printRepeat $'\b' ${count}
-        printRepeat '*' ${count}
     fi
 
-    [[ ${result} == '' ]] && cancelled=true
+    [[ ${result} == '' ]] && cancelled=1
 
-    if [[ ! ${cancelled} ]]; then
+    if (( ! cancelled )); then
 
         # Check result if requested
 
-        if [[ ${checkResult} == true ]]; then
+        if (( checkResult )); then
             IFS=',' read -r -a score <<< "$(echo "${result}" | mrld -t)"
             echo -n "  ⮕  ${score[0]} (${score[1]}/4), ${score[2]} to crack" > ${terminal}
             hasNotBeenPwned "${result}"; pwned=${?}
@@ -138,14 +143,13 @@ readPassword() {
 
     # Return the result if not cancelled and not pwned
 
-#print "pwned: ${pwned}, expertMode: ${expertMode}"
-    if [[ ! ${cancelled} ]]; then
-        if [[ ${pwned} == 1 ]]; then
+    if (( ! cancelled )); then
+        if (( pwned == 1 )); then
             warn "Could not check if this password/phrase has been breached!"
             if [[ ${expertMode} ]]; then
                 resultVar="${result}"
             fi
-        elif [[ ${pwned} == 2 ]]; then
+        elif (( pwned == 2 )); then
             error "This password/phrase is present in a large set of breached passwords so is not safe to use!"
         else
             resultVar="${result}"
