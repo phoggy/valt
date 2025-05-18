@@ -5,13 +5,31 @@ projectVersion='0.1.0+'
 projectReleaseDate=''
 projectBinaries=('valt')
 
-declare -grxA projectDependencies=( # TODO this belongs in valt
+declare -gA projectDependencies=(
 
-    [pandoc_min]='3.1'
-    [pandoc_brew]=true
-    [pandoc_brew_tap]=
-    [pandoc_install]='https://pandoc.org/installing.html'
-    [pandoc_version]='versionExtract'
+    # valt/age
+
+    [rage_min]='0.11.1'
+    [rage_brew]=true
+    [rage_brew_tap]='str4d.xyz/rage https://str4d.xyz/rage'
+    [rage_install]='https://github.com/str4d/rage'
+    [rage_version]='versionExtract'
+
+    # valt/password
+
+    [phraze_min]='0.3.18'
+    [phraze_brew]=true   # TODO
+    [phraze_brew_tap]='' # TODO
+    [phraze_install]='https://github.com/sts10/phraze'
+    [phraze_version]='versionExtract'
+
+    [mrld_min]='0.1.0'
+    [mrld_brew]=true
+    [mrld_brew_tap]='phoggy/mrld'
+    [mrld_install]='https://github.com/phoggy/mrld'
+    [mrld_version]='versionExtract'
+
+    # valt/pdf
 
     [wkhtmltopdf_min]='0.12.6'
     [wkhtmltopdf_brew]=true
@@ -25,9 +43,23 @@ declare -grxA projectDependencies=( # TODO this belongs in valt
     [qrencode_install]='https://fukuchi.org/works/qrencode/'
     [qrencode_version]='versionExtractA'
 
-    [cpdf_min]='0'
-    [cpdf_brew]=
-    [cpdf_brew_tap]= # there is a 3rd party brew tap but it is an older version
-    [cpdf_install]='https://github.com/coherentgraphics/cpdf-binaries'
-    [cpdf_version]='versionExtractB'
+    [exiftool_min]='13.25'
+    [exiftool_brew]=true
+    [exiftool_brew_tap]=
+    [exiftool_install]='https://exiftool.org/'
+    [exiftool_version]='versionExtractExiftool'
+
+    [qpdf_min]='12.2.0'
+    [qpdf_brew]=true
+    [qpdf_brew_tap]=
+    [qpdf_install]='https://github.com/qpdf/qpdf'
+    [qpdf_version]='versionExtractA'
+
+    # valt/pwned
+
+    [curl_min]='7.76.0'
+    [curl_brew]=true
+    [curl_install]='https://curl.se/dlwiz/?type=bin'
+    [curl_version]='versionExtract'
+
 )
