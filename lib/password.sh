@@ -7,25 +7,6 @@ require 'rayvn/core' 'valt/pwned'
 
 # TODO: don't display strength (via mrld) as it is inaccurate. Just pick a threshold and warn is week if below.
 
-declare -grxA valt_password_dependencies=(
-
-    [phraze_min]='0.3.18'
-    [phraze_brew]=true   # TODO
-    [phraze_brew_tap]='' # TODO
-    [phraze_install]='https://github.com/sts10/phraze'
-    [phraze_version]='versionExtract'
-
-    [mrld_min]='0.1.0'
-    [mrld_brew]=true
-    [mrld_brew_tap]='phoggy/mrld'
-    [mrld_install]='https://github.com/phoggy/mrld'
-    [mrld_version]='versionExtract'
-)
-
-_init_valt_password() {
-    assertExecutables valt_password_dependencies
-}
-
 generatePassword() {
     local -i minLength="${1:-24}"
     local -i maxLength="${2:-32}"

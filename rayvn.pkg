@@ -13,7 +13,7 @@ declare -gA projectDependencies=(
     [rage_brew]=true
     [rage_brew_tap]='str4d.xyz/rage https://str4d.xyz/rage'
     [rage_install]='https://github.com/str4d/rage'
-    [rage_version]='versionExtract'
+    [rage_extract]=1
 
     # valt/password
 
@@ -21,45 +21,45 @@ declare -gA projectDependencies=(
     [phraze_brew]=true   # TODO
     [phraze_brew_tap]='' # TODO
     [phraze_install]='https://github.com/sts10/phraze'
-    [phraze_version]='versionExtract'
+    [phraze_extract]=1
 
     [mrld_min]='0.1.0'
     [mrld_brew]=true
     [mrld_brew_tap]='phoggy/mrld'
     [mrld_install]='https://github.com/phoggy/mrld'
-    [mrld_version]='versionExtract'
+    [mrld_extract]=1
 
-    # valt/pdf
+    # valt keys pdf generation
 
     [wkhtmltopdf_min]='0.12.6'
     [wkhtmltopdf_brew]=true
     [wkhtmltopdf_brew_tap]=
     [wkhtmltopdf_install]='https://wkhtmltopdf.org/downloads.html'
-    [wkhtmltopdf_version]='versionExtract'
+    [wkhtmltopdf_extract]=1
 
     [qrencode_min]='4.1.1'
     [qrencode_brew]=true
     [qrencode_brew_tap]=
     [qrencode_install]='https://fukuchi.org/works/qrencode/'
-    [qrencode_version]='versionExtractA'
+    [qrencode_extract]=2
 
     [exiftool_min]='13.25'
     [exiftool_brew]=true
     [exiftool_brew_tap]=
     [exiftool_install]='https://exiftool.org/'
-    [exiftool_version]='versionExtractExiftool'
+    [exiftool_extract]=5
 
     [qpdf_min]='12.2.0'
     [qpdf_brew]=true
     [qpdf_brew_tap]=
     [qpdf_install]='https://github.com/qpdf/qpdf'
-    [qpdf_version]='versionExtractA'
+    [qpdf_extract]=2
 
     # valt/pwned
 
     [curl_min]='7.76.0'
     [curl_brew]=true
     [curl_install]='https://curl.se/dlwiz/?type=bin'
-    [curl_version]='versionExtract'
+    [curl_extract]=1
 
 )

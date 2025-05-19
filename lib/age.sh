@@ -5,21 +5,8 @@
 
 require 'rayvn/core' 'valt/pinentry'
 
-declare -grxA valt_age_dependencies=(
-
-    [rage_min]='0.11.1'
-    [rage_brew]=true
-    [rage_brew_tap]='str4d.xyz/rage https://str4d.xyz/rage'
-    [rage_install]='https://github.com/str4d/rage'
-    [rage_version]='versionExtract'
-)
-
-_init_valt_age() {
-    assertExecutables valt_age_dependencies
-
-    declare -grx ageFileExtension='age'
-    declare -grx tarFileExtension='tar.xz'
-}
+declare -grx ageFileExtension='age'
+declare -grx tarFileExtension='tar.xz'
 
 showAgeKeyPairAdvice() {
 

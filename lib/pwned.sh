@@ -1,23 +1,12 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2155
 
-# Library supporting password/phrase generation
+# Library supporting password/phrase breach testing
 # Intended for use via: require 'valt/pwned'
 
 require 'rayvn/core'
 
-declare -grxA valt_pwned_dependencies=(
-
-    [curl_min]='7.76.0'
-    [curl_brew]=true
-    [curl_install]='https://curl.se/dlwiz/?type=bin'
-    [curl_version]='versionExtract'
-)
-
-_init_valt_pwned() {
-    assertExecutables valt_pwned_dependencies
-    declare -grx pwnedPasswordsApiUrl='https://api.pwnedpasswords.com'
-}
+declare -grx pwnedPasswordsApiUrl='https://api.pwnedpasswords.com'
 
 hasNotBeenPwned() {
     local pass="${1}"
