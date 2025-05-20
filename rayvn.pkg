@@ -3,7 +3,6 @@
 projectName='valt'
 projectVersion='0.1.0+'
 projectReleaseDate=''
-projectBinaries=('valt')
 
 declare -gA projectDependencies=(
 
