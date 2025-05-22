@@ -7,64 +7,63 @@ projectReleaseDate=''
 declare -gA projectDependencies=(
 
     [rayvn_min]='0.1.2'
+    [rayvn_extract]=1
     [rayvn_brew]=true
     [rayvn_brew_tap]='phoggy/rayvn'
-    [rayvn_install]='https://github.com/phoggy/rayvn'
-    [rayvn_extract]=1
+    [rayvn_url]='https://github.com/phoggy/rayvn'
 
     # valt/age
 
     [rage_min]='0.11.1'
-    [rage_brew]=true
-    [rage_brew_tap]='str4d.xyz/rage https://str4d.xyz/rage'
-    [rage_install]='https://github.com/str4d/rage'
     [rage_extract]=1
+    [rage_brew]=true
+    [rage_brew_tap]=
+    [rage_url]='https://github.com/str4d/rage'
 
     # valt/password
 
     [phraze_min]='0.3.18'
-    [phraze_brew]=true   # TODO
-    [phraze_brew_tap]='' # TODO
-    [phraze_install]='https://github.com/sts10/phraze'
     [phraze_extract]=1
+    [phraze_brew]=true
+    [phraze_brew_tap]='sts10/phraze'
+    [phraze_url]='https://github.com/sts10/phraze'
 
     [mrld_min]='0.1.0'
+    [mrld_extract]=1
     [mrld_brew]=true
     [mrld_brew_tap]='phoggy/mrld'
-    [mrld_install]='https://github.com/phoggy/mrld'
-    [mrld_extract]=1
+    [mrld_url]='https://github.com/phoggy/mrld'
 
     # valt keys pdf generation
 
     [wkhtmltopdf_min]='0.12.6'
+    [wkhtmltopdf_extract]=1
     [wkhtmltopdf_brew]=true
     [wkhtmltopdf_brew_tap]=
-    [wkhtmltopdf_install]='https://wkhtmltopdf.org/downloads.html'
-    [wkhtmltopdf_extract]=1
+    [wkhtmltopdf_url]='https://wkhtmltopdf.org'
 
     [qrencode_min]='4.1.1'
+    [qrencode_extract]=2
     [qrencode_brew]=true
     [qrencode_brew_tap]=
-    [qrencode_install]='https://fukuchi.org/works/qrencode/'
-    [qrencode_extract]=2
+    [qrencode_url]='https://fukuchi.org/en/works/qrencode/'
 
     [exiftool_min]='13.25'
+    [exiftool_extract]=5
     [exiftool_brew]=true
     [exiftool_brew_tap]=
-    [exiftool_install]='https://exiftool.org/'
-    [exiftool_extract]=5
+    [exiftool_url]='https://exiftool.org/'
 
     [qpdf_min]='12.2.0'
+    [qpdf_extract]=2
     [qpdf_brew]=true
     [qpdf_brew_tap]=
-    [qpdf_install]='https://github.com/qpdf/qpdf'
-    [qpdf_extract]=2
+    [qpdf_url]='https://github.com/qpdf/qpdf'
 
     # valt/pwned
 
     [curl_min]='7.76.0'
-    [curl_brew]=true
-    [curl_install]='https://curl.se/dlwiz/?type=bin'
     [curl_extract]=1
-
+    [curl_brew]=true
+    [curl_url]='https://curl.se/'
 )
