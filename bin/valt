@@ -5,7 +5,7 @@ usage() {
     echo
     echo "$(ansi bold Public key encryption of files and directories, using) $(ansi cyan rage) (see $(ansi blue ${rageProjectUrl}))."
     echo
-    echo "Usage: $(ansi bold_blue ${scriptName}) [OPTIONS] $(ansi italic COMMAND)"
+    echo "Usage: $(ansi bold_blue ${projectName}) [OPTIONS] $(ansi italic COMMAND)"
     echo
     echo "Options"
     echo
@@ -25,7 +25,7 @@ usage() {
     echo "    VALT_VISIBILITY       Set default visibility mode."
     echo "    VALT_TIMEOUT          Set input timeout, in seconds. Defaults to 30."
     echo
-    echo "Run $(ansi bold_blue ${scriptName}) $(ansi italic COMMAND) $(ansi bold_blue --help) for more information on a command."
+    echo "Run $(ansi bold_blue ${projectName})$(ansi italic COMMAND) $(ansi bold_blue --help) for more information on a command."
     echo
     bye "${@}"
 }
@@ -33,7 +33,7 @@ usage() {
 main() {
     init "${@}"
     if [[ ${command} ]]; then
-       ${command} ${commandOptions}
+        source ${command} ${commandOptions}
     else
         usage
     fi
@@ -42,14 +42,11 @@ main() {
 init() {
     allNewFilesUserOnly
     useValtPinEntry
-    readonly scriptName="$(basename "${0}")"
-    readonly scriptHome=$(realpath "$(dirname "${0}/../../..")")
     readonly rageProjectUrl='https://github.com/str4d/rage'
 
     # Global constants
-
-    declare -grx VALT_PROJECT_URL='https://github.com/phoggy/sage'
-    declare -grx VALT_ETC_DIR="${scriptHome}/etc"
+    declare -grx valtEtcDir="${valtHome}/etc"
+    declare -grx valtProjectUrl='https://github.com/phoggy/valt'
     declare -grx webPasswordGenUrl='https://bitwarden.com/password-generator/'
     declare -grx webHaveIBeenPwnedUrl="https://haveibeenpwned.com/Passwords"
     declare -grx webXkcdPasswordsUrl="https://xkcd.com/936/"
@@ -71,7 +68,7 @@ init() {
 
     while (( ${#} > 0 )); do
         case "${1}" in
-            pass) setCommand pass ;;
+            pass) setCommand pass ;; # TODO implement!!
             keys) setCommand keys ;;
             encrypt) setCommand encrypt ;;
             decrypt) setCommand decrypt ;;
@@ -95,7 +92,7 @@ init() {
 }
 
 setCommand() {
-    command="${VALT_ETC_DIR}/${1}"
+    command="${valtEtcDir}/${1}"
 }
 
 assertValidVisibility() {

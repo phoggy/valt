@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2155
 
-readonly VERSION='encrypt 0.1.0'
+require 'rayvn/core' 'valt/age'
 
 usage() {
     echo
@@ -34,11 +34,6 @@ main() {
 }
 
 init() {
-    allNewFilesUserOnly
-    useValtPinEntry
-    readonly scriptName=$(basename "${0}")
-
-
     # Files
     files=()
 
@@ -173,7 +168,5 @@ replaceOutputFile() {
     rm -rf "${outputFile}" || fail
     echo "Deleted $(ansi bold ${outputFile})"
 }
-
-source rayvn.up --add valt 'rayvn/core' 'valt/age'
 
 main "${@}"

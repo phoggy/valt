@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
-readonly VERSION='decrypt 0.1.0'
+require 'rayvn/core' 'valt/age'
 
 usage() {
     echo
     echo "$(ansi bold Decrypt a file using an age private key)."
     echo
-    echo "Usage: $(ansi bold_blue valt decrypt ${scriptName}) [OPTIONS] -i IDENTITY PATH"
+    echo "Usage: $(ansi bold_blue valt decrypt) [OPTIONS] -i IDENTITY PATH"
     echo
     echo "Decrypted tar files will be unpacked by default into a new directory using the filename without any extension."
     echo
@@ -29,9 +29,6 @@ main() {
 }
 
 init() {
-    allNewFilesUserOnly
-    readonly scriptName=$(basename "${0}")
-
     file=
     unpackDir=
     identities=
@@ -111,7 +108,5 @@ replaceOutputFile() {
     rm -rf "${target}" || fail
     progress "Deleted $(ansi bold ${target})"
 }
-
-source rayvn.up --add valt 'rayvn/core' 'valt/age'
 
 main "${@}"
