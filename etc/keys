@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 
+require 'rayvn/core' 'rayvn/safe-env' 'valt/age' 'valt/password'
+
 usage() {
     echo
     echo "$(ansi bold Generate an age public key pair and backup documentation)."
     echo
-    echo "Usage: $(ansi bold_blue valt keys ${scriptName}) [OPTIONS] [NAME]"
+    echo "Usage: $(ansi bold_blue valt keys) [OPTIONS] [NAME]"
     echo
     echo "If no name is specified it defaults to 'my'."
     echo
@@ -62,18 +64,15 @@ main() {
 }
 
 init() {
-    allNewFilesUserOnly
-    readonly scriptName=$(basename "${0}")
-    readonly exampleSubstitutionsFile="${VALT_ETC_DIR}/key-doc-example-substitutions.sh"
+    readonly exampleSubstitutionsFile="${valtEtcDir}/key-doc-example-substitutions.sh"
     readonly cssMainFileName="key-doc.css"
-    readonly cssOverrideFileName='override.css'
     readonly logoFileName="phoggy.png"
+    readonly assetFiles=("${cssMainFileName}" "${logoFileName}" "marker-bg-001-001.png" "paper-texture.png" "cursive.ttf")
+    readonly cssOverrideFileName='override.css'
     readonly htmlFileName='note.html'
     readonly qrCodeFileName='qr.png'
-    readonly cssMainFile="${VALT_ETC_DIR}/${cssMainFileName}"
-    readonly logoFile="${VALT_ETC_DIR}/${logoFileName}"
-
-    templateFile="${VALT_ETC_DIR}/key-doc-template.html"
+    readonly configDir="$(configDirPath)"
+    templateFile="${valtEtcDir}/key-doc-template.html"
     substitutionsFile="${exampleSubstitutionsFile}"
     cssOverrideFile=
     htmlFile=
@@ -102,9 +101,12 @@ init() {
         shift
     done
 
-    privateKeyFile="${PWD}/${prefix}.key"
-    publicKeyFile="${PWD}/${prefix}-public.key"
-    documentsFile="${PWD}/${prefix}-key.pdf"
+    privateKeyFile="${configDir}/${prefix}.key"
+    publicKeyFile="${configDir}/${prefix}-public.key"
+
+    # TODO see Data Model in rayvn note !!! ------------------------------------------------
+    documentsFile="${configDir}/${prefix}-key.pdf"
+    # TODO ---------------------------------------------------------------------------------
 
     if (( force )); then
         rm "${publicKeyFile}" "${privateKeyFile}" 2> /dev/null
@@ -171,16 +173,20 @@ createKeyDocument() {
 # TODO: --+----+-++(-++(---++++(---+(((+)))+---)++++---)++-)++-+-----+--
 
 generatePdf() {
-    local workDir=$(tempDirPath)
+
+# TODO    local workDir=$(tempDirPath)
+    local workDir="${HOME}/tmp"                       ## TODO !!! FIX
 
     # Set armoredKey var
 
     armorAgeFile "${privateKeyFile}" armoredKey
 
-    # Copy required files
+    # Copy asset files
 
-    cp "${cssMainFile}" "${workDir}/${cssMainFileName}" || fail
-    cp "${logoFile}" "${workDir}/${logoFileName}" || fail
+    for assetFile in "${assetFiles[@]}"; do
+        cp "${valtEtcDir}/${assetFile}" "${workDir}/${assetFile}" || fail
+    done
+
     if [[ ${cssOverrideFile} ]]; then
         cp "${cssOverrideFile}" "${workDir}/${cssOverrideFileName}" || fail
     fi
@@ -211,6 +217,10 @@ generatePdf() {
         --footer-font-size 8 \
         --margin-bottom 15mm \
         "${htmlFile}" "${documentsFile}"
+
+    # Add the form fields
+
+    addForm "${workDir}" "${documentsFile}"
 
     # Set metadata and encrypt with a strong password
 
@@ -300,6 +310,59 @@ generateHtml() {
     echo "${author}"
 }
 
-source rayvn.up --add valt 'rayvn/core' 'rayvn/safe-env' 'valt/age' 'valt/password'
+addForm() {
+    local workDir="${1}"
+    local pdfFile="${2}"
+    local marker="__NOTES_FORM__"
+    local formName="notes"
+    local formType="textfield"
+    local outputForm="form.json"
+
+    # Step 1: Extract content (text positions) from the PDF
+    pdfcpu extract -mode content "${pdfFile}" "${workDir}"
+
+    # Step 2: Locate marker text with coordinates
+    markerLine=$(grep -r "${marker}" "${workDir}" | head -n1)
+
+    if [[ -z "${markerLine}" ]]; then
+        fail "Marker '${marker}' not found in extracted content."
+    fi
+
+    # Get filename (to extract page number)
+    filename="${markerLine%%:*}"
+
+    # Extract the last [x, y, w, h] group from the line using sed
+    coords=$(echo "${markerLine}" | sed -n 's/.*\[\([^]]*\)\][^[]*$/\1/p')
+
+    # Parse coordinates
+    IFS=',' read -r x y width height <<< "${coords}"
+
+    # Convert to numeric rectangle: [x0, y0, x1, y1]
+    x0=$(printf "%.0f" "$x")
+    y0=$(printf "%.0f" "$y")
+    x1=$((x0 + 150))
+    y1=$((y0 + 20))
+
+    # Extract page number from filename like content_page_1.txt
+    page=$(echo "${filename}" | sed -E 's/.*page_([0-9]+)\.txt/\1/')
+
+    # Step 3: Write form.json
+    cat > "${outputForm}" <<- 'EOF'
+	{
+	  "forms": {
+		"${formType}": [
+		  {
+			"id": "${formName}",
+			"name": "${formName}",
+			"pages": [${page}],
+			"rect": [${x0}, ${y0}, ${x1}, ${y1}],
+			"value": "",
+			"locked": false
+		  }
+		]
+	  }
+	}
+	EOF
+}
 
 main "${@}"

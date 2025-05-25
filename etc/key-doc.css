@@ -1,3 +1,11 @@
+/*!*@import url('https://fonts.googleapis.com/css2?family=Shadows+Into+Light&display=swap');*!*/
+/*@font-face {*/
+/*    font-family: 'Shadows Into Light';*/
+/*    font-style: normal;*/
+/*    font-weight: 400;*/
+/*    font-display: swap;*/
+/*    src: url("cursive.ttf") format('truetype');*/
+/*}*/
 
 body {
     font-family: Helvetica, Arial, sans-serif;
@@ -59,14 +67,184 @@ code {
     font-family: Inconsolata, Consolas, monospace;
 }
 
+.closing {
+    margin-top: 40px;
+    font-size: 18px;
+    font-style: italic;
+    line-height: 20px;
+}
+
+.signature {
+    margin-top: 40px;
+    line-height: 26px;
+    font-family: "Shadows Into Light", "Zapfino", "Brush Script MT", "Caflisch Script Pro", "Brush Script Std", cursive;
+    font-weight: 400;
+    font-size: 24px;
+    letter-spacing: 1px;
+    word-spacing: 4px;
+}
+
 .break-before {
     page-break-before: always;
 }
 
-.note-box {
-    border: 1px solid #ccc;
-    height: 200px;
-    background-image: repeating-linear-gradient(white, white 29px, #ccc 30px);
-    padding: 1em;
-    margin-top: 1em;
+/*.note-box {*/
+/*    border: 1px solid #ccc;*/
+/*    height: 200px;*/
+/*    background-image: repeating-linear-gradient(white, white 29px, #ccc 30px);*/
+/*    padding: 1em;*/
+/*    margin-top: 1em;*/
+/*}*/
+
+/*.paper {*/
+/*    font: normal 12px/1.5 "Lucida Grande", arial, sans-serif;*/
+/*    !*width: 300px;*!*/
+/*    margin: 0 auto 10px;*/
+/*    padding: 6px 5px 4px 42px;*/
+/*    position: relative;*/
+/*    color: #444;*/
+/*    line-height: 20px;*/
+/*    border: 1px solid #d2d2d2;*/
+
+/*    background: #fff;*/
+/*    background: -webkit-gradient(linear, 0 0, 0 100%, from(#d9eaf3), color-stop(4%, #fff)) 0 4px;*/
+/*    background: -webkit-linear-gradient(top, #d9eaf3 0%, #fff 8%) 0 4px;*/
+/*    background: -moz-linear-gradient(top, #d9eaf3 0%, #fff 8%) 0 4px;*/
+/*    background: -ms-linear-gradient(top, #d9eaf3 0%, #fff 8%) 0 4px;*/
+/*    background: -o-linear-gradient(top, #d9eaf3 0%, #fff 8%) 0 4px;*/
+/*    background: linear-gradient(top, #d9eaf3 0%, #fff 8%) 0 4px;*/
+
+/*    -webkit-background-size: 100% 20px;*/
+/*    -moz-background-size: 100% 20px;*/
+/*    -ms-background-size: 100% 20px;*/
+/*    -o-background-size: 100% 20px;*/
+/*    background-size: 100% 20px;*/
+
+/*    -webkit-border-radius: 3px;*/
+/*    -moz-border-radius: 3px;*/
+/*    border-radius: 3px;*/
+
+/*    -webkit-box-shadow: 0 1px 2px rgba(0,0,0,0.07);*/
+/*    -moz-box-shadow: 0 1px 2px rgba(0,0,0,0.07);*/
+/*    box-shadow: 0 1px 2px rgba(0,0,0,0.07);*/
+/*}*/
+
+/*.paper::before {*/
+/*    content: '';*/
+/*    position: absolute;*/
+/*    width: 4px;*/
+/*    top: 0;*/
+/*    left: 30px;*/
+/*    bottom: 0;*/
+/*    border: 1px solid;*/
+/*    border-color: transparent #efe4e4;*/
+/*}*/
+
+/*.paper h1,*/
+/*.paper h2 {*/
+/*    font-size: 16px;*/
+/*    line-height: 16px;*/
+/*    margin: 0 0 4px;*/
+/*}*/
+
+/*.paper h3,*/
+/*.paper h4,*/
+/*.paper h5 {*/
+/*    font-size: 14px;*/
+/*    line-height: 16px;*/
+/*    margin: 0 0 4px;*/
+/*}*/
+
+/*.paper h4,*/
+/*.paper h5 {*/
+/*    font-weight: normal;*/
+/*}*/
+/*.paper p {margin: 0 0 20px;}*/
+/*.paper p:last-child {margin: 0;}*/
+/*.paper ul {margin: 0 0 20px;}*/
+
+
+/*
+   From https://luanmorina.com/snippets/html-and-css/notebook-paper-background/
+*/
+
+.demo-section {
+    background: linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%);
+    margin-bottom: 2rem;
 }
+
+.demo-container {
+
+}
+
+.notebook-container {
+    position: relative;
+    background-color: rgba(255, 255, 255, 0.4);
+    background-image: url("paper-texture.png");
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+.notebook-container::before {
+    content: '';
+    width: 1px;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 60px;
+    background-color: rgba(255, 0, 0, 0.4);
+}
+
+.notebook-container::after {
+    content: '';
+    width: 1px;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 63px;
+    background-color: rgba(255, 0, 0, 0.4);
+}
+
+.notebook-content-top {
+    padding-top: 40px;
+    background-color: rgba(255, 255, 255, 0.4);
+}
+
+.notebook-content-bottom {
+    padding-bottom: 40px;
+    background-color: rgba(255, 255, 255, 0.4);
+}
+
+.notebook-lines {
+    height: 100%;
+    background-image: repeating-linear-gradient(rgba(255, 255, 255, 0.4) 0px,
+    rgba(255, 255, 255, 0.4) 25px,
+    rgba(0, 0, 0, 0.2) 26px);
+}
+
+.notebook-content {
+    padding-top: 6px;
+    padding-left: 90px;
+    padding-right: 40px;
+    line-height: 26px;
+    font-family: "Shadows Into Light", "Caflisch Script Pro", "Brush Script MT", "Brush Script Std", cursive;
+    font-weight: 400;
+    font-size: 20px;
+    letter-spacing: 1px;
+    word-spacing: 4px;
+}
+
+.notebook-content-title {
+    display: inline-block;
+    background-image: url("marker-bg-001-001.png");
+    background-repeat: no-repeat;
+    background-position: center left;
+    padding-right: 6px;
+}
+
+.notebook-content-author {
+    display: block;
+    text-align: right;
+    padding-right: 60px;
+}
+
