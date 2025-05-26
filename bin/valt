@@ -19,6 +19,7 @@ usage() {
     echo "    keys                  Generate a public key pair, with encrypted private key."
     echo "    encrypt               Encrypt one or more files or directories."
     echo "    decrypt               Decrypt a '.valt' file."
+    echo "    append                Append one or more files to an existing .valt file." # TODO!!
     echo
     echo "Environment Variables"
     echo
