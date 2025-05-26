@@ -67,7 +67,7 @@ init() {
     readonly exampleSubstitutionsFile="${valtEtcDir}/key-doc-example-substitutions.sh"
     readonly cssMainFileName="key-doc.css"
     readonly logoFileName="phoggy.png"
-    readonly assetFiles=("${cssMainFileName}" "${logoFileName}" "marker-bg-001-001.png" "paper-texture.png" "cursive.ttf")
+    readonly assetFiles=("${cssMainFileName}" "${logoFileName}")
     readonly cssOverrideFileName='override.css'
     readonly htmlFileName='note.html'
     readonly qrCodeFileName='qr.png'
