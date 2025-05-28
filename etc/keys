@@ -220,11 +220,10 @@ generatePdf() {
 
     # Add the form fields
 
-    addForm "${workDir}" "${documentsFile}"
+   # TODO!! addForm "${workDir}" "${documentsFile}"
 
     # Set metadata and encrypt with a strong password
 
-    local valtProjectUrl='https://github.com/phoggy/valt'
     local title='Private Key Pair Backup & Usage Instructions'
     local creator="$(projectVersion valt), ${valtProjectUrl}"
     local subject="File decryption."
@@ -345,16 +344,22 @@ addForm() {
 
     # Extract page number from filename like content_page_1.txt
     page=$(echo "${filename}" | sed -E 's/.*page_([0-9]+)\.txt/\1/')
+declare -p markerLine filename page
 
     # Step 3: Write form.json
-    cat > "${outputForm}" <<- 'EOF'
+
+    cat > "${outputForm}" <<- EOF
 	{
-	  "forms": {
-		"${formType}": [
+		"pages": [
+		{
+			"bg": "${pdfFile}"
+		}
+	],
+	"forms": {
+			"${formType}": [
 		  {
 			"id": "${formName}",
 			"name": "${formName}",
-			"pages": [${page}],
 			"rect": [${x0}, ${y0}, ${x1}, ${y1}],
 			"value": "",
 			"locked": false
@@ -363,6 +368,31 @@ addForm() {
 	  }
 	}
 	EOF
+
+#    cat > "${outputForm}" <<- EOF
+#	{
+#		"pages": [
+#		{
+#			"bg": "${pdfFile}"
+#		}
+#	],
+#	"forms": {
+#			"${formType}": [
+#		  {
+#			"id": "${formName}",
+#			"name": "${formName}",
+#			"pages": ["${page}"],
+#			"rect": [${x0}, ${y0}, ${x1}, ${y1}],
+#			"value": "",
+#			"locked": false
+#		  }
+#		]
+#	  }
+#	}
+#	EOF
+
+echo "create"
+    pdfcpu create form.json output.pdf
 }
 
 main "${@}"
