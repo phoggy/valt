@@ -55,6 +55,7 @@ usage() {
 }
 
 main() {
+ echo "keys: ${*}"
     init "${@}"
     createKeys
     if [[ ${substitutionsFile} ]]; then
@@ -88,6 +89,7 @@ init() {
 
     while ((${#} > 0)); do
         case "${1}" in
+            --) ;;
             -d | --document) shift; setSubstitutionsFile "${1}" ;;
             -t | --template) shift; setFileVar templateFile "${1}" "TEMPLATE" ;;
             -c | --css) shift; setFileVar cssOverrideFile "${1}" "CSS" ;;

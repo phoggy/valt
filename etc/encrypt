@@ -56,12 +56,13 @@ init() {
 
     while (( ${#} > 0 )); do
         case "${1}" in
-            -r|--recipient) shift; appendVar recipients "-r ${1}" ;;
+            --) ;;
+            -r|--recipient) shift; assertRecipient "${1}"; appendVar recipients "-r ${1}" ;;
             -R|--recipients-file) shift; assertFile "${1}" "recipients file"; appendVar recipients "-R ${1}" ;;
             -n|--name) shift; name="${1}" ;;
             -t|--timestamp) addTimeStamp=1 ;;
             -z|--timezone) shift; timeZoneName="${1}" ;;
-            -v|--verify) shift; assertFile "${1}" "private key file"; verifyKeyFile="${1}" ;;
+            --verify) shift; assertFile "${1}" "private key file"; verifyKeyFile="${1}" ;;
             -f|--force) force=1 ;;
             -d|--delete) deleteOriginal=1 ;;
             -h|--help) usage ;;
@@ -74,6 +75,17 @@ init() {
     [[ ${recipients} ]] || fail "no recipients specified"
     [[ ${verifyKeyFile} ]] || deleteOriginal=0
     initializeFiles
+}
+
+assertRecipient() {
+    local recipient="${1}"
+    if [[ ${recipient} != age* ]]; then
+        if [[ -f ${recipient} ]]; then
+            fail "${recipient} is not a public key but is a file, use -R instead of -r"
+        else
+            fail "${recipient} is not a public key"
+        fi
+    fi
 }
 
 initializeFiles() {
@@ -125,7 +137,7 @@ verifyEncryptedFile() {
         local decryptedFile="$(tempDirPath file)"
         local verifyDir="$(tempDirPath file-content)"
         echo "Verifying $(ansi cyan ${outputFile})"
-        decrypt -i "${verifyKeyFile}" ${outputFile} -o "${decryptedFile}" -u "${verifyDir}" -f -q || fail
+        valt decrypt -i "${verifyKeyFile}" ${outputFile} -o "${decryptedFile}" -u "${verifyDir}" -f -q || fail
 
         if [[ ${isArchive} ]]; then
             local file i

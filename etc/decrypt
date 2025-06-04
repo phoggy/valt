@@ -42,6 +42,7 @@ init() {
 
     while (( ${#} > 0 )); do
         case "${1}" in
+            --) ;;
             -i|--identity) shift; assertFile "${1}"; appendVar identities "-i ${1}" ;;
             -u|--unpack-dir) shift; unpackDir="${1}" ;;
             -n|--no-unpack) unpack=0 ;;

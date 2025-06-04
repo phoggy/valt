@@ -34,7 +34,7 @@ usage() {
 main() {
     init "${@}"
     if [[ ${command} ]]; then
-        source ${command} ${commandOptions}
+        source ${command} -- ${commandOptions}
     else
         usage
     fi
