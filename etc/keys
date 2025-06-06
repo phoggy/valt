@@ -6,17 +6,14 @@ usage() {
     echo
     echo "$(ansi bold Generate an age public key pair and backup documentation)."
     echo
-    echo "Usage: $(ansi bold_blue valt keys) [OPTIONS] [NAME]"
-    echo
-    echo "If no name is specified it defaults to 'my'."
+    echo "Usage: $(ansi bold_blue valt keys) [OPTIONS]"
     echo
     echo "Private keys are encrypted and a strong passphrase is $(ansi bold_green highly) encouraged; advice and an opportunity to"
     echo "generate one will be offered."
     echo
     echo "A PDF file will be created containing your keys, also in encrypted form, to serve as a backup for you and/or your"
-    echo "successors. Keys are represented as a QR code and again in a text format — when printed, such representations are often"
-    echo "called \"paper keys\". Detailed usage instructions are included and should be personalized with information (e.g. emergency contacts)"
-    echo "that you supply in a separate file via the --document option. When not specified, an example file will be used."
+    echo "successors. Detailed usage instructions are included. Keys are represented as a QR code and again in a text format"
+    echo "(often called \"paper keys\"). Content will be personalized: you will be prompted to edit a $(ansi blue key.info) file".
     echo
     echo "Space is provided in the document for you to record your passphrase by hand. Please do so, and then:"
     echo
@@ -26,88 +23,84 @@ usage() {
     echo
     echo "Options"
     echo
+    echo "    -p, --prefix PREFIX           Use PREFIX for key file names. Defaults to ${USER}."
     echo "    -f, --force                   Overwrite existing files."
     echo "    --no-verify                   Do not verify keys."
     echo "    --no-advice                   Do not show passphrase advice."
     echo "    -q, --quick                   Do not verify keys or show passphrase advice."
-    echo "    -d, --document SUBSTITUTIONS  Use the SUBSTITUTIONS file when generating the document."
     echo "    -t, --template TEMPLATE       Use the TEMPLATE markdown file instead of the default for PDF generation."
     echo "    -c, --css CSS                 Apply style overrides from the CSS file for PDF generation."
     echo "    -h, --help                    Display usage and exit."
     echo
-    echo "Document Customization"
+    echo "$(ansi bold Document Customization)"
     echo
-    echo "Substitutions are performed with simple key/value pairs defined in a file such as:"
+    echo "The HTML template can be changed from the default and CSS style overrides can be applied. The default template"
+    echo "and primary CSS file can be found in the $(ansi blue ${valtEtcDir}) directory."
     echo
-    echo "    ${exampleSubstitutionsFile}"
+    echo "Template substitutions are performed with variables defined in the $(ansi blue key.info) file. Note that keys"
+    echo "prefixed with an underscore are reserved for system use."
     echo
-    echo "Substitution keys are brace delimited within a template file, where the default is:"
-    echo
-    echo "    ${templateFile}"
-    echo
-    echo "Substitution keys with an underscore prefix are reserved for system use."
-    echo
-    echo "Default styles can be extended using the --css option to override the base CSS rules in:"
-    echo
-    echo "    ${cssMainFile}"
-    echo
+    echo "The template can be specified with the --template option, and default styles can be extended using the --css option."
     bye
 }
 
 main() {
- echo "keys: ${*}"
     init "${@}"
     createKeys
-    if [[ ${substitutionsFile} ]]; then
+    if [[ ${keyInfoFile} ]]; then
         createKeyDocument
     fi
     echo
 }
 
 init() {
-    readonly exampleSubstitutionsFile="${valtEtcDir}/key-doc-example-substitutions.sh"
-    readonly cssMainFileName="key-doc.css"
-    readonly logoFileName="phoggy.png"
-    readonly assetFiles=("${cssMainFileName}" "${logoFileName}")
-    readonly cssOverrideFileName='override.css'
-    readonly htmlFileName='note.html'
-    readonly qrCodeFileName='qr.png'
-    readonly configDir="$(configDirPath)"
-    templateFile="${valtEtcDir}/key-doc-template.html"
-    substitutionsFile="${exampleSubstitutionsFile}"
+    declare -gr keyInfoTemplateFile="${valtEtcDir}/key-info-template.sh"
+    declare -gr keyInfoFile="${valtConfigDir}/key.info"
+    declare -gr cssMainFileName="key-doc.css"
+    declare -gr logoFileName="phoggy.png"
+    declare -gr assetFiles=("${cssMainFileName}" "${logoFileName}")
+    declare -gr cssOverrideFileName='override.css'
+    declare -gr htmlFileName='note.html'
+    declare -gr qrCodeFileName='qr.png'
+    qrCodeFile=
+    armoredKey=
+
+    # Options
+    htmlTemplateFile="${valtEtcDir}/key-doc-template.html"
     cssOverrideFile=
     htmlFile=
     prefix="${USER}"
     htmlFile=
-    qrCodeFile=
-    armoredKey=
 
     # Flags
     declare -i force=0
     declare -i showKeyAdvice=1
     declare -i verifyKeys=1
 
-    while ((${#} > 0)); do
+    while (( ${#} > 0 )); do
         case "${1}" in
             --) ;;
-            -d | --document) shift; setSubstitutionsFile "${1}" ;;
+            -p | --prefix) shift; setPrefix "${1}";;
             -t | --template) shift; setFileVar templateFile "${1}" "TEMPLATE" ;;
             -c | --css) shift; setFileVar cssOverrideFile "${1}" "CSS" ;;
             --no-verify) verifyKeys=0 ;;
             --no-advice) showKeyAdvice=0 ;;
             -q | --quick) showKeyAdvice=0; verifyKeys=0 ;;
             -f | --force) force=1 ;;
-            -h | --help) usage ;;
-            *) setPrefix "${1}" ;;
+            -h | --help | help) usage ;;
+            -*) usage "Unknown option: ${1}" ;;
         esac
         shift
     done
 
-    privateKeyFile="${configDir}/${prefix}.key"
-    publicKeyFile="${configDir}/${prefix}-public.key"
+    privateKeyFile="${valtConfigDir}/${prefix}.key"
+    publicKeyFile="${valtConfigDir}/${prefix}-public.key"
 
     # TODO see Data Model in rayvn note !!! ------------------------------------------------
-    documentsFile="${configDir}/${prefix}-key.pdf"
+
+    ensureKeyInfo
+    documentsFile="${valtConfigDir}/${prefix}-key.pdf"
+
     # TODO ---------------------------------------------------------------------------------
 
     if (( force )); then
@@ -123,11 +116,35 @@ setPrefix() {
     prefix="${1}"
 }
 
-setSubstitutionsFile() {
-    local file="${1}"
-    [[ ${file} == 'example' ]] && file="${exampleSubstitutionsFile}"
-    setFileVar substitutionsFile "${file}" "SUBSTITUTIONS"
-    [[ ${force} ]] || assertFileDoesNotExist "${documentsFile}"
+ensureKeyInfo() {
+    local status="has not been"
+
+    if [[ ! -f "${keyInfoFile}" ]]; then
+        cp "${keyInfoTemplateFile}" "${keyInfoFile}" || fail
+        status="must be"
+    else
+        sourceSafeStaticVars "${keyInfoFile}"
+        assertKeyInfoVar closing author completed
+        [[ $(declare -p contacts 2> /dev/null) ]] || fail "${keyInfoFile} is missing the 'contacts' array variable."
+        (( ${#contacts[@]} )) || fail "${keyInfoFile} must include one contact in the 'contacts' array variable."
+        if [[ ${completed} == yes ]]; then
+            return 0
+        fi
+    fi
+
+    echo
+    echo "The $(ansi bold key.info) file at $(ansi blue ${valtConfigDir}) ${status} completed."
+    echo "Please edit and complete it before proceeding."
+    bye
+}
+
+assertKeyInfoVar() {
+    while (( ${#} > 0 )); do
+        local varName="${1}"
+        [[ -v ${varName} ]] || fail "${keyInfoFile} is missing the '${varName}' variable."
+        [[ $(declare -p "${varName}" 2> /dev/null) ]] || fail "${keyInfoFile} '${varName}' variable cannot be empty."
+        shift
+    done
 }
 
 createKeys() {
@@ -255,12 +272,12 @@ generatePdf() {
 
 generateHtml() {
     local outputFile="${1}"
-    local html="$(< ${templateFile})" || fail
+    local html="$(< ${htmlTemplateFile})" || fail
     local contact value
 
     # Set user provided substitutions
 
-    sourceSafeStaticVars "${substitutionsFile}"
+    sourceSafeStaticVars "${keyInfoFile}"
 
     # Set built-in substitution values(clobbering any that the user might have defined)
 
@@ -287,13 +304,13 @@ generateHtml() {
 
     # Insist on an 'author' var in template
 
-    [[ "${author}" ]] || fail "'${author}' is required in ${templateFile}"
+    [[ "${author}" ]] || fail "'${author}' is required in ${htmlTemplateFile}"
 
     # Perform the substitutions, failing if a required substitution is not defined
 
     for key in "${requiredSubstitutionKeys[@]}"; do
         value="${!key}"
-        [[ -v "${key}" ]] || fail "${key} not set in ${substitutionsFile}"
+        [[ -v "${key}" ]] || fail "${key} not set in ${keyInfoFile}"
 
         # Special case contacts and transform into list items
 
@@ -303,7 +320,7 @@ generateHtml() {
                 value+="<li>${contact}</li>"
             done
         fi
-        [[ "${value}" ]] || fail "${key} value not set in ${substitutionsFile}"
+        [[ "${value}" ]] || fail "${key} value not set in ${keyInfoFile}"
         html=${html/\$\{${key}\}/${value}}
     done
     echo "${html}" > "${outputFile}"
