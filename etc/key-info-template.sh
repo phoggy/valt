@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-# This file is required when creating a new public key pair and are used
-# to customize the generated PDF. The PDF contains a backup of the keys
-# in paper form (aka "paper key") along with usage instructions.
+# This file is required when creating a new public key pair and is used to
+# customize the generated PDF. The PDF contains a backup of the keys in
+# paper form (aka "paper key") along with usage instructions.
 
 # The first page is in the form of a letter, where you'll have a closing line
 # followed by your name as 'signature'.

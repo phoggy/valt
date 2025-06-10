@@ -44,8 +44,8 @@
         <p>pdf file SHOULD NOT be stored in password manager </p>
 
         <ul>
-            <li>Write the passphrase <a href="#the-passphrase">below</a> for you or your successor, but ONLY if it will be kept in a very secure
-                place like a safe-deposit box.</li>
+            <li>Write the passphrase <a href="#the-passphrase">below</a> for you or your successor, but <em>ONLY</em> if it will
+                be kept in a very secure place like a safe-deposit box.</li>
             <li>Put this in the safe place <em>now</em>: don't leave it laying around!</li>
         </ul>
 
@@ -70,9 +70,9 @@
 
         <h2>The Key</h2>
 
-        <p>This page contains the <em>encrypted</em> <code>age</code> public key pair, in two forms: as a QR code and as raw <code>pem</code> text.
-            The text form is provided just for the unlikely case that the QR code does not work as it can be copied
-            from the PDF or, worst case, typed in.</p>
+        <p>This section contains the <em>encrypted</em> <code>age</code> public key pair, in two forms: as a QR code and as raw <code>.pem</code> text.
+            The text form is provided only for the highly unlikely case that the QR code does not work; while extremely tedious,
+            it <em>can</em> be typed in by hand.</p>
 
         <p>To use the QR code, just open the camera app on your phone and point it at the image. You should see
             the same text as below (maybe just the beginning). Just copy it, send it to the computer on which you
@@ -86,8 +86,8 @@
 
         <h2>The Prerequisites</h2>
 
-        <p>The key is encrypted, so to use it you must know the passphrase. It may be written down
-            <a href="#the-passphrase">here</a>.</p>
+        <p>Using the private key to decrypt a file requires the passphrase used when it was created. It is normally printed
+            on the last page of this document, but it may be stored separately.</p>
 
         <p>You also need a command line tool that performs <a href="https://github.com/C2SP/C2SP/blob/main/age.md">age file encryption</a>:</p>
 
@@ -103,27 +103,14 @@
 
         <h2>Decrypting A File</h2>
 
-        <p>TODO</p>
+        <p class="break-before"></p>
 
-        <h2 id="the-passphrase">The Passphrase</h2>
-        <div class="notebook-container">
-            <div class="notebook-content-top"></div>
-            <div class="notebook-lines">
-                <div class="notebook-content">
-                    <br/>
-                    People tell you the world looks a certain way. Parents tell you how to think. Schools tell you how to think. TV. Religion. And then at a certain point, if you’re lucky, you realize you can make up your own mind. Nobody sets the rules but you. You can design your own life.<br/><br/>
-                    <span class="notebook-content-author">Carrie Ann Moss</span>
-                </div>
-            </div>
-            <div class="notebook-content-bottom"></div>
+        <h2>The Passphrase</h2>
+
+        <p>Here is the passphrase used when creating the keys on page 3</p>
+
+        <div class="passphrase-box">
+            ${_PHRASE}
         </div>
-
-        <section id="notes" class="break-before">
-            <h2>Notes</h2>
-            <p>Use this space for any relevant notes or observations:</p>
-            <div class="note-box">
-                <span style="color:white">__NOTES_FORM__</span>
-            </div>
-        </section>
     </body>
 </html>

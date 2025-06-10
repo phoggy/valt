@@ -175,6 +175,7 @@ getPin() {
     # Got it
 
     respond "D ${p1}"
+    [[ -v _rayvnAnonymousPipe ]] && echo "${p1}" > "${_rayvnAnonymousPipe}"
     secureEraseVars p1 p2
     respond ${noError}
 }

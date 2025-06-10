@@ -53,11 +53,24 @@ createAgeKeyPair() {
     useValtPinEntry
     local keyFile="${1}"
     local publicKeyFile="${2}"
+    local captureVarName="${3:-}"
+    declare -i capture=0
+    [[ -v captureVarName ]] && capture=1
     local key=$(rage-keygen 2> /dev/null)
     local publicKey=$(echo "${key}" | grep "public key: age1" | awk '{print $NF}')
     [[ -f ${keyFile} ]] && fail "${keyFile} should have been deleted!"
 
+    (( capture )) && export _rayvnAnonymousPipe=$(makeTempDir 'XXXXXXXXXXXX')
+
     echo "${key}" | rage -p -o "${keyFile}" -
+
+    if (( capture )) && [[ -s "${_rayvnAnonymousPipe}" ]]; then
+        local result
+        read -r result < "${_rayvnAnonymousPipe}"
+        rm -f "${_rayvnAnonymousPipe}" 2> /dev/null
+        printf -v "${captureVarName}" '%s' "${result}"
+    fi
+
     [[ -f ${keyFile} ]] || fail "canceled"
     echo "${publicKey}" > "${publicKeyFile}"
     unset key

@@ -158,7 +158,7 @@ createKeys() {
         echo
         [[ ${reply,,} == 'y' ]] && generatePass
     fi
-    createAgeKeyPair "${privateKeyFile}" "${publicKeyFile}" || fail
+    createAgeKeyPair "${privateKeyFile}" "${publicKeyFile}" _PHRASE || fail
     echo
     echo "Public key (aka 'recipient') file: $(ansi cyan ${publicKeyFile})"
     echo "Private key (aka 'identity') file: $(ansi cyan ${privateKeyFile}) (also contains public key)"
@@ -189,12 +189,8 @@ createKeyDocument() {
     open "${documentsFile}" &> /dev/null
 }
 
-# TODO: --+----+-++(-++(---++++(---+(((+)))+---)++++---)++-)++-+-----+--
-
 generatePdf() {
-
-# TODO    local workDir=$(tempDirPath)
-    local workDir="${HOME}/tmp"                       ## TODO !!! FIX
+    local workDir=$(tempDirPath)
 
     # Set armoredKey var
 
@@ -219,7 +215,7 @@ generatePdf() {
     # Generate substituted html file
 
     htmlFile="${workDir}/${htmlFileName}"
-    author="$(generateHtml "${htmlFile}")"
+    generateHtml "${htmlFile}"
     assertFileExists "${htmlFile}"
 
     # Move to work dir so that relative paths in html work correctly
@@ -229,17 +225,13 @@ generatePdf() {
     # Convert html to pdf
 
     wkhtmltopdf --enable-local-file-access \
+        --enable-forms \
         --footer-left "${author} Private Key" \
         --footer-center "$(date '+%B %e, %Y')" \
         --footer-right "Page [page] of [topage]" \
         --footer-font-name "Helvetica, Arial, sans-serif" \
         --footer-font-size 8 \
-        --margin-bottom 15mm \
         "${htmlFile}" "${documentsFile}"
-
-    # Add the form fields
-
-   # TODO!! addForm "${workDir}" "${documentsFile}"
 
     # Set metadata and encrypt with a strong password
 
@@ -275,10 +267,6 @@ generateHtml() {
     local html="$(< ${htmlTemplateFile})" || fail
     local contact value
 
-    # Set user provided substitutions
-
-    sourceSafeStaticVars "${keyInfoFile}"
-
     # Set built-in substitution values(clobbering any that the user might have defined)
 
     local _DATE="$(date "+%B %d, %Y %r %Z")"
@@ -302,15 +290,11 @@ generateHtml() {
         tempHtml="${BASH_REMATCH[2]}"
     done
 
-    # Insist on an 'author' var in template
-
-    [[ "${author}" ]] || fail "'${author}' is required in ${htmlTemplateFile}"
-
     # Perform the substitutions, failing if a required substitution is not defined
 
     for key in "${requiredSubstitutionKeys[@]}"; do
         value="${!key}"
-        [[ -v "${key}" ]] || fail "${key} not set in ${keyInfoFile}"
+        [[ -v key ]] || fail "${key} not set in ${keyInfoFile}"
 
         # Special case contacts and transform into list items
 
@@ -324,94 +308,6 @@ generateHtml() {
         html=${html/\$\{${key}\}/${value}}
     done
     echo "${html}" > "${outputFile}"
-
-    echo "${author}"
-}
-
-addForm() {
-    local workDir="${1}"
-    local pdfFile="${2}"
-    local marker="__NOTES_FORM__"
-    local formName="notes"
-    local formType="textfield"
-    local outputForm="form.json"
-
-    # Step 1: Extract content (text positions) from the PDF
-    pdfcpu extract -mode content "${pdfFile}" "${workDir}"
-
-    # Step 2: Locate marker text with coordinates
-    markerLine=$(grep -r "${marker}" "${workDir}" | head -n1)
-
-    if [[ -z "${markerLine}" ]]; then
-        fail "Marker '${marker}' not found in extracted content."
-    fi
-
-    # Get filename (to extract page number)
-    filename="${markerLine%%:*}"
-
-    # Extract the last [x, y, w, h] group from the line using sed
-    coords=$(echo "${markerLine}" | sed -n 's/.*\[\([^]]*\)\][^[]*$/\1/p')
-
-    # Parse coordinates
-    IFS=',' read -r x y width height <<< "${coords}"
-
-    # Convert to numeric rectangle: [x0, y0, x1, y1]
-    x0=$(printf "%.0f" "$x")
-    y0=$(printf "%.0f" "$y")
-    x1=$((x0 + 150))
-    y1=$((y0 + 20))
-
-    # Extract page number from filename like content_page_1.txt
-    page=$(echo "${filename}" | sed -E 's/.*page_([0-9]+)\.txt/\1/')
-declare -p markerLine filename page
-
-    # Step 3: Write form.json
-
-    cat > "${outputForm}" <<- EOF
-	{
-		"pages": [
-		{
-			"bg": "${pdfFile}"
-		}
-	],
-	"forms": {
-			"${formType}": [
-		  {
-			"id": "${formName}",
-			"name": "${formName}",
-			"rect": [${x0}, ${y0}, ${x1}, ${y1}],
-			"value": "",
-			"locked": false
-		  }
-		]
-	  }
-	}
-	EOF
-
-#    cat > "${outputForm}" <<- EOF
-#	{
-#		"pages": [
-#		{
-#			"bg": "${pdfFile}"
-#		}
-#	],
-#	"forms": {
-#			"${formType}": [
-#		  {
-#			"id": "${formName}",
-#			"name": "${formName}",
-#			"pages": ["${page}"],
-#			"rect": [${x0}, ${y0}, ${x1}, ${y1}],
-#			"value": "",
-#			"locked": false
-#		  }
-#		]
-#	  }
-#	}
-#	EOF
-
-echo "create"
-    pdfcpu create form.json output.pdf
 }
 
 main "${@}"
