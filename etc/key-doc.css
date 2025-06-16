@@ -46,8 +46,8 @@ img {
 pre {
     /*white-space: pre-wrap;         !* wrap long lines instead of horizontal scrolling *!*/
     /*word-break: break-all;         !* break words if needed *!*/
-    font-family: Inconsolata, Consolas, monospace;
-    font-weight: bold;
+    font-family: "Fira Code", Inconsolata, Consolas, monospace;
+    /*font-weight: bold;*/
     font-size: 18px;
     background-color: #f9f9f9; /* Light background color */
     padding: 1em;
@@ -55,19 +55,9 @@ pre {
     margin: 1em 0;
 
 }
-/*pre {*/
-/*    white-space: pre-wrap;         !* wrap long lines instead of horizontal scrolling *!*/
-/*    word-break: break-all;         !* break words if needed *!*/
-/*    font-family: monospace;*/
-/*    font-size: 12pt;               !* adjust as large as possible while avoiding clipping *!*/
-/*    background: #f4f4f4;*/
-/*    padding: 1em;*/
-/*    overflow: visible;             !* allow full rendering *!*/
-/*    margin: 1em 0;*/
-/*}*/
 
 code {
-    font-family: Inconsolata, Consolas, monospace;
+    font-family: "Fira Code", Inconsolata, Consolas, monospace;
 }
 
 .closing {

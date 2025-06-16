@@ -19,7 +19,6 @@ declare -gA projectDependencies=(
     [rage_min]='0.11.1'
     [rage_extract]=1
     [rage_brew]=true
-    [rage_brew_tap]=
     [rage_url]='https://github.com/str4d/rage'
 
     # valt/password
@@ -38,28 +37,27 @@ declare -gA projectDependencies=(
 
     # valt keys pdf generation
 
+    [font-fira-code_brew]=true
+    [font-fira-code_url]='https://fonts.google.com/specimen/Fira+Code'
+
     [wkhtmltopdf_min]='0.12.6'
     [wkhtmltopdf_extract]=1
     [wkhtmltopdf_brew]=true
-    [wkhtmltopdf_brew_tap]=
     [wkhtmltopdf_url]='https://wkhtmltopdf.org'
 
     [qrencode_min]='4.1.1'
     [qrencode_extract]=2
     [qrencode_brew]=true
-    [qrencode_brew_tap]=
     [qrencode_url]='https://fukuchi.org/en/works/qrencode/'
 
     [exiftool_min]='13.25'
     [exiftool_extract]=5
     [exiftool_brew]=true
-    [exiftool_brew_tap]=
     [exiftool_url]='https://exiftool.org/'
 
     [qpdf_min]='12.2.0'
     [qpdf_extract]=2
     [qpdf_brew]=true
-    [qpdf_brew_tap]=
     [qpdf_url]='https://github.com/qpdf/qpdf'
 
     # valt/pwned

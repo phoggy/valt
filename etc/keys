@@ -274,11 +274,17 @@ generateHtml() {
     local _LOGO_PATH="${logoFileName}"
     local _QR_CODE_PATH="${qrCodeFileName}"
     local _ARMORED_KEY="${armoredKey}"
-    local _CONTACTS_LIST= # transformed later
     local _CSS_OVERRIDE='<!-- placeholder -->'
     if [[ ${cssOverrideFile} ]]; then
         _CSS_OVERRIDE="<link rel="stylesheet" href="${cssOverrideFileName}">"
     fi
+
+    # Transform contacts into list items
+
+    local _CONTACTS_LIST=
+    for contact in "${contacts[@]}"; do
+        _CONTACTS_LIST+="<li>${contact}</li>"
+    done
 
     # Collect all required substitution keys (consumes tempHtml)
 
@@ -295,16 +301,7 @@ generateHtml() {
     for key in "${requiredSubstitutionKeys[@]}"; do
         value="${!key}"
         [[ -v key ]] || fail "${key} not set in ${keyInfoFile}"
-
-        # Special case contacts and transform into list items
-
-        if [[ ${key} == '_CONTACTS_LIST' ]]; then
-            value=
-            for contact in "${contacts[@]}"; do
-                value+="<li>${contact}</li>"
-            done
-        fi
-        [[ "${value}" ]] || fail "${key} value not set in ${keyInfoFile}"
+        [[ -n "${value}" ]] || fail "${key} value not set in ${keyInfoFile}"
         html=${html/\$\{${key}\}/${value}}
     done
     echo "${html}" > "${outputFile}"

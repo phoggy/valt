@@ -12,7 +12,7 @@ author="Bob Barker"
 
 # In the event that you are unavailable or incapacitated when encrypted file
 # content is needed, you must provide contact info for at least one person
-# with appropriate computer skills (terminal command line tools) to help.
+# with appropriate computer skills (MacOS command line tools) to help.
 #
 # This is POTENTIALLY CRITICAL information, so please give it the attention
 # it deserves!
