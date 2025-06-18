@@ -55,7 +55,7 @@ createAgeKeyPair() {
     local publicKeyFile="${2}"
     local captureVarName="${3:-}"
     declare -i capture=0
-    [[ -v captureVarName ]] && capture=1
+    [[ -n "${captureVarName}" ]] && capture=1
     local key=$(rage-keygen 2> /dev/null)
     local publicKey=$(echo "${key}" | grep "public key: age1" | awk '{print $NF}')
     [[ -f ${keyFile} ]] && fail "${keyFile} should have been deleted!"
