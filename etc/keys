@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-require 'rayvn/core' 'rayvn/safe-env' 'valt/age' 'valt/password'
+require 'rayvn/core' 'rayvn/safe-source' 'valt/age' 'valt/password'
 
 usage() {
     echo
