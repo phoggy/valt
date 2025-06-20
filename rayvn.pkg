@@ -37,6 +37,9 @@ declare -gA projectDependencies=(
 
     # valt keys pdf generation
 
+    [font-indie-flower_brew]=true
+    [font-indie-flower_url]='https://fonts.google.com/specimen/Indie+Flower'
+
     [font-fira-code_brew]=true
     [font-fira-code_url]='https://fonts.google.com/specimen/Fira+Code'
 

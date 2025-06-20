@@ -15,11 +15,15 @@ usage() {
     echo "successors. Detailed usage instructions are included. Keys are represented as a QR code and again in a text format"
     echo "(often called \"paper keys\"). Content will be personalized: you will be prompted to edit a $(ansi blue key.info) file".
     echo
-    echo "Space is provided in the document for you to record your passphrase by hand. Please do so, and then:"
+    echo "By default, the passphrase you enter when creating the keys will be included in the generated PDF and you will be"
+    echo "prompted to select a printer and choose a copy count. After printing, the PDF will be deleted to keep your passphrase"
+    echo "secure."
     echo
-    echo "      $(ansi bold store the document in a secure location such as a safe deposit box or fire safe!)"
+    echo "   $(ansi bold store the documents in secure locations, e.g. safe deposit box/fire safe and/or with trusted people!)"
     echo
-    echo "Better, store copies in multiple secure places, perhaps also with a trusted friend or family member."
+    echo "If you specify the --no-passphrase option, you will not be prompted to the print the PDF. However, you $(ansi bold must) still"
+    echo "make the passphrase available to whomever has access to the document! To ensure this, the 'notes' property in the"
+    echo "$(ansi blue key.info) will be required and should be used to help guide the reader to access the passphrase."
     echo
     echo "Options"
     echo
@@ -27,6 +31,8 @@ usage() {
     echo "    -f, --force                   Overwrite existing files."
     echo "    --no-verify                   Do not verify keys."
     echo "    --no-advice                   Do not show passphrase advice."
+    echo "    --no-pdf                      Do not generate PDF file."
+    echo "    --no-passphrase               Do not include the passphrase on the PDF file."
     echo "    -q, --quick                   Do not verify keys or show passphrase advice."
     echo "    -t, --template TEMPLATE       Use the TEMPLATE markdown file instead of the default for PDF generation."
     echo "    -c, --css CSS                 Apply style overrides from the CSS file for PDF generation."
@@ -47,7 +53,7 @@ usage() {
 main() {
     init "${@}"
     createKeys
-    if [[ ${keyInfoFile} ]]; then
+    if (( generatePdf )); then
         createKeyDocument
     fi
     echo
@@ -73,9 +79,11 @@ init() {
     htmlFile=
 
     # Flags
-    declare -i force=0
-    declare -i showKeyAdvice=1
-    declare -i verifyKeys=1
+    declare -gi force=0
+    declare -gi verifyKeys=1
+    declare -gi showKeyAdvice=1
+    declare -gi generatePdf=1
+    declare -gi includePassphrase=1
 
     while (( ${#} > 0 )); do
         case "${1}" in
@@ -85,6 +93,8 @@ init() {
             -c | --css) shift; setFileVar cssOverrideFile "${1}" "CSS" ;;
             --no-verify) verifyKeys=0 ;;
             --no-advice) showKeyAdvice=0 ;;
+            --no-pdf) generatePdf=0 ;;
+            --no-passphrase) includePassphrase=0 ;;
             -q | --quick) showKeyAdvice=0; verifyKeys=0 ;;
             -f | --force) force=1 ;;
             -h | --help | help) usage ;;
@@ -98,7 +108,7 @@ init() {
 
     # TODO see Data Model in rayvn note !!! ------------------------------------------------
 
-    ensureKeyInfo
+    (( generatePdf )) && ensureKeyInfo
     documentsFile="${valtConfigDir}/${prefix}-key.pdf"
 
     # TODO ---------------------------------------------------------------------------------
@@ -125,8 +135,9 @@ ensureKeyInfo() {
     else
         sourceSafeStaticVars "${keyInfoFile}"
         assertKeyInfoVar closing author completed
-        [[ $(declare -p contacts 2> /dev/null) ]] || fail "${keyInfoFile} is missing the 'contacts' array variable."
-        (( ${#contacts[@]} )) || fail "${keyInfoFile} must include one contact in the 'contacts' array variable."
+        assertKeyInfoArrayVar contacts
+        (( includePassphrase )) || assertKeyInfoArrayVar notes # required if passphrase omitted
+
         if [[ ${completed} == yes ]]; then
             return 0
         fi
@@ -141,11 +152,25 @@ ensureKeyInfo() {
 assertKeyInfoVar() {
     while (( ${#} > 0 )); do
         local varName="${1}"
-        [[ -v ${varName} ]] || fail "${keyInfoFile} is missing the '${varName}' variable."
-        [[ $(declare -p "${varName}" 2> /dev/null) ]] || fail "${keyInfoFile} '${varName}' variable cannot be empty."
+        [[ -v ${varName} ]] || bye "The '${varName}' variable is missing in ${keyInfoFile}."
+        [[ -n ${!varName} ]] || bye "The '${varName}' variable cannot be empty in ${keyInfoFile}."
         shift
     done
 }
+
+assertKeyInfoArrayVar() {
+    local name="${1}"
+
+    declare -p "${name}" &> /dev/null || bye "The '${name}' array variable is missing in ${keyInfoFile}."
+
+    if ! declare -p "${name}" 2> /dev/null | grep -q '^declare \-a'; then
+        bye "The '${name}' variable must be an array in ${keyInfoFile}."
+    fi
+
+    local -n nameRef="${name}"
+    (( ${#nameRef[@]} > 0 )) || bye "The '${name}' array variable cannot be empty in ${keyInfoFile}."
+}
+
 
 createKeys() {
     echo
@@ -158,7 +183,12 @@ createKeys() {
         echo
         [[ ${reply,,} == 'y' ]] && generatePass
     fi
-    createAgeKeyPair "${privateKeyFile}" "${publicKeyFile}" _PHRASE || fail
+    if (( includePassphrase )); then
+        createAgeKeyPair "${privateKeyFile}" "${publicKeyFile}" _PHRASE || fail
+    else
+        createAgeKeyPair "${privateKeyFile}" "${publicKeyFile}" || fail
+        _PHRASE="(see Notes)"
+    fi
     echo
     echo "Public key (aka 'recipient') file: $(ansi cyan ${publicKeyFile})"
     echo "Private key (aka 'identity') file: $(ansi cyan ${privateKeyFile}) (also contains public key)"
@@ -265,10 +295,11 @@ generatePdf() {
 generateHtml() {
     local outputFile="${1}"
     local html="$(< ${htmlTemplateFile})" || fail
-    local contact value
+    local contact note value
 
-    # Set built-in substitution values(clobbering any that the user might have defined)
+    # Set built-in substitution values (clobbering any that the user might have defined)
 
+    local _GREETING="${greeting}"
     local _DATE="$(date "+%B %d, %Y %r %Z")"
     local _CSS_PATH="${cssMainFileName}"
     local _LOGO_PATH="${logoFileName}"
@@ -279,11 +310,26 @@ generateHtml() {
         _CSS_OVERRIDE="<link rel="stylesheet" href="${cssOverrideFileName}">"
     fi
 
+    local _PASSPHRASE_LOCATION
+    if (( includePassphrase )); then
+        _PASSPHRASE_LOCATION="The last page includes the passphrase."
+    else
+        _PASSPHRASE_LOCATION="The last page contains notes that should provide some information to help find the passphrase.\
+                                 If you <em>don't have or can't get the passphrase</em>, stop here. Yes, really (sorry!)."
+    fi
+
     # Transform contacts into list items
 
     local _CONTACTS_LIST=
     for contact in "${contacts[@]}"; do
         _CONTACTS_LIST+="<li>${contact}</li>"
+    done
+
+    # Transform notes into paragraphs
+
+    local _NOTES=
+    for note in "${notes[@]}"; do
+        _NOTES+="<p>${note}</p>"
     done
 
     # Collect all required substitution keys (consumes tempHtml)

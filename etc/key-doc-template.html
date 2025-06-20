@@ -9,63 +9,45 @@
     <body class="markdown-body">
 
         <img src="${_LOGO_PATH}" alt="logo">
+        <br>
+        <br>
+        <div class=".letter">
 
-        <h1>About</h1>
+            <p>${_GREETING}</p>
 
-        <p>This document contains a “private key” that can unlock files encrypted with the associated
-            public key. This document is intended as a backup and <strong>must</strong> be kept in a safe place. It contains
-            instructions for using the (private) key to unlock a file — these instructions are a bit technical, so it includes
-            some ways to get help if needed.</p>
+            <p>This document contains a “private key” that can unlock files encrypted with the associated
+                public key. This document is intended as a backup and <strong>must</strong> be kept in a safe place. It contains
+                instructions for using the (private) key to unlock a file — these instructions are a bit technical, so it includes
+                some ways to get help if needed.</p>
 
-        <p>Know that the key <em>itself</em> is locked, so it cannot be used without the passphrase used to create it. That
-            passphrase might be written down below, or it might be stored somewhere else that you are expected to know.</p>
+            <p>Know that the key <em>itself</em> is locked, so it <strong>cannot</strong> be used without the passphrase used to
+                create it. ${_PASSPHRASE_LOCATION}</p>
 
-        <p>If you <em>don't have or can't get the passphrase</em>, stop here. Yes, really.</p>
+            <p>Welcome to the modern world of digital security.</p>
 
-        <p>If this all seems over the top, sorry... welcome to the modern world of digital security.</p>
+            <p>If all of this has you thinking <em>"uh… what?"</em>, please see <a href="#getting-help">Getting Help</a>.</p>
 
-        <p>Alright then, moving on…</p>
+            <div class="closing">${closing}</div>
+            <div class="signature">${author}</div>
 
-        <p>If you just generated this document, see <a href="#next-steps">Next Steps</a>.</p>
+            <p class="break-before"></p>
+            <h1 id="getting-help">Getting Help</h1>
 
-        <p>If you know your way around a terminal and need to decrypt a <code>.valt</code> or <code>.age</code> file, see <a href="#instructions">Instructions</a>.</p>
+            <p>The following are contacts that I trust and who have agreed to help if needed:</p>
 
-        <p>If all of this has you thinking <em>"uh… what?"</em>, please see <a href="#getting-help">Getting Help</a>.</p>
+            <ol>
+            ${_CONTACTS_LIST}
+            </ol>
 
-        <div class="closing">${closing}</div>
-        <div class="signature">${author}</div>
+            <p>If none of them are available, hopefully one of them can suggest someone else; if not, you'll have to find
+                someone else…</p>
 
-        <p class="break-before"></p>
-
-        <h1 id="next-steps">Next Steps</h1>
-
-        <p>TODO</p>
-        <p>passphrase can be stored in password manager (e.g. bitwarden)</p>
-        <p>pdf file SHOULD NOT be stored in password manager </p>
-
-        <ul>
-            <li>Write the passphrase <a href="#the-passphrase">below</a> for you or your successor, but <em>ONLY</em> if it will
-                be kept in a very secure place like a safe-deposit box.</li>
-            <li>Put this in the safe place <em>now</em>: don't leave it laying around!</li>
-        </ul>
-
-        <h1 id="getting-help">Getting Help</h1>
-
-        <p>The following are contacts that I trust and who have agreed to help if needed:</p>
-
-        <ol>
-        ${_CONTACTS_LIST}
-        </ol>
-
-        <p>If none of them are available, hopefully one of them can suggest someone else; if not, you'll have to find
-            someone else…</p>
-
-        <ul>
-            <li>Try looking online for TODO</li>
-        </ul>
+            <ul>
+                <li>Try looking online for TODO</li>
+            </ul>
+        </div>
 
         <p class="break-before"></p>
-
         <h1 id="instructions">Instructions</h1>
 
         <h2>The Key</h2>
@@ -112,5 +94,12 @@
         <div class="passphrase-box">
             ${_PHRASE}
         </div>
+
+        <h2>Notes</h2>
+
+        <div class="notes">
+            ${_NOTES}
+        </div>
+
     </body>
 </html>

@@ -1,6 +1,11 @@
+/*
+ * NOTE: font-family lists are repeated because wkhtmltopdf does not support custom properties.
+ */
+
 body {
-    font-family: Helvetica, Arial, sans-serif;
+    font-family: Arial, Helvetica, sans-serif;
     font-size: 14px;
+    font-weight: 400;
     color: #222;
     background-color: white;
     padding: 2em;
@@ -44,23 +49,26 @@ img {
 }
 
 pre {
-    /*white-space: pre-wrap;         !* wrap long lines instead of horizontal scrolling *!*/
-    /*word-break: break-all;         !* break words if needed *!*/
     font-family: "Fira Code", Inconsolata, Consolas, monospace;
-    /*font-weight: bold;*/
+    white-space: pre-wrap;         /* wrap long lines instead of horizontal scrolling */
+    word-break: break-all;         /* break words if needed */
     font-size: 18px;
     background-color: #f9f9f9; /* Light background color */
     padding: 1em;
     overflow: visible;             /* allow full rendering */
     margin: 1em 0;
-
 }
 
 code {
     font-family: "Fira Code", Inconsolata, Consolas, monospace;
 }
 
+.letter p {
+    font-family: "Architects Daughter", "Indie Flower", "Zapfino", "Brush Script MT", "Caflisch Script Pro", "Brush Script Std", cursive;
+}
+
 .closing {
+    font-family: "Architects Daughter", "Indie Flower", "Zapfino", "Brush Script MT", "Caflisch Script Pro", "Brush Script Std", cursive;
     margin-top: 40px;
     font-size: 18px;
     font-style: italic;
@@ -68,9 +76,9 @@ code {
 }
 
 .signature {
+    font-family: "Architects Daughter", "Indie Flower", "Zapfino", "Brush Script MT", "Caflisch Script Pro", "Brush Script Std", cursive;
     margin-top: 40px;
     line-height: 26px;
-    font-family: "Shadows Into Light", "Zapfino", "Brush Script MT", "Caflisch Script Pro", "Brush Script Std", cursive;
     font-weight: 400;
     font-size: 24px;
     letter-spacing: 1px;
@@ -82,17 +90,19 @@ code {
 }
 
 .passphrase-box {
+    font-family: "Fira Code", Inconsolata, Consolas, monospace;
     border: 2px solid #ccc; /* Solid border with a light grey color */
     padding: 10px; /* Add some spacing inside the box */
     background-color: #f9f9f9; /* Light background color */
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Add a subtle shadow */
     border-radius: 8px; /* Rounded corners */
 
-    font-family: Inconsolata, Consolas, monospace;
-    font-weight: bold;
-    font-size: 32px;
+    font-size: 18px;
 }
 
+.notes {
+    font-family: "Architects Daughter", "Indie Flower", "Zapfino", "Brush Script MT", "Caflisch Script Pro", "Brush Script Std", cursive;
+}
 
 
 
