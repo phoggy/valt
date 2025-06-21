@@ -37,9 +37,9 @@ readVerifiedPassword() {
     local -n resultVar="${1}"
     local timeout="${2:-30}"
     readPassword "Password" p1 "${timeout}" true || fail
-    [[ ${p1} == '' ]] && fail "cancelled"
+    [[ ${p1} == '' ]] && fail "cancelled"  > ${terminal}
     readPassword "  Verify" p2 "${timeout}" false || fail
-    [[ ${p1} == "${p2}" ]] || fail "entries do not match"
+    [[ ${p1} == "${p2}" ]] || fail "entries do not match" > ${terminal}
     resultVar="${p1}"
 }
 
@@ -103,8 +103,8 @@ readPassword() {
         # Mask password if we did not do so above
 
         if (( show )); then
-            printRepeat $'\b' ${count}
-            printRepeat '*' ${count}
+            printRepeat $'\b' ${count} > ${terminal}
+            printRepeat '*' ${count}  > ${terminal}
         fi
     fi
 
@@ -120,18 +120,18 @@ readPassword() {
             hasNotBeenPwned "${result}"; pwned=${?}
         fi
     fi
-    print # complete the line
+    print > ${terminal} # complete the line
 
     # Return the result if not cancelled and not pwned
 
     if (( ! cancelled )); then
         if (( pwned == 1 )); then
-            warn "Could not check if this password/phrase has been breached!"
+            warn "Could not check if this password/phrase has been breached!" > ${terminal}
             if [[ ${expertMode} ]]; then
                 resultVar="${result}"
             fi
         elif (( pwned == 2 )); then
-            error "This password/phrase is present in a large set of breached passwords so is not safe to use!"
+            error "This password/phrase is present in a large set of breached passwords so is not safe to use!" > ${terminal}
         else
             resultVar="${result}"
         fi

@@ -8,9 +8,10 @@
 #
 # Uses env vars to configure (controlled by valt):
 #
-#   proxyPinEntry -> ordered, space separated list of pinentry executable names (may be empty)
-#   showPassword  -> if no proxy AND set, passphrase will be visible until enter is pressed
-#   debugLogFile  -> where to write debug log messages (may be empty)
+#   proxyPinEntry  -> ordered, space separated list of pinentry executable names (may be empty)
+#   showPassword   -> if no proxy AND set, passphrase will be visible until enter is pressed
+#   _debug         -> 1 if debug is enabled, 0 if not
+#   _debugLogFile  -> where to write debug log messages (may be empty if _debug != 1)
 #
 
 main () {
@@ -45,15 +46,14 @@ init() {
     confirm=
     proxyCommand=
 
-    # Init debug log file if requested
+    # Init debug log if enabled
 
-    if [[ ${debugLogFile} ]]; then
+    if (( _debug )); then
         log $'--- BEGIN pinentry -----------------------------------------------------\n'
         log "      date: $(date)"
         log "  terminal: ${terminal}"
         log "       pid: ${BASHPID}"
         log "      args: ${*}"
-        log
     fi
 
     # Find pinentry program to proxy, if requested
@@ -112,7 +112,7 @@ resetRequestState() {
 }
 
 log() {
-    [[ ${debugLogFile} ]] && echo "${@}" >> "${debugLogFile}"
+    (( _debug )) && echo "${@}" >> "${_debugLogFile}"
 }
 
 onGetPin() {
@@ -183,12 +183,12 @@ getPin() {
 onSetTimeout() {
     local cmd="${1}"
     local arg="${2}"
-	if (( arg > 0 && arg < 60 )); then
-	    timeout="${arg}"
+    if (( arg > 0 && arg < 60 )); then
+        timeout="${arg}"
         addProxyCommandAndRespond "${cmd}" "${timeout}"
     else
-    	respond ${noError}
-	fi
+        respond ${noError}
+    fi
 }
 
 onSetDescription() {
@@ -215,12 +215,11 @@ onSetRepeat() {
 
 addProxyCommandAndRespond() {
     proxyCommand+="${1} ${2}${newline}"
-	respond ${noError}
+    respond ${noError}
 }
 
 describe() {
-    print "${@}"
-    print
+    printf "%s\n\n" "${@}" > ${terminal}
 }
 
 source rayvn.up --add valt 'rayvn/core' 'valt/password'
