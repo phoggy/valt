@@ -5,13 +5,15 @@
         <title>Key Document</title>
         <link rel="stylesheet" href="${_CSS_PATH}">
         ${_CSS_OVERRIDE}
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.400.0/umd/lucide.js"></script>
+        <link rel="stylesheet" href="~lucide-static/font/lucide.css">
     </head>
-    <body class="markdown-body">
+    <body>
 
         <img src="${_LOGO_PATH}" alt="logo">
         <br>
         <br>
-        <div class=".letter">
+        <div class="letter">
 
             <p>${_GREETING}</p>
 
@@ -30,29 +32,120 @@
             <div class="closing">${closing}</div>
             <div class="signature">${author}</div>
 
-            <p class="break-before"></p>
-            <h1 id="getting-help">Getting Help</h1>
-
-            <p>The following are contacts that I trust and who have agreed to help if needed:</p>
-
-            <ol>
-            ${_CONTACTS_LIST}
-            </ol>
-
-            <p>If none of them are available, hopefully one of them can suggest someone else; if not, you'll have to find
-                someone else…</p>
-
-            <ul>
-                <li>Try looking online for TODO</li>
-            </ul>
         </div>
+
+        <p class="break-before"></p>
+        <h1 id="getting-help">Getting Help</h1>
+
+        <p>The following are contacts that I trust and who have agreed to help if needed:</p>
+
+        <ol>
+            ${_CONTACTS_LIST}
+        </ol>
+
+        <p>If they aren't available, don't worry – there are people out there who can help you through this process.
+            Since what you're trying to decrypt may be extremely sensitive (e.g. a password manager backup), we need
+            to be very careful about who we trust and how we get help...</p>
+
+        <div class="getting-help">
+            <h1>Finding Help</h1>
+
+            <h2>Your Best Options: In-Person Help</h2>
+
+            <p><strong>Local Computer Repair Shops:</strong> This is probably your best bet. Most towns have at least one computer
+                repair shop, and many of their technicians know their way around the Mac Terminal. When you call, you can say
+                something like: "I need help following some written instructions to use Terminal commands on my Mac. It involves
+                decrypting a very sensitive file, so I need someone who can work on this in person and agrees not to keep any
+                copies of my files or information."</p>
+
+            <p><strong>Apple Store Genius Bar:</strong> While Apple support might not help with the actual decryption, they can
+                definitely help you get comfortable with opening Terminal and understanding basic navigation. Make an appointment
+                and explain that you need to learn some basic Terminal commands for accessing your own files.</p>
+
+            <p><strong>Local College IT Departments:</strong> If you have a community college or university nearby, their IT
+                support staff are usually knowledgeable and trustworthy. You might be able to arrange a consultation where they
+                walk you through the process.</p>
+
+            <p><strong>Friends or Family in Tech:</strong> Think about anyone in your network who works with computers
+                professionally – software developers, IT support, network administrators, or even tech-savvy relatives. They might
+                be willing to help, and you already know them personally.</p>
+
+            <h2>Community Resources</h2>
+
+            <p><strong>Library Technology Centers:</strong> Many public libraries have tech help sessions or staff who assist with
+                computer problems. While they might not know the specific commands, they can help you get comfortable with the
+                basics.</p>
+
+            <p><strong>Senior Centers or Community Centers:</strong> If you're looking for a comfortable, non-intimidating
+                environment, these often have volunteer tech helpers who are patient and understanding.</p>
+
+            <h2>Last Resort: Online Help</h2>
+
+            <div class="callout callout-warning">
+                <div class="callout-title">
+                    <i data-lucide="triangle-alert" class="callout-icon"></i>
+                    Last Resort Only
+                </div>
+                <p><strong>Only if you absolutely cannot find in-person help</strong>, you might consider freelance platforms like
+                    Upwork or Fiverr. But please understand – this is risky because you're dealing with your password manager
+                    backup. If you go this route:</p>
+                <ul>
+                    <li>Never, ever share your actual files or private keys</li>
+                    <li>Only ask for general guidance on the process</li>
+                    <li>Work with someone who has excellent reviews and a long track record</li>
+                    <li>Consider having them walk you through the steps over video call rather than doing the work themselves</li>
+                </ul>
+            </div>
+
+            <h2>What to Say to Anyone Helping You</h2>
+
+            <p>Here's some language you can use to protect yourself:</p>
+
+            <div class="callout callout-quote">
+                <div class="callout-title">
+                    <i data-lucide="lightbulb" class="callout-icon"></i>
+                    What to Say
+                </div>
+                <p>"I need help with a very sensitive file decryption. Before we start, I need your agreement that you will not
+                    make any copies of my files, take screenshots, or retain any information from this session. The file contains
+                    extremely sensitive personal data, and I need your word that everything stays confidential and nothing gets
+                    saved to your system."</p>
+            </div>
+
+            <p>If they're professionals, they should understand completely and agree without hesitation.</p>
+
+            <div class="callout callout-danger">
+                <div class="callout-title">
+                    <i data-lucide="zap" class="callout-icon"></i>
+                    Red Flags – When to Walk Away
+                </div>
+                <p>Trust your instincts. If someone:</p>
+                <ul>
+                    <li>Asks to take your computer home or work on it remotely</li>
+                    <li>Wants to copy your files "for backup purposes"</li>
+                    <li>Seems evasive about confidentiality agreements</li>
+                    <li>Pressures you to rush through the process</li>
+                    <li>Asks too many questions about what's in the encrypted file</li>
+                </ul>
+                <p>Just politely decline and find someone else.</p>
+            </div>
+
+            <h2>A Final Thought</h2>
+
+            <p>Remember, you're not asking for anything unreasonable. Plenty of people know how to use Terminal commands, and most
+                will be happy to help you follow written instructions. The key is finding someone trustworthy who respects the
+                sensitive nature of what you're working with. Take your time, and don't settle for help that doesn't feel
+                right.</p>
+        </div>
+
 
         <p class="break-before"></p>
         <h1 id="instructions">Instructions</h1>
 
         <h2>The Key</h2>
 
-        <p>This section contains the <em>encrypted</em> <code>age</code> public key pair, in two forms: as a QR code and as raw <code>.pem</code> text.
+        <p>This section contains the <em>encrypted</em> <code>age</code> public key pair, in two forms: as a QR code and as raw
+            <code>.pem</code> text.
             The text form is provided only for the highly unlikely case that the QR code does not work; while extremely tedious,
             it <em>can</em> be typed in by hand.</p>
 
@@ -71,7 +164,8 @@
         <p>Using the private key to decrypt a file requires the passphrase used when it was created. It is normally printed
             on the last page of this document, but it may be stored separately.</p>
 
-        <p>You also need a command line tool that performs <a href="https://github.com/C2SP/C2SP/blob/main/age.md">age file encryption</a>:</p>
+        <p>You also need a command line tool that performs <a href="https://github.com/C2SP/C2SP/blob/main/age.md">age file
+            encryption</a>:</p>
 
         <ul>
             <li><a href="https://github.com/str4d/rage">rage</a></li>
@@ -100,6 +194,5 @@
         <div class="notes">
             ${_NOTES}
         </div>
-
     </body>
 </html>
