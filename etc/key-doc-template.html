@@ -5,34 +5,28 @@
         <title>Key Document</title>
         <link rel="stylesheet" href="${_CSS_PATH}">
         ${_CSS_OVERRIDE}
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.400.0/umd/lucide.js"></script>
-        <link rel="stylesheet" href="~lucide-static/font/lucide.css">
     </head>
     <body>
 
         <img src="${_LOGO_PATH}" alt="logo">
         <br>
         <br>
-        <div class="letter">
+        <p>${_GREETING}</p>
 
-            <p>${_GREETING}</p>
+        <p>This document contains a “private key” that can unlock files encrypted with the associated
+            public key. This document is intended as a backup and <strong>must</strong> be kept in a safe place. It contains
+            instructions for using the (private) key to unlock a file — these instructions are a bit technical, so it includes
+            some ways to get help if needed.</p>
 
-            <p>This document contains a “private key” that can unlock files encrypted with the associated
-                public key. This document is intended as a backup and <strong>must</strong> be kept in a safe place. It contains
-                instructions for using the (private) key to unlock a file — these instructions are a bit technical, so it includes
-                some ways to get help if needed.</p>
+        <p>Know that the key <em>itself</em> is locked, so it <strong>cannot</strong> be used without the passphrase used to
+            create it. ${_PASSPHRASE_LOCATION}</p>
 
-            <p>Know that the key <em>itself</em> is locked, so it <strong>cannot</strong> be used without the passphrase used to
-                create it. ${_PASSPHRASE_LOCATION}</p>
+        <p>Welcome to the modern world of digital security.</p>
 
-            <p>Welcome to the modern world of digital security.</p>
+        <p>If all of this has you thinking <em>"uh… what?"</em>, please see <a href="#getting-help">Getting Help</a>.</p>
 
-            <p>If all of this has you thinking <em>"uh… what?"</em>, please see <a href="#getting-help">Getting Help</a>.</p>
-
-            <div class="closing">${closing}</div>
-            <div class="signature">${author}</div>
-
-        </div>
+        <div class="closing">${closing}</div>
+        <div class="signature">${author}</div>
 
         <p class="break-before"></p>
         <h1 id="getting-help">Getting Help</h1>
@@ -52,6 +46,10 @@
 
             <h2>Your Best Options: In-Person Help</h2>
 
+            <p><strong>Friends or Family in Tech:</strong> Think about anyone in your network who works with computers
+                professionally – software developers, IT support, network administrators, or even tech-savvy relatives. They might
+                be willing to help, and you already know them personally.</p>
+
             <p><strong>Local Computer Repair Shops:</strong> This is probably your best bet. Most towns have at least one computer
                 repair shop, and many of their technicians know their way around the Mac Terminal. When you call, you can say
                 something like: "I need help following some written instructions to use Terminal commands on my Mac. It involves
@@ -66,10 +64,6 @@
                 support staff are usually knowledgeable and trustworthy. You might be able to arrange a consultation where they
                 walk you through the process.</p>
 
-            <p><strong>Friends or Family in Tech:</strong> Think about anyone in your network who works with computers
-                professionally – software developers, IT support, network administrators, or even tech-savvy relatives. They might
-                be willing to help, and you already know them personally.</p>
-
             <h2>Community Resources</h2>
 
             <p><strong>Library Technology Centers:</strong> Many public libraries have tech help sessions or staff who assist with
@@ -82,11 +76,11 @@
             <h2>Last Resort: Online Help</h2>
 
             <div class="callout callout-warning">
-                <div class="callout-title">
-                    <i data-lucide="triangle-alert" class="callout-icon"></i>
-                    Last Resort Only
-                </div>
-                <p><strong>Only if you absolutely cannot find in-person help</strong>, you might consider freelance platforms like
+                <!--                <div class="callout-title">-->
+                <!--                    <span class="callout-label">⚠️ Last Resort Only</span>-->
+                <!--                </div>-->
+                <p><strong>Only if you absolutely cannot find in-person help</strong>, you might consider freelance platforms
+                    like-->
                     Upwork or Fiverr. But please understand – this is risky because you're dealing with your password manager
                     backup. If you go this route:</p>
                 <ul>
@@ -102,24 +96,34 @@
             <p>Here's some language you can use to protect yourself:</p>
 
             <div class="callout callout-quote">
-                <div class="callout-title">
-                    <i data-lucide="lightbulb" class="callout-icon"></i>
-                    What to Say
-                </div>
+                <!--                <div class="callout-title">-->
+                <!--                    <span class="callout-label">What to say</span>-->
+                <!--                </div>-->
                 <p>"I need help with a very sensitive file decryption. Before we start, I need your agreement that you will not
                     make any copies of my files, take screenshots, or retain any information from this session. The file contains
                     extremely sensitive personal data, and I need your word that everything stays confidential and nothing gets
                     saved to your system."</p>
+                <p><strong>Or for friends or family:</strong></p>
+                <p>“I need your help unlocking a really sensitive file. Before we get started, I just want to ask that you don’t
+                    make any copies, take screenshots, or save anything from this session. It has deeply personal information, and
+                    I’m trusting you to keep it completely private. I really appreciate your help.”</p>
             </div>
 
             <p>If they're professionals, they should understand completely and agree without hesitation.</p>
 
+<!--            <div class="callout callout-quote">-->
+<!--                <p>“I need your help unlocking a really sensitive file. Before we get started, I just want to ask that you don’t-->
+<!--                    make any copies, take screenshots, or save anything from this session. It has deeply personal information, and-->
+<!--                    I’m trusting you to keep it completely private. I really appreciate your help.”</p>-->
+<!--            </div>-->
+
+            <p class="break-before"></p>
+            <h2>Red Flags – When to Walk Away</h2>
             <div class="callout callout-danger">
-                <div class="callout-title">
-                    <i data-lucide="zap" class="callout-icon"></i>
-                    Red Flags – When to Walk Away
-                </div>
-                <p>Trust your instincts. If someone:</p>
+                <!--                <div class="callout-title">-->
+                <!--                    <span class="callout-label">Red Flags – When to Walk Away</span>-->
+                <!--                </div>-->
+                <p><strong>Trust your instincts.</strong> If someone:</p>
                 <ul>
                     <li>Asks to take your computer home or work on it remotely</li>
                     <li>Wants to copy your files "for backup purposes"</li>

@@ -220,7 +220,8 @@ createKeyDocument() {
 }
 
 generatePdf() {
-    local workDir=$(tempDirPath)
+# TODO!    local workDir=$(tempDirPath)
+    local workDir="${PWD}"
 
     # Set armoredKey var
 
