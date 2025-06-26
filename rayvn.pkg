@@ -43,10 +43,10 @@ declare -gA projectDependencies=(
     [font-fira-code_brew]=true
     [font-fira-code_url]='https://fonts.google.com/specimen/Fira+Code'
 
-    [wkhtmltopdf_min]='0.12.6'
-    [wkhtmltopdf_extract]=1
-    [wkhtmltopdf_brew]=true
-    [wkhtmltopdf_url]='https://wkhtmltopdf.org'
+    [node_min]='24.3.0'
+    [node_extract]=7
+    [node_brew]=true
+    [node_url]='https://nodejs.org/'
 
     [qrencode_min]='4.1.1'
     [qrencode_extract]=2

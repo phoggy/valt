@@ -70,6 +70,7 @@ init() {
     declare -gr qrCodeFileName='qr.png'
     qrCodeFile=
     armoredKey=
+    defaultPrinter=
 
     # Options
     htmlTemplateFile="${valtEtcDir}/key-doc-template.html"
@@ -84,6 +85,8 @@ init() {
     declare -gi showKeyAdvice=1
     declare -gi generatePdf=1
     declare -gi includePassphrase=1
+    declare -gi printPdf=1
+    declare -gi deletePdfAfterPrint=1
 
     while (( ${#} > 0 )); do
         case "${1}" in
@@ -93,8 +96,8 @@ init() {
             -c | --css) shift; setFileVar cssOverrideFile "${1}" "CSS" ;;
             --no-verify) verifyKeys=0 ;;
             --no-advice) showKeyAdvice=0 ;;
-            --no-pdf) generatePdf=0 ;;
-            --no-passphrase) includePassphrase=0 ;;
+            --no-pdf) generatePdf=0; includePassphrase=0; printPdf=0; deletePdfAfterPrint=0 ;;
+            --no-passphrase) includePassphrase=0; printPdf=0; deletePdfAfterPrint=0 ;;
             -q | --quick) showKeyAdvice=0; verifyKeys=0 ;;
             -f | --force) force=1 ;;
             -h | --help | help) usage ;;
@@ -108,10 +111,19 @@ init() {
 
     # TODO see Data Model in rayvn note !!! ------------------------------------------------
 
-    (( generatePdf )) && ensureKeyInfo
-    documentsFile="${valtConfigDir}/${prefix}-key.pdf"
+    if (( generatePdf )); then
+        ensureKeyInfo
+        require 'valt/pdf'
+        documentsFile="${valtConfigDir}/${prefix}-key.pdf"
 
-    # TODO ---------------------------------------------------------------------------------
+        if (( printPdf )); then
+
+            defaultPrinter="$(lpstat -d | cut -d: -f2 | cut -d' ' -f2)"
+
+            # TODO: check if online/available. Ask Claude.
+            # system_profiler SPPrintersDataType # shows full details, including if online, requires parsing
+        fi
+    fi
 
     if (( force )); then
         rm "${publicKeyFile}" "${privateKeyFile}" 2> /dev/null
@@ -213,15 +225,16 @@ createKeyDocument() {
     echo
     echo "$(ansi bold Generating documentation)"
     echo
-    generatePdf
+    createPdf
     echo
     echo "Keys documented in $(ansi cyan ${documentsFile})"
     open "${documentsFile}" &> /dev/null
 }
 
-generatePdf() {
+createPdf() {
 # TODO!    local workDir=$(tempDirPath)
     local workDir="${PWD}"
+    local footerTemplate
 
     # Set armoredKey var
 
@@ -243,26 +256,18 @@ generatePdf() {
     echo "${armoredKey}" | qrencode -l H -o "${qrCodeFile}" || fail
     assertFileExists "${qrCodeFile}"
 
-    # Generate substituted html file
+    # Generate substituted html file and footer template
 
     htmlFile="${workDir}/${htmlFileName}"
     generateHtml "${htmlFile}"
     assertFileExists "${htmlFile}"
+    footerTemplate="$(generateFooterTemplate)"
 
-    # Move to work dir so that relative paths in html work correctly
+    # Move to work dir so that relative paths in html work correctly and
+    # generate the pdf
 
     cd ${workDir} || fail
-
-    # Convert html to pdf
-
-    wkhtmltopdf --enable-local-file-access \
-        --enable-forms \
-        --footer-left "${author} Private Key" \
-        --footer-center "$(date '+%B %e, %Y')" \
-        --footer-right "Page [page] of [topage]" \
-        --footer-font-name "Helvetica, Arial, sans-serif" \
-        --footer-font-size 8 \
-        "${htmlFile}" "${documentsFile}"
+    generatePdf "${htmlFile}" "${documentsFile}" "${footerTemplate}" || fail
 
     # Set metadata and encrypt with a strong password
 
@@ -278,7 +283,7 @@ generatePdf() {
         -Keywords="${keywords}" \
         -Creator="${creator}" \
         -overwrite_original \
-        "${documentsFile}"  > /dev/null
+        "${documentsFile}"  > /dev/null || fail
 
     # Encrypt with a strong owner password so that permissions cannot be changed, ensuring
     # that the user password is empty so viewing does not require a password. The owner
@@ -290,7 +295,43 @@ generatePdf() {
 
     qpdf ${documentsFile} \
         --encrypt "${userPW}" "${ownerPW}" 256 --modify=none -- \
-        --replace-input
+        --replace-input  || fail
+}
+
+generateFooterTemplate() {
+    local footerClass=$(awk '
+        /^[[:space:]]*\.footer[[:space:]]*\{/ {
+            print
+            brace_count = 1
+            while ((getline line) > 0) {
+                print line
+                # Count opening and closing braces
+                temp1 = line
+                gsub(/[^{]/, "", temp1)
+                opening = length(temp1)
+                temp2 = line
+                gsub(/[^}]/, "", temp2)
+                closing = length(temp2)
+                brace_count += opening - closing
+                if (brace_count == 0) break
+            }
+            exit
+        }
+        ' "${valtEtcDir}/key-doc.css")
+
+    cat <<- EOF
+		<style>
+		    ${footerClass}
+		    .page-info .pageNumber::after {
+		        content: " / ";
+		    }
+		</style>
+		<div class="footer">
+		    <span>${author} Private Key</span>
+		    <span>$(date '+%B %e, %Y')</span>
+		    <span class="page-info"><span class="pageNumber"></span><span class="totalPages"></span></span>
+		</div>
+	EOF
 }
 
 generateHtml() {
