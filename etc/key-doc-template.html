@@ -39,13 +39,13 @@
         </ol>
 
         <p>If they aren't available, don't worry – there are people out there who can help you through this process.
-            Since what you're trying to decrypt may be extremely sensitive (e.g. a password manager backup), we need
-            to be very careful about who we trust and how we get help...</p>
+            Since what you're trying to decrypt may be extremely sensitive (e.g. a password manager backup), you need
+            to be careful about who you trust and how you get help...</p>
 
         <div class="getting-help">
-            <h1>Finding Help</h1>
+            <h2>Finding Help</h2>
 
-            <h2>Your Best Options: In-Person Help</h2>
+            <h3>Your Best Options: In-Person Help</h3>
 
             <p><strong>Friends or Family in Tech:</strong> Think about anyone in your network who works with computers
                 professionally – software developers, IT support, network administrators, or even tech-savvy relatives. They might
@@ -65,7 +65,7 @@
                 support staff are usually knowledgeable and trustworthy. You might be able to arrange a consultation where they
                 walk you through the process.</p>
 
-            <h2>Community Resources</h2>
+            <h3>Community Resources</h3>
 
             <p><strong>Library Technology Centers:</strong> Many public libraries have tech help sessions or staff who assist with
                 computer problems. While they might not know the specific commands, they can help you get comfortable with the
@@ -74,15 +74,16 @@
             <p><strong>Senior Centers or Community Centers:</strong> If you're looking for a comfortable, non-intimidating
                 environment, these often have volunteer tech helpers who are patient and understanding.</p>
 
-            <h2>Last Resort: Online Help</h2>
+            <div class="page-break"></div>
+
+            <h3>Last Resort: Online Help</h3>
 
             <div class="callout callout-warning">
                 <!--                <div class="callout-title">-->
                 <!--                    <span class="callout-label">⚠️ Last Resort Only</span>-->
                 <!--                </div>-->
                 <p><strong>Only if you absolutely cannot find in-person help</strong>, you might consider freelance platforms
-                    like-->
-                    Upwork or Fiverr. But please understand – this is risky because you're dealing with your password manager
+                    like Upwork or Fiverr. But please understand – this is risky because you're dealing with your password manager
                     backup. If you go this route:</p>
                 <ul>
                     <li>Never, ever share your actual files or private keys</li>
@@ -92,39 +93,35 @@
                 </ul>
             </div>
 
-            <h2>What to Say to Anyone Helping You</h2>
+            <h3>What to Say to Anyone Helping You</h3>
 
             <p>Here's some language you can use to protect yourself:</p>
 
             <div class="callout callout-quote">
-                <!--                <div class="callout-title">-->
-                <!--                    <span class="callout-label">What to say</span>-->
-                <!--                </div>-->
+                <div class="callout-title">
+                    <span class="callout-label">Friends and family</span>
+                </div>
+
+                <p>“I need your help unlocking a really sensitive file. Before we get started, I just want to ask that you don’t
+                    make any copies, take screenshots, or save anything from this session. It has deeply personal information, and
+                    I’m trusting you to keep it completely private. I really appreciate your help.”</p>
+
+                <div class="callout-title">
+                    <span class="callout-label">Professionals</span>
+                </div>
+
                 <p>"I need help with a very sensitive file decryption. Before we start, I need your agreement that you will not
                     make any copies of my files, take screenshots, or retain any information from this session. The file contains
                     extremely sensitive personal data, and I need your word that everything stays confidential and nothing gets
                     saved to your system."</p>
-                <p><strong>Or for friends or family:</strong></p>
-                <p>“I need your help unlocking a really sensitive file. Before we get started, I just want to ask that you don’t
-                    make any copies, take screenshots, or save anything from this session. It has deeply personal information, and
-                    I’m trusting you to keep it completely private. I really appreciate your help.”</p>
+
+                <span class="callout-label">Professionals should understand completely and agree without hesitation.</span>
             </div>
-
-            <p>If they're professionals, they should understand completely and agree without hesitation.</p>
-
-<!--            <div class="callout callout-quote">-->
-<!--                <p>“I need your help unlocking a really sensitive file. Before we get started, I just want to ask that you don’t-->
-<!--                    make any copies, take screenshots, or save anything from this session. It has deeply personal information, and-->
-<!--                    I’m trusting you to keep it completely private. I really appreciate your help.”</p>-->
-<!--            </div>-->
 
             <div class="page-break"></div>
 
-            <h2>Red Flags – When to Walk Away</h2>
+            <h3>Red Flags – When to Walk Away</h3>
             <div class="callout callout-danger">
-                <!--                <div class="callout-title">-->
-                <!--                    <span class="callout-label">Red Flags – When to Walk Away</span>-->
-                <!--                </div>-->
                 <p><strong>Trust your instincts.</strong> If someone:</p>
                 <ul>
                     <li>Asks to take your computer home or work on it remotely</li>
@@ -136,7 +133,7 @@
                 <p>Just politely decline and find someone else.</p>
             </div>
 
-            <h2>A Final Thought</h2>
+            <h3>A Final Thought</h3>
 
             <p>Remember, you're not asking for anything unreasonable. Plenty of people know how to use Terminal commands, and most
                 will be happy to help you follow written instructions. The key is finding someone trustworthy who respects the
@@ -144,20 +141,23 @@
                 right.</p>
         </div>
 
-
         <div class="page-break"></div>
+
         <h1 id="instructions">Instructions</h1>
 
-        <h2>The Key</h2>
+        <h2>Paper Key</h2>
 
-        <p>This section contains the <em>encrypted</em> <code>age</code> public key pair, in two forms: as a QR code and as raw
-            <code>.pem</code> text.
-            The text form is provided only for the highly unlikely case that the QR code does not work; while extremely tedious,
-            it <em>can</em> be typed in by hand.</p>
+        <p>Hopefully you have the key in digital form, perhaps on a USB drive or in a file. If you don't, this section has two
+        forms of backup. Both the QR code and "<code>.pem</code>" formatted text below contain the <em>encrypted</em>
+        <code>age</code> public key pair. Both should be converted to a text file by using your phone and
+        sending the result to your computer then saving it as a file.</p>
 
         <p>To use the QR code, just open the camera app on your phone and point it at the image. You should see
-            the same text as below (maybe just the beginning). Just copy it, send it to the computer on which you
-            want to use the key and save it as a file with whatever name you like.</p>
+            the same text as below (maybe just the beginning).</p>
+
+        <p>If that fails, try scanning the text below it. If you don't know how, search the web for "scan text on phone".
+            Worst case, you can always type it in by hand(!), including the leading and trailing lines, each of which begins
+            and ends with 5 dashes.</p>
 
         <img src="${_QR_CODE_PATH}" alt="QR Code">
 
@@ -165,7 +165,7 @@
 
         <div class="page-break"></div>
 
-        <h2>The Prerequisites</h2>
+        <h2>Prerequisites</h2>
 
         <p>Using the private key to decrypt a file requires the passphrase used when it was created. It is normally printed
             on the last page of this document, but it may be stored separately.</p>
@@ -187,9 +187,9 @@
 
         <div class="page-break"></div>
 
-        <h2>The Passphrase</h2>
+        <h2>Passphrase</h2>
 
-        <p>Here is the passphrase used when creating the keys on page 3</p>
+        <p>Here is the passphrase used when creating the key pair:</p>
 
         <div class="passphrase-box">
             ${_PHRASE}
