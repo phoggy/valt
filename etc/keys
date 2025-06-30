@@ -109,27 +109,45 @@ init() {
     privateKeyFile="${valtConfigDir}/${prefix}.key"
     publicKeyFile="${valtConfigDir}/${prefix}-public.key"
 
-    # TODO see Data Model in rayvn note !!! ------------------------------------------------
+    if (( force )); then
+        rm "${publicKeyFile}" "${privateKeyFile}" 2> /dev/null
+    else
+        assertFileDoesNotExist "${privateKeyFile}"
+        assertFileDoesNotExist "${publicKeyFile}"
+    fi
 
+    prepareForPdf
+}
+
+prepareForPdf() {
     if (( generatePdf )); then
         ensureKeyInfo
         require 'valt/pdf'
         documentsFile="${valtConfigDir}/${prefix}-key.pdf"
 
         if (( printPdf )); then
-
-            defaultPrinter="$(lpstat -d | cut -d: -f2 | cut -d' ' -f2)"
-
-            # TODO: check if online/available. Ask Claude.
-            # system_profiler SPPrintersDataType # shows full details, including if online, requires parsing
+            local printers status prompt answer
+            local printers="$(system_profiler SPPrintersDataType -json)"
+            defaultPrinter="$(echo "${printers}" | jq -r '.SPPrintersDataType[] | select(.default == "yes") | ._name')"
+            status="$(echo "${printers}" | jq -r --arg name "${defaultPrinter}" '.SPPrintersDataType[] | select(._name == $name) | .status')"
+            echo
+            if [[ ${status} == offline ]]; then
+                echo "Your default printer '${defaultPrinter}' is $(ansi bold_red offline)."
+                echo "If you just powered on, it may take up to a minute before it appears online."
+                read -p "Continue without printing key documentation? $(ansi dim [y/n]) " answer
+                [[ ${answer} == y ]] || exit 0
+                printPdf=0
+                includePassphrase=0
+            else
+                echo "Key documentation will be printed to your default printer '${defaultPrinter}'."
+                if (( includePassphrase )); then
+                    echo "The passphrase that you enter below will be included in the document."
+                    if (( deletePdfAfterPrint )); then
+                        echo "After printing, the document will be deleted for your security."
+                    fi
+                fi
+            fi
         fi
-    fi
-
-    if (( force )); then
-        rm "${publicKeyFile}" "${privateKeyFile}" 2> /dev/null
-    else
-        assertFileDoesNotExist "${privateKeyFile}"
-        assertFileDoesNotExist "${publicKeyFile}"
     fi
 }
 
