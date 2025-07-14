@@ -161,7 +161,7 @@ getPin() {
                 break
             else
                 (( retries -= 1 ))
-                mismatchError "   ${confirmError}" ${retries}   # TODO WHERE DID THIS FUNCTION GO??
+                mismatchError "   ${confirmError}" ${retries}
             fi
         done
         if (( retries <= 0 )); then
