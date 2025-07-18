@@ -4,10 +4,6 @@
 # Library supporting password/phrase breach testing
 # Intended for use via: require 'valt/pwned'
 
-require 'rayvn/core'
-
-declare -grx pwnedPasswordsApiUrl='https://api.pwnedpasswords.com'
-
 hasNotBeenPwned() {
     local pass="${1}"
     local hash=$(echo -n "${pass}" | shasum | cut -d' ' -f1 | tr '[:lower:]' '[:upper:]')
@@ -27,3 +23,12 @@ hasNotBeenPwned() {
     fi
     return 0 # has not been pwned
 }
+
+
+PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/pwned' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
+
+_init_valt_pwned() {
+    require 'rayvn/core'
+}
+
+declare -grx pwnedPasswordsApiUrl='https://api.pwnedpasswords.com'

@@ -3,11 +3,6 @@
 # Library supporting age file encryption via rage
 # Intended for use via: require 'valt/age'
 
-require 'rayvn/core' 'valt/pinentry'
-
-declare -grx ageFileExtension='age'
-declare -grx tarFileExtension='tar.xz'
-
 showAgeKeyPairAdvice() {
 
     echo "Generally, you will only need a single key pair for all your file encryption needs. Your new private key will itself be"
@@ -61,9 +56,9 @@ createAgeKeyPair() {
     [[ -f ${keyFile} ]] && fail "${keyFile} should have been deleted!"
 
     (( capture )) && export _rayvnAnonymousPipe=$(makeTempDir 'XXXXXXXXXXXX')
-
+debug 'encrypting key'
     echo "${key}" | rage -p -o "${keyFile}" -
-
+debug 'encrypting key RETURN'
     if (( capture )) && [[ -s "${_rayvnAnonymousPipe}" ]]; then
         local result
         read -r result < "${_rayvnAnonymousPipe}"
@@ -124,3 +119,12 @@ setSampleText() {
 HEREDOC
     fi
 }
+
+PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/age' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
+
+_init_valt_age() {
+    require 'rayvn/core' 'valt/pinentry'
+}
+
+declare -grx ageFileExtension='age'
+declare -grx tarFileExtension='tar.xz'

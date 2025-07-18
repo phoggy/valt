@@ -3,8 +3,6 @@
 # Library supporting password/phrase generation
 # Intended for use via: require 'valt/passwords'
 
-require 'rayvn/core' 'valt/pwned'
-
 # TODO: don't display strength (via mrld) as it is inaccurate. Just pick a threshold and warn is week if below.
 
 generatePassword() {
@@ -136,6 +134,12 @@ readPassword() {
             resultVar="${result}"
         fi
     fi
+}
+
+PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/password' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
+
+_init_valt_password() {
+    require 'rayvn/core' 'valt/pwned'
 }
 
 _randomIndex() {

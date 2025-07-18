@@ -3,8 +3,6 @@
 # Library to generate PDF files from HTML.
 # Intended for use via: require 'valt/pdf'
 
-require 'rayvn/core'
-
 generatePdf() {
     local htmlFile="${1}"
     local outputFile="${2}"
@@ -25,9 +23,11 @@ generatePdf() {
     )
 }
 
-PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
+PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/pdf' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_pdf() {
+    require 'rayvn/core'
+
     declare -gr nodeJsHome="$(configDirPath)/node-js"
     local srcFile="${valtEtcDir}/generate-pdf.js"
     local dstFile="${nodeJsHome}/generate-pdf.js"
