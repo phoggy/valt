@@ -14,11 +14,8 @@ showAgeKeyPairAdvice() {
     echo "whole collection of encrypted data. Since human memory $(ansi bold_italic is) fallible, it's very important that you also keep"
     echo "written copies somewhere secure (e.g. a safe, a good friend, a safe-deposit box) in case you forget or become incapacitated."
     echo ""
-
-    echo "generally much better sincbetter form of"
-    echo "'passwr"
-
-
+    echo "!!! TODO!!!" # TODO
+    echo
 
     echo "Your new private key will itself be encrypted, and you will be prompted to enter a 'passphrase' for it (twice). By using"
     echo "a multiple words rather than a terse sequence of numbers, a passphrase can be memorized. Generally and it is"
