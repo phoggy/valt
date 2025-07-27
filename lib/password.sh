@@ -66,7 +66,7 @@ readPassword() {
     echo -n "${prompt}" > ${terminal}
 
     if (( ! visible )); then
-        read -rs result < ${terminal}
+        read -t ${timeout} -rs result < ${terminal}
     else
 
         # Process one character at a time
