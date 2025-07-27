@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-require 'rayvn/core' 'rayvn/safe-source' 'valt/age' 'valt/pinentry'
+require 'rayvn/core' 'rayvn/config' 'valt/age' 'valt/pinentry'
 
 usage() {
     echo
@@ -163,7 +163,7 @@ ensureKeyInfo() {
         cp "${keyInfoTemplateFile}" "${keyInfoFile}" || fail
         status="must be"
     else
-        sourceSafeStaticVars "${keyInfoFile}"
+        sourceConfigFile "${keyInfoFile}"
         assertKeyInfoVar closing author completed
         assertKeyInfoArrayVar contacts
         (( includePassphrase )) || assertKeyInfoArrayVar notes # required if passphrase omitted
