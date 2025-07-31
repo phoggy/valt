@@ -173,7 +173,7 @@ replaceOutputFile() {
     local outputFile="${1}"
     if (( ! force )); then
         echo "$(ansi bold ${outputFile}) already exists."
-        read -p "$(ansi red Replace all output files?) y/n: " reply
+        prompt "$(ansi red Replace all output files?)" y n reply
         [[ ${reply} != "y" ]] && exit 0
         force=1
     fi

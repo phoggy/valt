@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-require 'rayvn/core' 'rayvn/config' 'valt/age' 'valt/pinentry'
+require 'rayvn/prompt' 'rayvn/config' 'valt/age' 'valt/pinentry'
 
 usage() {
     echo
@@ -134,7 +134,7 @@ prepareForPdf() {
             if [[ ${status} == offline ]]; then
                 echo "Your default printer '${defaultPrinter}' is $(ansi bold_red offline)."
                 echo "If you just powered on, it may take up to a minute before it appears online."
-                read -p "Continue without printing key documentation? $(ansi dim [y/n]) " answer
+                prompt "Continue without printing key documentation" y n answer
                 [[ ${answer} == y ]] || exit 0
                 printPdf=0
                 includePassphrase=0
@@ -209,9 +209,9 @@ createKeys() {
         echo
         showAgeKeyPairAdvice
         local reply
-        read -t ${inputTimeout} -p "Would you like help generating a passphrase? (y/n): " reply
+        prompt "Would you like help generating a passphrase?" y n reply
         echo
-        [[ ${reply,,} == 'y' ]] && generatePass
+        [[ ${reply} == 'y' ]] && generatePass
     fi
     if (( includePassphrase )); then
         createAgeKeyPair "${privateKeyFile}" "${publicKeyFile}" _PHRASE || fail

@@ -66,7 +66,7 @@ readPassword() {
     echo -n "${prompt}" > ${terminal}
 
     if (( ! visible )); then
-        read -t ${timeout} -rs result < ${terminal}
+        read -t ${timeout} -rs result < ${terminal}  # TODO: use rayvn/prompt after adding support for hidden input??
     else
 
         # Process one character at a time

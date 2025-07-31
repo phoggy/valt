@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-require 'rayvn/core' 'valt/age'
+require 'rayvn/prompt' 'valt/age'
 
 usage() {
     echo
@@ -102,7 +102,7 @@ replaceOutputFile() {
     local target="${1}"
     if (( ! force )); then
         echo "$(ansi bold ${target}) already exists."
-        read -p "$(ansi red Replace all output files?) y/n: " reply
+        prompt "$(ansi red Replace all output files?)" y n reply
         [[ ${reply} != "y" ]] && exit 0
         force=1
     fi
