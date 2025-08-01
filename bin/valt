@@ -90,7 +90,7 @@ init() {
         shift
     done
 
-#    debugVars passwordVisibility expertMode proxyPinEntry command commandOptions
+#    debugVar passwordVisibility expertMode proxyPinEntry command commandOptions
 
     assertValidVisibility
     [[ ${command} ]] || usage "missing command"
