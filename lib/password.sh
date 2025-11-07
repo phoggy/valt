@@ -43,7 +43,7 @@ readVerifiedPassword() {
 
 readPassword() {
     local result count=0 mask key
-    local prompt="$(ansi cyan "${1}: ")"
+    local prompt="${ show cyan "${1}: " ;}"
     local -n resultVar="${2}"
     local timeout="${3:-30}"
     local checkResult="${4:-true}"
@@ -55,7 +55,7 @@ readPassword() {
     resultVar=''
 
     case ${passwordVisibility} in
-        none) visible=0; show=0; prompt="$(ansi cyan "${1}") $(ansi dim [hidden]) " ;;
+        none) visible=0; show=0; prompt="${ show cyan "${1}" plain dim "[hidden]" ;} " ;;
         hide) show=0 ;;
         show) show=1 ;;
         *) fail "unknown visibility mode: ${passwordVisibility}"

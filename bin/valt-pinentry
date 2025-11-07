@@ -227,7 +227,7 @@ mismatchError() {
     local remaining=${2}
     local retries='retries'
     (( ${remaining} == 1 )) && retries='retry'
-    print "$(ansi red "${error}") (${remaining} ${retries} remain)" > ${terminal}
+    show red "${error}" plain "(${remaining} ${retries} remain)" > ${terminal}
     print > ${terminal}
 }
 

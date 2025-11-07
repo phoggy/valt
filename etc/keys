@@ -4,26 +4,26 @@ require 'rayvn/prompt' 'rayvn/config' 'valt/age' 'valt/pinentry'
 
 usage() {
     echo
-    echo "$(ansi bold Generate an age public key pair and backup documentation)."
+    show bold "Generate an age public key pair and backup documentation."
     echo
-    echo "Usage: $(ansi bold_blue valt keys) [OPTIONS]"
+    show "Usage:" bold blue "valt keys" plain "[OPTIONS]"
     echo
-    echo "Private keys are encrypted and a strong passphrase is $(ansi bold_green highly) encouraged; advice and an opportunity to"
+    show "Private keys are encrypted and a strong passphrase is" bold green "highly" plain "encouraged; advice and an opportunity to"
     echo "generate one will be offered."
     echo
     echo "A PDF file will be created containing your keys, also in encrypted form, to serve as a backup for you and/or your"
     echo "successors. Detailed usage instructions are included. Keys are represented as a QR code and again in a text format"
-    echo "(often called \"paper keys\"). Content will be personalized: you will be prompted to edit a $(ansi blue key.info) file".
+    show "(often called \"paper keys\"). Content will be personalized: you will be prompted to edit a" blue "key.info" plain "file."
     echo
     echo "By default, the passphrase you enter when creating the keys will be included in the generated PDF and you will be"
     echo "prompted to select a printer and choose a copy count. After printing, the PDF will be deleted to keep your passphrase"
     echo "secure."
     echo
-    echo "   $(ansi bold store the documents in secure locations, e.g. safe deposit box/fire safe and/or with trusted people!)"
+    show "  " bold "store the documents in secure locations, e.g. safe deposit box/fire safe and/or with trusted people!"
     echo
-    echo "If you specify the --no-passphrase option, you will not be prompted to the print the PDF. However, you $(ansi bold must) still"
+    show "If you specify the --no-passphrase option, you will not be prompted to the print the PDF. However, you" bold "must" plain "still"
     echo "make the passphrase available to whomever has access to the document! To ensure this, the 'notes' property in the"
-    echo "$(ansi blue key.info) will be required and should be used to help guide the reader to access the passphrase."
+    show blue "key.info" plain "will be required and should be used to help guide the reader to access the passphrase."
     echo
     echo "Options"
     echo
@@ -38,12 +38,12 @@ usage() {
     echo "    -c, --css CSS                 Apply style overrides from the CSS file for PDF generation."
     echo "    -h, --help                    Display usage and exit."
     echo
-    echo "$(ansi bold Document Customization)"
+    show bold "Document Customization"
     echo
     echo "The HTML template can be changed from the default and CSS style overrides can be applied. The default template"
-    echo "and primary CSS file can be found in the $(ansi blue ${valtEtcDir}) directory."
+    show "and primary CSS file can be found in the" blue "${valtEtcDir}" plain "directory."
     echo
-    echo "Template substitutions are performed with variables defined in the $(ansi blue key.info) file. Note that keys"
+    show "Template substitutions are performed with variables defined in the" blue "key.info" plain "file. Note that keys"
     echo "prefixed with an underscore are reserved for system use."
     echo
     echo "The template can be specified with the --template option, and default styles can be extended using the --css option."
@@ -132,7 +132,7 @@ prepareForPdf() {
             status="$(echo "${printers}" | jq -r --arg name "${defaultPrinter}" '.SPPrintersDataType[] | select(._name == $name) | .status')"
             echo
             if [[ ${status} == offline ]]; then
-                echo "Your default printer '${defaultPrinter}' is $(ansi bold_red offline)."
+                show "Your default printer '${defaultPrinter}' is" bold red "offline" plain "."
                 echo "If you just powered on, it may take up to a minute before it appears online."
                 prompt "Continue without printing key documentation" y n answer
                 [[ ${answer} == y ]] || exit 0
@@ -174,7 +174,7 @@ ensureKeyInfo() {
     fi
 
     echo
-    echo "The $(ansi bold key.info) file at $(ansi blue ${valtConfigDir}) ${status} completed."
+    show "The" bold "key.info" plain "file at" blue "${valtConfigDir}" plain "${status} completed."
     echo "Please edit and complete it before proceeding."
     bye
 }
@@ -204,7 +204,7 @@ assertKeyInfoArrayVar() {
 
 createKeys() {
     echo
-    echo "$(ansi bold Generating keys)"
+    show bold "Generating keys"
     if (( showKeyAdvice )); then
         echo
         showAgeKeyPairAdvice
@@ -220,32 +220,32 @@ createKeys() {
         _PHRASE="(see Notes)"
     fi
     echo
-    echo "Public key (aka 'recipient') file: $(ansi cyan ${publicKeyFile})"
-    echo "Private key (aka 'identity') file: $(ansi cyan ${privateKeyFile}) (also contains public key)"
+    show "Public key (aka 'recipient') file:" cyan "${publicKeyFile}"
+    show "Private key (aka 'identity') file:" cyan "${privateKeyFile}" plain "(also contains public key)"
 
     if (( verifyKeys )); then
         echo
-        echo "$(ansi bold Verifying keys)"
+        show bold "Verifying keys"
         echo
         verifyAgeKeyPair "${privateKeyFile}" "${publicKeyFile}"
         echo
-        echo "$(ansi bold_green Verified) that a file encrypted with $(ansi cyan ${publicKeyFile}) decrypts with passphrase and $(ansi cyan ${privateKeyFile})."
+        show bold green "Verified" plain "that a file encrypted with" cyan "${publicKeyFile}" plain "decrypts with passphrase and" cyan "${privateKeyFile}" plain "."
     fi
 }
 
 generatePass() {
-    echo "$(ansi bold_yellow TODO): implement generatePass()!" # TODO!!
+    show bold yellow "TODO" plain ": implement generatePass()!" # TODO!!
     echo
 }
 
 createKeyDocument() {
     local options=
     echo
-    echo "$(ansi bold Generating documentation)"
+    show bold "Generating documentation"
     echo
     createPdf
     echo
-    echo "Keys documented in $(ansi cyan ${documentsFile})"
+    show "Keys documented in" cyan "${documentsFile}"
     open "${documentsFile}" &> /dev/null
 }
 

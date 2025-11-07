@@ -4,9 +4,9 @@ require 'rayvn/prompt' 'valt/age'
 
 usage() {
     echo
-    echo "$(ansi bold Decrypt a file using an age private key)."
+    show bold "Decrypt a file using an age private key."
     echo
-    echo "Usage: $(ansi bold_blue valt decrypt) [OPTIONS] -i IDENTITY PATH"
+    show "Usage:" bold blue "valt decrypt" plain "[OPTIONS] -i IDENTITY PATH"
     echo
     echo "Decrypted tar files will be unpacked by default into a new directory using the filename without any extension."
     echo
@@ -75,7 +75,7 @@ progress() {
 
 decryptFile() {
     [[ -f ${decryptedFile} ]] && replaceOutputFile "${decryptedFile}"
-    progress "Decrypting $(ansi cyan ${file}) to $(ansi bold ${decryptedFile})"
+    progress "${ show "Decrypting" cyan "${file}" plain "to" bold "${decryptedFile}" ;}"
     rage -d ${identities} "${file}" -o "${decryptedFile}" 2> >(redStream) || fail
 }
 
@@ -83,7 +83,7 @@ unpackFile() {
     if (( unpack )); then
         if tar tf "${decryptedFile}" &> /dev/null; then
             setUnpackDir
-            progress "Unpacking $(ansi cyan ${decryptedFile}) to $(ansi bold ${unpackDir})"
+            progress "${ show "Unpacking" cyan "${decryptedFile}" plain "to" bold "${unpackDir}" ;}"
             tar -xf "${decryptedFile}" -C "${unpackDir}"
         fi
     fi
@@ -101,13 +101,13 @@ replaceOutputFile() {
     local reply
     local target="${1}"
     if (( ! force )); then
-        echo "$(ansi bold ${target}) already exists."
-        prompt "$(ansi red Replace all output files?)" y n reply
+        show bold "${target}" plain "already exists."
+        prompt "${ show red "Replace all output files?" ;}" y n reply
         [[ ${reply} != "y" ]] && exit 0
         force=1
     fi
     rm -rf "${target}" || fail
-    progress "Deleted $(ansi bold ${target})"
+    progress "${ show "Deleted" bold "${target}" ;}"
 }
 
 main "${@}"

@@ -11,7 +11,7 @@ showAgeKeyPairAdvice() {
     echo
     echo "Rather than a typical password, a multi word 'passphrase' is a better choice here since it will be far easier"
     echo "to remember. Just as with a password manager, the idea is that you remember one secret that gives you access to a"
-    echo "whole collection of encrypted data. Since human memory $(ansi bold_italic is) fallible, it's very important that you also keep"
+    show "whole collection of encrypted data. Since human memory" bold italic "is" plain "fallible, it's very important that you also keep"
     echo "written copies somewhere secure (e.g. a safe, a good friend, a safe-deposit box) in case you forget or become incapacitated."
     echo ""
     echo "!!! TODO!!!" # TODO
@@ -22,12 +22,12 @@ showAgeKeyPairAdvice() {
     echo "important that you use a strong one. preferably one that is easy for you to remember. The following are examples of passwords and passphrases, with rough"
     echo "estimated 'crack' times using modern systems:"
     echo
-    echo "   $(ansi bold_cyan My dog Oscar)                    ⮕  $(ansi bold_green easy) to remember $(ansi red non-random) & $(ansi red short):  6 days to crack"
-    echo "   $(ansi bold_cyan 'BkZB&XWGj%3Tx')                   ⮕  $(ansi bold_red hard) to remember random password:     31 years to crack"
-    echo "   $(ansi bold_cyan repossess thursday flaky lazy)   ⮕  $(ansi bold fair) to remember random passphrase:   centuries to crack"
+    show "  " bold cyan "My dog Oscar" plain "                    ⮕ " bold green "easy" plain "to remember" red "non-random" plain "&" red "short" plain ":  6 days to crack"
+    show "  " bold cyan "BkZB&XWGj%3Tx" plain "                   ⮕ " bold red "hard" plain "to remember random password:     31 years to crack"
+    show "  " bold cyan "repossess thursday flaky lazy" plain "   ⮕ " bold "fair" plain "to remember random passphrase:   centuries to crack"
     echo
-    echo "A good passphrase requires randomness, and we humans are very bad at that. There's a famous $(ansi magenta xkcd)"
-    echo "comic on this subject ($(ansi blue ${webXkcdPasswordsUrl})) that ends with this:"
+    show "A good passphrase requires randomness, and we humans are very bad at that. There's a famous" magenta "xkcd"
+    show "comic on this subject (" blue "${webXkcdPasswordsUrl}" plain ") that ends with this:"
     echo
     echo "    \"Through 20 years of effort, we've successfully trained everyone to use passwords that"
     echo "     are hard for humans to remember, but easy for computers to guess.\""
@@ -36,7 +36,7 @@ showAgeKeyPairAdvice() {
     echo "That comic makes another important point in the last cell: creating a mental scene to represent your"
     echo "passphrase is an excellent way to help remember it."
     echo
-    echo "Please use a $(ansi bold_green strong) passphrase, preferably generated. When you enter it below, a srayvn will be shown"
+    show "Please use a" bold green "strong" plain "passphrase, preferably generated. When you enter it below, a srayvn will be shown"
     echo "so you can see the strength of your passphrase."
     echo
 }
