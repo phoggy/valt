@@ -209,7 +209,7 @@ createKeys() {
         echo
         showAgeKeyPairAdvice
         local reply
-        prompt "Would you like help generating a passphrase?" y n reply
+        confirm "Would you like help generating a passphrase?" y n reply
         echo
         [[ ${reply} == 'y' ]] && generatePass
     fi
