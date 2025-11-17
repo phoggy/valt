@@ -101,8 +101,8 @@ readPassword() {
         # Mask password if we did not do so above
 
         if (( show )); then
-            printRepeat $'\b' ${count} > ${terminal}
-            printRepeat '*' ${count}  > ${terminal}
+            repeat $'\b' ${count} > ${terminal}
+            repeat '*' ${count}  > ${terminal}
         fi
     fi
 
@@ -118,7 +118,7 @@ readPassword() {
             hasNotBeenPwned "${result}"; pwned=${?}
         fi
     fi
-    print > ${terminal} # complete the line
+    echo > ${terminal} # complete the line
 
     # Return the result if not cancelled and not pwned
 

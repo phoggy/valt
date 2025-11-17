@@ -229,7 +229,7 @@ mismatchError() {
     local retries='retries'
     (( remaining == 1 )) && retries='retry'
     show red "${error}" plain "(${remaining} ${retries} remain)" > ${terminal}
-    print > ${terminal}
+    echo > ${terminal}
 }
 
 source rayvn.up --add valt 'rayvn/core' 'valt/password'
