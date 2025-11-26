@@ -17,7 +17,7 @@ generatePassword() {
     local password=''
 
     for (( i = 0; i < ${passwordLength}; i++ )); do
-        _randomIndex ${charSetLen} index
+        randomInteger ${charSetLen} index
         password+=${charSet[${index}]}
     done
     echo "${password}"
@@ -140,24 +140,4 @@ PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/password' PRIV
 
 _init_valt_password() {
     require 'rayvn/core' 'valt/pwned'
-}
-
-_randomIndex() {
-    local -i maxIndex="${1}"
-    local -n resultInt=${2}
-    local -i randomInt
-
-    if [[ ! ${checkedDevUrandom} ]]; then
-        declare -grx hasDevUrandom=$(ls /dev/urandom > /dev/null && echo -n 'true' || echo -n '')
-        declare -grx checkedDevUrandom='true'
-        if [[ ! ${hasDevUrandom} ]]; then
-            warn "generated passwords/phrases *may* not be random enough: use ${webPasswordGenUrl}"
-        fi
-    fi
-    if [[ ${hasDevUrandom} ]]; then
-        randomInt=$(head -c4 /dev/urandom | od -An -tu4)
-    else
-        randomInt=${SRANDOM}
-    fi
-    resultInt=$(( ${randomInt} % ${maxIndex} ))
 }
