@@ -28,13 +28,14 @@ usage() {
     echo "Options"
     echo
     echo "    -p, --prefix PREFIX           Use PREFIX for key file names. Defaults to ${USER}."
+    show "    -o, --output-dir PATH         Set output directory. Defaults to the" blue "${valtConfigDir}" plain "directory."
     echo "    -f, --force                   Overwrite existing files."
     echo "    --no-verify                   Do not verify keys."
     echo "    --no-advice                   Do not show passphrase advice."
     echo "    --no-pdf                      Do not generate PDF file."
     echo "    --no-passphrase               Do not include the passphrase on the PDF file."
-    echo "    -q, --quick                   Do not verify keys or show passphrase advice."
-    echo "    -t, --template TEMPLATE       Use the TEMPLATE markdown file instead of the default for PDF generation."
+    echo "    --no-passphrase               Do not include the passphrase on the PDF file."
+    echo "    -t, --template TEMPLATE       Use the TEMPLATE html file instead of the default for PDF generation."
     echo "    -c, --css CSS                 Apply style overrides from the CSS file for PDF generation."
     echo "    -h, --help                    Display usage and exit."
     echo
@@ -47,7 +48,7 @@ usage() {
     echo "prefixed with an underscore are reserved for system use."
     echo
     echo "The template can be specified with the --template option, and default styles can be extended using the --css option."
-    bye
+    bye "${@}"
 }
 
 main() {
@@ -73,6 +74,7 @@ init() {
     defaultPrinter=
 
     # Options
+    outputDir="${valtConfigDir}"
     htmlTemplateFile="${valtEtcDir}/key-doc-template.html"
     cssOverrideFile=
     htmlFile=
@@ -92,7 +94,8 @@ init() {
         case "${1}" in
             --) ;;
             -p | --prefix) shift; setPrefix "${1}";;
-            -t | --template) shift; setFileVar templateFile "${1}" "TEMPLATE" ;;
+            -d | --directory) shift; setDirVar outputDir "${1}" "output directory";;
+            -t | --template) shift; setFileVar htmlTemplateFile "${1}" "html template file path" ;;
             -c | --css) shift; setFileVar cssOverrideFile "${1}" "CSS" ;;
             --no-verify) verifyKeys=0 ;;
             --no-advice) showKeyAdvice=0 ;;
@@ -106,8 +109,8 @@ init() {
         shift
     done
 
-    privateKeyFile="${valtConfigDir}/${prefix}.key"
-    publicKeyFile="${valtConfigDir}/${prefix}-public.key"
+    privateKeyFile="${outputDir}/${prefix}.key"
+    publicKeyFile="${outputDir}/${prefix}-public.key"
 
     if (( force )); then
         rm "${publicKeyFile}" "${privateKeyFile}" 2> /dev/null
@@ -123,7 +126,7 @@ prepareForPdf() {
     if (( generatePdf )); then
         ensureKeyInfo
         require 'valt/pdf'
-        documentsFile="${valtConfigDir}/${prefix}-key.pdf"
+        documentsFile="${outputDir}/${prefix}-key.pdf"
 
         if (( printPdf )); then
             local printers status prompt answer
@@ -204,7 +207,7 @@ assertKeyInfoArrayVar() {
 
 createKeys() {
     echo
-    show bold "Generating keys"
+    header 1 "Generating keys"
     if (( showKeyAdvice )); then
         echo
         showAgeKeyPairAdvice
@@ -229,7 +232,7 @@ createKeys() {
         echo
         verifyAgeKeyPair "${privateKeyFile}" "${publicKeyFile}"
         echo
-        show bold green "Verified" plain "that a file encrypted with" cyan "${publicKeyFile}" plain "decrypts with passphrase and" cyan "${privateKeyFile}" plain "."
+        show bold green "Verified" plain "that a file encrypted with" cyan "${publicKeyFile}" plain "decrypts with passphrase and the" cyan "${privateKeyFile}" plain "private key."
     fi
 }
 
