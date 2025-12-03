@@ -50,7 +50,7 @@ init() {
 
     if (( _debug )); then
         log $'--- BEGIN pinentry -----------------------------------------------------\n'
-        log "      date: $(date)"
+        log "      date: ${ date; }"
         log "  terminal: ${terminal}"
         log "       pid: ${BASHPID}"
         log "      args: ${*}"
@@ -62,7 +62,7 @@ init() {
         local pinEntry
         for pinEntry in ${proxyPinEntry}; do
             log "Checking for ${pinEntry}"
-            proxyPath="$(command -v "${pinEntry}")"
+            proxyPath="${ command -v "${pinEntry}"; }"
             if [[ ${proxyPath} ]]; then
                 log "Reverse-proxy to '${pinEntry}' at ${proxyPath}"
                 break

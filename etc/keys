@@ -130,9 +130,9 @@ prepareForPdf() {
 
         if (( printPdf )); then
             local printers status prompt answer
-            local printers="$(system_profiler SPPrintersDataType -json)"
-            defaultPrinter="$(echo "${printers}" | jq -r '.SPPrintersDataType[] | select(.default == "yes") | ._name')"
-            status="$(echo "${printers}" | jq -r --arg name "${defaultPrinter}" '.SPPrintersDataType[] | select(._name == $name) | .status')"
+            local printers="${ system_profiler SPPrintersDataType -json; }"
+            defaultPrinter="${ echo "${printers}" | jq -r '.SPPrintersDataType[] | select(.default == "yes") | ._name'; }"
+            status="${ echo "${printers}" | jq -r --arg name "${defaultPrinter}" '.SPPrintersDataType[] | select(._name == $name) | .status'; }"
             echo
             if [[ ${status} == offline ]]; then
                 show "Your default printer '${defaultPrinter}' is" bold red "offline" plain "."
@@ -282,7 +282,7 @@ createPdf() {
     htmlFile="${workDir}/${htmlFileName}"
     generateHtml "${htmlFile}"
     assertFileExists "${htmlFile}"
-    footerTemplate="$(generateFooterTemplate)"
+    footerTemplate="${ generateFooterTemplate; }"
 
     # Move to work dir so that relative paths in html work correctly and
     # generate the pdf
@@ -293,7 +293,7 @@ createPdf() {
     # Set metadata and encrypt with a strong password
 
     local title='Private Key Pair Backup & Usage Instructions'
-    local creator="$(projectVersion valt), ${valtProjectUrl}"
+    local creator="${ projectVersion valt; }, ${valtProjectUrl}"
     local subject="File decryption."
     local keywords="${author}, valt, private key, backup, encryption, decryption, security"
 
@@ -311,7 +311,7 @@ createPdf() {
     # password should never be required. Note that if we ever want actual form fields,
     # the --modify option must be changed to allow filling.
 
-    local ownerPW="$(phraze)"
+    local ownerPW="${ phraze; }"
     local userPW=''
 
     qpdf ${documentsFile} \
@@ -320,7 +320,7 @@ createPdf() {
 }
 
 generateFooterTemplate() {
-    local footerClass=$(awk '
+    local footerClass="${ awk '
         /^[[:space:]]*\.footer[[:space:]]*\{/ {
             print
             brace_count = 1
@@ -338,7 +338,7 @@ generateFooterTemplate() {
             }
             exit
         }
-        ' "${valtEtcDir}/key-doc.css")
+        ' "${valtEtcDir}/key-doc.css"; }"
 
     cat <<- EOF
 		<style>
@@ -349,7 +349,7 @@ generateFooterTemplate() {
 		</style>
 		<div class="footer">
 		    <span>${author} Private Key</span>
-		    <span>$(date '+%B %e, %Y')</span>
+		    <span>${ date '+%B %e, %Y'; }</span>
 		    <span class="page-info"><span class="pageNumber"></span><span class="totalPages"></span></span>
 		</div>
 	EOF
@@ -357,13 +357,13 @@ generateFooterTemplate() {
 
 generateHtml() {
     local outputFile="${1}"
-    local html="$(< ${htmlTemplateFile})" || fail
+    local html="${ < ${htmlTemplateFile}; }" || fail
     local contact note value
 
     # Set built-in substitution values (clobbering any that the user might have defined)
 
     local _GREETING="${greeting}"
-    local _DATE="$(date "+%B %d, %Y %r %Z")"
+    local _DATE="${ date "+%B %d, %Y %r %Z"; }"
     local _CSS_PATH="${cssMainFileName}"
     local _LOGO_PATH="${logoFileName}"
     local _QR_CODE_PATH="${qrCodeFileName}"

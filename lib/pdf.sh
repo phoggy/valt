@@ -28,7 +28,7 @@ PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/pdf' PRIVATE �
 _init_valt_pdf() {
     require 'rayvn/core'
 
-    declare -gr nodeJsHome="$(configDirPath)/node-js"
+    declare -gr nodeJsHome="${ configDirPath; }/node-js"
     local srcFile="${valtEtcDir}/generate-pdf.js"
     local dstFile="${nodeJsHome}/generate-pdf.js"
 

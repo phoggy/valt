@@ -113,7 +113,7 @@ readPassword() {
         # Check result if requested
 
         if (( checkResult )); then
-            IFS=',' read -r -a score <<< "$(echo "${result}" | mrld -t)"
+            IFS=',' read -r -a score <<< "${ echo "${result}" | mrld -t; }"
             echo -n "  ⮕  ${score[0]} (${score[1]}/4), ${score[2]} to crack" > ${terminal}
             hasNotBeenPwned "${result}"; pwned=${?}
         fi

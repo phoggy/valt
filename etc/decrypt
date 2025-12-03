@@ -58,7 +58,7 @@ init() {
 
     [[ ${identities} ]] || fail "no identities specified"
     [[ ${file} ]] || fail "no file provided"
-    [[ ${decryptedFile} ]] || decryptedFile=$(basename -- "${file}" .${ageFileExtension})
+    [[ ${decryptedFile} ]] || decryptedFile="${ basename -- "${file}" .${ageFileExtension}; }"
 }
 
 setFile() {
@@ -91,7 +91,7 @@ unpackFile() {
 
 setUnpackDir() {
     if [[ ! ${unpackDir} ]]; then
-        unpackDir="$(echo "${decryptedFile}" | cut -d'.' -f1)-content"
+        unpackDir="${ echo "${decryptedFile}" | cut -d'.' -f1; }-content"
     fi
     [[ -e ${unpackDir} ]] && replaceOutputFile "${unpackDir}"
     mkdir -p "${unpackDir}" || fail

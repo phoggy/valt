@@ -48,11 +48,11 @@ createAgeKeyPair() {
     local captureVarName="${3:-}"
     declare -i capture=0
     [[ -n "${captureVarName}" ]] && capture=1
-    local key=$(rage-keygen 2> /dev/null)
-    local publicKey=$(echo "${key}" | grep "public key: age1" | awk '{print $NF}')
+    local key="${ rage-keygen 2> /dev/null; }"
+    local publicKey="${ echo "${key}" | grep "public key: age1" | awk '{print $NF}'; }"
     [[ -f ${keyFile} ]] && fail "${keyFile} should have been deleted!"
 
-    (( capture )) && export _rayvnAnonymousPipe=$(makeTempDir 'XXXXXXXXXXXX')
+    (( capture )) && export _rayvnAnonymousPipe="${ makeTempDir 'XXXXXXXXXXXX'; }"
 debug 'encrypting key'
     echo "${key}" | rage -p -o "${keyFile}" -
 debug 'encrypting key RETURN'
@@ -73,12 +73,12 @@ verifyAgeKeyPair() {
     local sampleText
     local keyFile="${1}"
     local publicKeyFile="${2}"
-    local tempEncryptedFile=$(tempDirPath sample.age)
+    local tempEncryptedFile="${ tempDirPath sample.age; }"
     useValtPinEntry
 
     setSampleText sampleText
     echo -n "${sampleText}" | rage -R "${publicKeyFile}" -o "${tempEncryptedFile}" || fail
-    local decrypted=$(rage -d -i "${keyFile}" "${tempEncryptedFile}" 2> /dev/null)
+    local decrypted="${ rage -d -i "${keyFile}" "${tempEncryptedFile}" 2> /dev/null; }"
     diff -u <(echo -n "${sampleText}") <(echo "${decrypted}") > /dev/null || fail "not verified (wrong passphrase?)"
     disableValtPinEntry
 }
@@ -86,11 +86,11 @@ verifyAgeKeyPair() {
 armorAgeFile() {
     local ageFile="${1}"
     local -n resultVar="${2}"
-    local header=$(head -n 1 "${ageFile}")
+    local header="${ head -n 1 "${ageFile}"; }"
     if [[ ${header} =~ ^age-encryption.org/v ]]; then
         # $'x' is bash magic for mapping escaped characters
         local result=$'-----BEGIN AGE ENCRYPTED FILE-----\n'
-        result+="$(cat "${ageFile}" | base64 -b 65)"
+        result+="${ cat "${ageFile}" | base64 -b 65; }"
         result+=$'\n'
         result+=$'-----END AGE ENCRYPTED FILE-----\n'
         resultVar=${result}

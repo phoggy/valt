@@ -49,7 +49,7 @@ init() {
     # Global constants
 
     declare -grx valtEtcDir="${valtHome}/etc"
-    declare -grx valtConfigDir="$(configDirPath)"
+    declare -grx valtConfigDir="${ configDirPath; }"
     declare -grx valtProjectUrl='https://github.com/phoggy/valt'
     declare -grx webPasswordGenUrl='https://bitwarden.com/password-generator/'
     declare -grx webHaveIBeenPwnedUrl="https://haveibeenpwned.com/Passwords"

@@ -95,14 +95,14 @@ initializeFiles() {
     (( ${inputCount} == 0 )) && usage "no files provided"
     if (( ${#files[@]} == 1 )) && [[ -f ${files[0]} ]]; then
         inputFile="${files[0]}"
-        [[ ${name} ]] || name="$(basename ${inputFile})"
+        [[ ${name} ]] || name="${ basename ${inputFile}; }"
         description="${name} file"
         extension="${ageFileExtension}"
         unset isArchive
     else
         [[ ${name} ]] || name="vault"
         description="${name}"
-        inputFile="$(tempDirPath ${name}.${tarFileExtension})"
+        inputFile="${ tempDirPath ${name}.${tarFileExtension}; }"
         extension="${tarFileExtension}.${ageFileExtension}"
         echo "Building ${description}"
         tar -Jcf "${inputFile}" "${files[@]}" || fail
@@ -111,9 +111,9 @@ initializeFiles() {
     if [[ ${name} ]]; then
         baseName="${name}"
     else
-        baseName=$(basename "${inputFile}" | cut -d. -f1)
+        baseName="${ basename "${inputFile}" | cut -d. -f1; }"
     fi
-    (( addTimeStamp )) && baseName+="-$(TZ=${timeZoneName} date +%Y-%m-%d_%H.%M)"
+    (( addTimeStamp )) && baseName+="-${ TZ=${timeZoneName} date +%Y-%m-%d_%H.%M; }"
     outputFile="${baseName}.${extension}"
 }
 
@@ -134,8 +134,8 @@ encryptFile() {
 
 verifyEncryptedFile() {
     if [[ ${verifyKeyFile} ]]; then
-        local decryptedFile="$(tempDirPath file)"
-        local verifyDir="$(tempDirPath file-content)"
+        local decryptedFile="${ tempDirPath file; }"
+        local verifyDir="${ tempDirPath file-content; }"
         show "Verifying" cyan "${outputFile}"
         valt decrypt -i "${verifyKeyFile}" ${outputFile} -o "${decryptedFile}" -u "${verifyDir}" -f -q || fail
 
