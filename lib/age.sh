@@ -90,7 +90,8 @@ armorAgeFile() {
     if [[ ${header} =~ ^age-encryption.org/v ]]; then
         # $'x' is bash magic for mapping escaped characters
         local result=$'-----BEGIN AGE ENCRYPTED FILE-----\n'
-        result+="${ cat "${ageFile}" | base64 -b 65; }"
+        # Platform-agnostic base64: try BSD -b flag first, fall back to GNU -w flag
+        result+="${ cat "${ageFile}" | base64 -b 65 2>/dev/null || cat "${ageFile}" | base64 -w 65; }"
         result+=$'\n'
         result+=$'-----END AGE ENCRYPTED FILE-----\n'
         resultVar=${result}
