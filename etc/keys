@@ -253,7 +253,7 @@ createKeyDocument() {
 }
 
 createPdf() {
-# TODO!    local workDir=$(tempDirPath)
+# TODO!    local workDir=${ tempDirPath; }
     local workDir="${PWD}"
     local footerTemplate
 
