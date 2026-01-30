@@ -21,39 +21,14 @@
             owner = "phoggy";
             repo = "mrld";
             rev = "v${version}";
-            hash = pkgs.lib.fakeHash;
+            hash = "sha256-0GlCSXalb6lheUW/MH2dM0LcAh4lrxvzo81NQ+ELUJY=";
           };
-          cargoHash = pkgs.lib.fakeHash;
+          cargoHash = "sha256-8IKe8Ps//m3yvG5EQjA/DadZ9mdmuoW7MA6DgMMLrdU=";
           meta = with pkgs.lib; {
             description = "Password strength evaluator";
             homepage = "https://github.com/phoggy/mrld";
             license = licenses.gpl3Only;
           };
-        };
-
-        # Pre-build Puppeteer node_modules to avoid runtime npm install
-        puppeteerNodeModules = pkgs.buildNpmPackage {
-          pname = "valt-puppeteer";
-          version = "1.0.0";
-
-          # Create a minimal package.json for puppeteer
-          src = pkgs.writeTextDir "package.json" (builtins.toJSON {
-            name = "valt-puppeteer";
-            version = "1.0.0";
-            dependencies = {
-              puppeteer = "*";
-            };
-          });
-
-          npmDepsHash = pkgs.lib.fakeHash;
-          dontNpmBuild = true;
-
-          installPhase = ''
-            runHook preInstall
-            mkdir -p $out/lib
-            cp -r node_modules $out/lib/node_modules
-            runHook postInstall
-          '';
         };
 
         # Runtime dependencies
@@ -102,20 +77,18 @@
             # Install rayvn.pkg
             cp rayvn.pkg "$out/"
 
-            # Set up pre-built Puppeteer node_modules
-            mkdir -p "$out/share/valt/node-js"
-            cp "$out/etc/generate-pdf.js" "$out/share/valt/node-js/"
-            ln -s "${puppeteerNodeModules}/lib/node_modules" "$out/share/valt/node-js/node_modules"
-
-            # Wrap valt with runtime dependencies on PATH and font config
+            # Wrap valt with runtime dependencies on PATH and font config.
+            # Include $out/bin so rayvn.up can find 'rayvn.up' and 'valt' via
+            # PATH lookup for project root resolution.
+            # Note: Puppeteer/npm install happens at runtime in ~/.config/valt/node-js/
+            # via pdf.sh's _init_valt_pdf — nodejs (with npm) is on PATH for this.
             wrapProgram "$out/bin/valt" \
-              --prefix PATH : "${pkgs.lib.makeBinPath runtimeDeps}" \
-              --set FONTCONFIG_FILE "${pkgs.makeFontsConf { fontDirectories = fonts; }}" \
-              --set VALT_NIX_NODE_JS_HOME "$out/share/valt/node-js"
+              --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath runtimeDeps}" \
+              --set FONTCONFIG_FILE "${pkgs.makeFontsConf { fontDirectories = fonts; }}"
 
             # Wrap valt-pinentry similarly
             wrapProgram "$out/bin/valt-pinentry" \
-              --prefix PATH : "${pkgs.lib.makeBinPath runtimeDeps}"
+              --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath runtimeDeps}"
 
             runHook postInstall
           '';
@@ -153,12 +126,13 @@
 
             cp rayvn.pkg "$out/"
 
-            # Wrap with minimal deps for recovery
+            # Wrap with minimal deps for recovery.
+            # Include $out/bin for rayvn.up project root resolution.
             wrapProgram "$out/bin/valt" \
-              --prefix PATH : "${pkgs.lib.makeBinPath [ pkgs.bash rayvnPkg pkgs.rage ]}"
+              --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath [ pkgs.bash rayvnPkg pkgs.rage ]}"
 
             wrapProgram "$out/bin/valt-pinentry" \
-              --prefix PATH : "${pkgs.lib.makeBinPath [ pkgs.bash rayvnPkg ]}"
+              --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath [ pkgs.bash rayvnPkg ]}"
 
             runHook postInstall
           '';

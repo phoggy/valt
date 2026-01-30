@@ -28,12 +28,6 @@ PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/pdf' PRIVATE �
 _init_valt_pdf() {
     require 'rayvn/core'
 
-    # When running under Nix, use pre-built Puppeteer from the flake
-    if [[ -n ${VALT_NIX_NODE_JS_HOME:-} ]]; then
-        declare -gr nodeJsHome="${VALT_NIX_NODE_JS_HOME}"
-        return 0
-    fi
-
     declare -gr nodeJsHome="${ configDirPath; }/node-js"
     local srcFile="${valtEtcDir}/generate-pdf.js"
     local dstFile="${nodeJsHome}/generate-pdf.js"

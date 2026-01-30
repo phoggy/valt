@@ -179,11 +179,24 @@
         </ul>
 
         <p>The code used to create this document is a wrapper around <code>rage</code> and can also encrypt/decrypt files. The
-            source code and instructions for it can be found <a href="todo">here</a>.</p>
+            source code and instructions can be found at
+            <a href="https://github.com/phoggy/valt">github.com/phoggy/valt</a>.</p>
 
         <p>There are other implementations to choose from <a href="https://github.com/FiloSottile/age">here</a>.</p>
 
         <h2>Decrypting A File</h2>
+
+        <p>If you have <a href="https://nixos.org/download/">Nix</a> installed, the simplest way to decrypt is:</p>
+
+        <pre><code>nix run github:phoggy/valt#recover -- decrypt -i YOUR_KEY_FILE ENCRYPTED_FILE</code></pre>
+
+        <p>This downloads and runs the recovery tool automatically — no other software needs to be installed.</p>
+
+        <p>Alternatively, if you have <code>rage</code> installed directly:</p>
+
+        <pre><code>rage -d -i YOUR_KEY_FILE -o DECRYPTED_FILE ENCRYPTED_FILE</code></pre>
+
+        <p>In both cases, you will be prompted for the passphrase that protects the private key.</p>
 
         <div class="page-break"></div>
 
