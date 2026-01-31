@@ -16,6 +16,8 @@ curl -L https://nixos.org/nix/install | sh
 nix run github:phoggy/valt
 ```
 
+All dependencies are declared in the `flake.nix` file in the `runtimeDeps` list. New dependencies must be added there.
+
 ### Recovery
 
 ```bash
