@@ -5,31 +5,15 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     rayvn.url = "github:phoggy/rayvn";
+    mrld.url = "github:phoggy/mrld";
   };
 
-  outputs = { self, nixpkgs, flake-utils, rayvn }:
+  outputs = { self, nixpkgs, flake-utils, rayvn, mrld }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
         rayvnPkg = rayvn.packages.${system}.default;
-
-        # Build mrld from source (not in nixpkgs)
-        mrld = pkgs.rustPlatform.buildRustPackage rec {
-          pname = "mrld";
-          version = "0.1.0";
-          src = pkgs.fetchFromGitHub {
-            owner = "phoggy";
-            repo = "mrld";
-            rev = "v${version}";
-            hash = "sha256-0GlCSXalb6lheUW/MH2dM0LcAh4lrxvzo81NQ+ELUJY=";
-          };
-          cargoHash = "sha256-8IKe8Ps//m3yvG5EQjA/DadZ9mdmuoW7MA6DgMMLrdU=";
-          meta = with pkgs.lib; {
-            description = "Password strength evaluator";
-            homepage = "https://github.com/phoggy/mrld";
-            license = licenses.gpl3Only;
-          };
-        };
+        mrldPkg = mrld.packages.${system}.default;
 
         # Runtime dependencies
         runtimeDeps = [
@@ -37,7 +21,7 @@
           rayvnPkg
           pkgs.rage
           pkgs.phraze
-          mrld
+          mrldPkg
           pkgs.curl
           pkgs.nodejs
           pkgs.qrencode
