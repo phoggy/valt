@@ -37,6 +37,18 @@ echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
 nix profile add github:phoggy/valt
 ```
 
+To install a specific version:
+
+```bash
+nix profile add github:phoggy/valt/v0.1.1
+```
+
+To upgrade to the latest version:
+
+```bash
+nix profile upgrade valt
+```
+
 To run without installing:
 
 ```bash
