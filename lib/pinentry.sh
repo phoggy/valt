@@ -4,7 +4,7 @@
 # Intended for use via: require 'valt/pinentry'
 
 useValtPinEntry() {
-    declare -gx PINENTRY_PROGRAM="${valtHome}/bin/valt-pinentry"
+    declare -gx PINENTRY_PROGRAM="${ binaryPath valt-pinentry; }"
 }
 
 disableValtPinEntry() {

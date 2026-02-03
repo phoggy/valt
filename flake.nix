@@ -51,15 +51,15 @@
             install -Dm755 bin/valt-pinentry "$out/bin/valt-pinentry"
 
             # Install lib/
-            mkdir -p "$out/lib"
-            cp lib/*.sh "$out/lib/"
+            mkdir -p "$out/share/valt/lib"
+            cp lib/*.sh "$out/share/valt/lib/"
 
             # Install etc/
-            mkdir -p "$out/etc"
-            cp -r etc/* "$out/etc/"
+            mkdir -p "$out/share/valt/etc"
+            cp -r etc/* "$out/share/valt/etc/"
 
             # Install rayvn.pkg
-            cp rayvn.pkg "$out/"
+            cp rayvn.pkg "$out/share/valt/"
 
             # Wrap valt with runtime dependencies on PATH and font config.
             # Include $out/bin so rayvn.up can find 'rayvn.up' and 'valt' via
@@ -81,7 +81,7 @@
           # bash, which lacks builtins like compgen. Restore the shebangs so
           # they resolve via PATH, where the wrapper provides bash-interactive.
           postFixup = ''
-            for f in "$out/bin/.valt-wrapped" "$out/bin/.valt-pinentry-wrapped" "$out/lib/"*.sh; do
+            for f in "$out/bin/.valt-wrapped" "$out/bin/.valt-pinentry-wrapped" "$out/share/valt/lib/"*.sh; do
               if [ -f "$f" ]; then
                 sed -i "1s|^#\\!.*/bin/bash.*|#!/usr/bin/env bash|" "$f"
               fi
@@ -113,13 +113,13 @@
             install -Dm755 bin/valt "$out/bin/valt"
             install -Dm755 bin/valt-pinentry "$out/bin/valt-pinentry"
 
-            mkdir -p "$out/lib"
-            cp lib/*.sh "$out/lib/"
+            mkdir -p "$out/share/valt/lib"
+            cp lib/*.sh "$out/share/valt/lib/"
 
-            mkdir -p "$out/etc"
-            cp etc/decrypt "$out/etc/"
+            mkdir -p "$out/share/valt/etc"
+            cp etc/decrypt "$out/share/valt/etc/"
 
-            cp rayvn.pkg "$out/"
+            cp rayvn.pkg "$out/share/valt/"
 
             # Wrap with minimal deps for recovery.
             # Include $out/bin for rayvn.up project root resolution.
@@ -133,7 +133,7 @@
           '';
 
           postFixup = ''
-            for f in "$out/bin/.valt-wrapped" "$out/bin/.valt-pinentry-wrapped" "$out/lib/"*.sh; do
+            for f in "$out/bin/.valt-wrapped" "$out/bin/.valt-pinentry-wrapped" "$out/share/valt/lib/"*.sh; do
               if [ -f "$f" ]; then
                 sed -i "1s|^#\\!.*/bin/bash.*|#!/usr/bin/env bash|" "$f"
               fi
