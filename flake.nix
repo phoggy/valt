@@ -58,8 +58,18 @@
             mkdir -p "$out/share/valt/etc"
             cp -r etc/* "$out/share/valt/etc/"
 
-            # Install rayvn.pkg
-            cp rayvn.pkg "$out/share/valt/"
+            # Install rayvn.pkg with version metadata
+            sed '/^projectVersion=/d; /^projectReleaseDate=/d; /^projectFlake=/d; /^projectBuildRev=/d; /^projectNixpkgsRev=/d' \
+                rayvn.pkg > "$out/share/valt/rayvn.pkg"
+            cat >> "$out/share/valt/rayvn.pkg" <<EOF
+
+# Version metadata (added by Nix build)
+projectVersion='$version'
+projectReleaseDate='$(date "+%Y-%m-%d %H:%M:%S %Z")'
+projectFlake='github:phoggy/valt/v$version'
+projectBuildRev='${self.shortRev or "dev"}'
+projectNixpkgsRev='${nixpkgs.shortRev}'
+EOF
 
             # Wrap valt with runtime dependencies on PATH and font config.
             # Include $out/bin so rayvn.up can find 'rayvn.up' and 'valt' via
@@ -119,7 +129,18 @@
             mkdir -p "$out/share/valt/etc"
             cp etc/decrypt "$out/share/valt/etc/"
 
-            cp rayvn.pkg "$out/share/valt/"
+            # Install rayvn.pkg with version metadata
+            sed '/^projectVersion=/d; /^projectReleaseDate=/d; /^projectFlake=/d; /^projectBuildRev=/d; /^projectNixpkgsRev=/d' \
+                rayvn.pkg > "$out/share/valt/rayvn.pkg"
+            cat >> "$out/share/valt/rayvn.pkg" <<EOF
+
+# Version metadata (added by Nix build)
+projectVersion='$version'
+projectReleaseDate='$(date "+%Y-%m-%d %H:%M:%S %Z")'
+projectFlake='github:phoggy/valt/v$version'
+projectBuildRev='${self.shortRev or "dev"}'
+projectNixpkgsRev='${nixpkgs.shortRev}'
+EOF
 
             # Wrap with minimal deps for recovery.
             # Include $out/bin for rayvn.up project root resolution.
