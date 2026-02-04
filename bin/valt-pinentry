@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env rayvn-bash
 
 # This pinentry implementation exists in order to change some default behaviors:
 #
