@@ -17,7 +17,7 @@ generatePassword() {
     local password=''
 
     for (( i = 0; i < ${passwordLength}; i++ )); do
-        randomInteger ${charSetLen} index
+        randomInteger index ${charSetLen}
         password+=${charSet[${index}]}
     done
     echo "${password}"
