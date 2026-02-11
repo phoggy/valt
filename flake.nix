@@ -197,7 +197,7 @@ EOF
           ];
           shellHook = ''
             export PATH="${self}/bin:$PATH"
-            echo "valt dev shell ready"
+            [[ $- == *i* ]] && echo "valt dev shell ready"
           '';
         };
       }
