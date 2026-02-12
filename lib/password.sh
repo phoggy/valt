@@ -43,7 +43,7 @@ readVerifiedPassword() {
 
 readPassword() {
     local result count=0 mask key
-    local prompt="${ show cyan "${1}: " ;}"
+    local prompt="${ show bold "${1}: "; }"
     local -n resultVar="${2}"
     local timeout="${3:-30}"
     local checkResult="${4:-true}"
@@ -55,55 +55,17 @@ readPassword() {
     resultVar=''
 
     case ${passwordVisibility} in
-        none) visible=0; show=0; prompt="${ show cyan "${1}" plain dim "[hidden]" ;} " ;;
+        none) visible=0; show=0; prompt="${1}" ;;
         hide) show=0 ;;
         show) show=1 ;;
         *) fail "unknown visibility mode: ${passwordVisibility}"
     esac
 
-    # Prompt
-
-    echo -n "${prompt}" > ${terminal}
-
     if (( ! visible )); then
-        read -t ${timeout} -rs result < ${terminal}  # TODO: use rayvn/prompt after adding support for hidden input??
+        secureRequest "${prompt}" result true || fail
+        cursorUpToColumn 1 $(( ${#prompt} + 3 ))  # re-position back for check
     else
-
-        # Process one character at a time
-
-        while :; do
-            (( visible )) && echo -n "${mask}" > ${terminal}
-            IFS= read -s -n 1 -t ${timeout} key < ${terminal}
-
-            if (( $? >= 128  )); then                # timeout
-                cancelled=true
-                break
-            elif [[ ${key} =~ [[:print:]] ]]; then   # valid character
-                count=$((count+1))
-                (( show )) && mask=${key} || mask='*'
-                result+=${key}
-            elif [[ ${key} == $'\177' ]]; then       # backspace
-                if (( ${count} > 0 )); then
-                    count=$((count-1))
-                    mask=$'\b \b'
-                    result="${result%?}"
-                else
-                    mask=''
-                fi
-            elif [[ ${key} == $'\e' ]] ; then        # ESC
-                cancelled=true;
-                break
-            elif [[ ${key} == '' ]] ; then           # enter
-                break
-            fi
-        done
-
-        # Mask password if we did not do so above
-
-        if (( show )); then
-            repeat $'\b' ${count} > ${terminal}
-            repeat '*' ${count}  > ${terminal}
-        fi
+        _readPassword
     fi
 
     [[ ${result} == '' ]] && cancelled=1
@@ -111,8 +73,7 @@ readPassword() {
     if (( ! cancelled )); then
 
         # Check result if requested
-
-        if (( checkResult )); then
+        if [[ ${checkResult} == true ]]; then
             IFS=',' read -r -a score <<< "${ echo "${result}" | mrld -t; }"
             echo -n "  ⮕  ${score[0]} (${score[1]}/4), ${score[2]} to crack" > ${terminal}
             hasNotBeenPwned "${result}"; pwned=${?}
@@ -120,7 +81,7 @@ readPassword() {
     fi
     echo > ${terminal} # complete the line
 
-    # Return the result if not cancelled and not pwned
+    # Return the result if not canceled and not pwned
 
     if (( ! cancelled )); then
         if (( pwned == 1 )); then
@@ -139,5 +100,42 @@ readPassword() {
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/password' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_password() {
-    require 'rayvn/core' 'valt/pwned'
+    require 'rayvn/core' 'rayvn/prompt' 'valt/pwned'
+}
+
+_readPassword() {
+    echo -n "${prompt}" > ${terminal}
+    while :; do
+        (( visible )) && echo -n "${mask}" > ${terminal}
+        IFS= read -s -n 1 -t ${timeout} key < ${terminal}
+
+        if (( $? >= 128  )); then                # timeout
+            cancelled=true
+            break
+        elif [[ ${key} =~ [[:print:]] ]]; then   # valid character
+            count=$((count+1))
+            (( show )) && mask=${key} || mask='*'
+            result+=${key}
+        elif [[ ${key} == $'\177' ]]; then       # backspace
+            if (( ${count} > 0 )); then
+                count=$((count-1))
+                mask=$'\b \b'
+                result="${result%?}"
+            else
+                mask=''
+            fi
+        elif [[ ${key} == $'\e' ]] ; then        # ESC
+            cancelled=true;
+            break
+        elif [[ ${key} == '' ]] ; then           # enter
+            break
+        fi
+    done
+
+    # Mask password if we did not do so above
+
+    if (( show )); then
+        repeat $'\b' ${count} > ${terminal}
+        repeat '*' ${count}  > ${terminal}
+    fi
 }
