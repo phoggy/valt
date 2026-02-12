@@ -9,7 +9,7 @@ hasNotBeenPwned() {
     local hash="${ echo -n "${pass}" | shasum | cut -d' ' -f1 | tr '[:lower:]' '[:upper:]'; }"
     local prefix=${hash:0:5}
     local suffix=${hash:5}
-    local results="${ curl -m 10 -s -H 'Add-Padding: true' "${pwnedPasswordsApiUrl}/range/${prefix}"; }"
+    local results="${ curl -m 10 -s -H 'Add-Padding: true' "${_pwnedPasswordsApiUrl}/range/${prefix}"; }"
     if [[ ! ${results} ]]; then
         return 1  # Unable to check
     fi
@@ -29,6 +29,7 @@ PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/pwned' PRIVATE
 
 _init_valt_pwned() {
     require 'rayvn/core'
+
+    declare -grx _pwnedPasswordsApiUrl='https://api.pwnedpasswords.com'
 }
 
-declare -grx pwnedPasswordsApiUrl='https://api.pwnedpasswords.com'
