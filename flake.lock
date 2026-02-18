@@ -60,11 +60,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1769888207,
-        "narHash": "sha256-KZJqFY5VxEPkf4AtCiVwCnvEEaYjV8nVymoocl2MikU=",
+        "lastModified": 1771439951,
+        "narHash": "sha256-Is+acSVolKDGsOYxToYO5HlrnIxppsUzcVUOzpEiFEQ=",
         "owner": "phoggy",
         "repo": "mrld",
-        "rev": "f7c99e8ae06f4a9b1ed22593659c8958497d931e",
+        "rev": "a87049f0afcca023e7ee91a086556aaa3b9350b4",
         "type": "github"
       },
       "original": {
