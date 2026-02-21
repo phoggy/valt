@@ -3,6 +3,7 @@
 # Library supporting age file encryption via rage
 # Intended for use via: require 'valt/age'
 
+# Print guidance about creating an age key pair, including passphrase strength advice.
 showAgeKeyPairAdvice() {
 
     echo "Generally, you will only need a single key pair for all your file encryption needs. Your new private key will itself be"
@@ -41,6 +42,12 @@ showAgeKeyPairAdvice() {
     echo
 }
 
+# Generate a new rage key pair, encrypting the private key with a passphrase via rage -p.
+# Args: keyFile publicKeyFile [captureVarName]
+#
+#   keyFile        - path where the passphrase-encrypted private key file will be written
+#   publicKeyFile  - path where the plain-text public key will be written
+#   captureVarName - optional variable name to receive the passphrase entered during encryption
 createAgeKeyPair() {
     useValtPinEntry
     local keyFile="${1}"
@@ -69,6 +76,12 @@ debug 'encrypting key RETURN'
     disableValtPinEntry
 }
 
+# Verify an age key pair by encrypting sample text and decrypting it, then comparing.
+# Fails if decryption does not reproduce the original (e.g. wrong passphrase).
+# Args: keyFile publicKeyFile
+#
+#   keyFile       - path to the passphrase-encrypted private key file
+#   publicKeyFile - path to the plain-text public key file
 verifyAgeKeyPair() {
     local sampleText
     local keyFile="${1}"
@@ -83,6 +96,12 @@ verifyAgeKeyPair() {
     disableValtPinEntry
 }
 
+# Convert a binary age-encrypted file to PEM-style ASCII-armored text and store in a nameref variable.
+# Fails if the file does not appear to be a valid age-encrypted file.
+# Args: ageFile resultVar
+#
+#   ageFile   - path to the binary age-encrypted file
+#   resultVar - nameref variable to receive the armored text
 armorAgeFile() {
     local ageFile="${1}"
     local -n resultVar="${2}"
@@ -100,6 +119,10 @@ armorAgeFile() {
     fi
 }
 
+# Populate a nameref variable with a multi-line sample text if not already set.
+# Args: resultVar
+#
+#   resultVar - nameref variable to populate (only written if currently empty)
 setSampleText() {
     local -n resultVar="${1}"
     if [[ ! ${resultVar} ]]; then
