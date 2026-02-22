@@ -1,0 +1,16 @@
+title: valt
+description: Encrypted file archives using age encryption
+theme: just-the-docs
+url: https://rayvn.ink
+baseurl: /valt
+
+nav_external_links:
+  - title: GitHub
+    url: https://github.com/phoggy/valt
+  - title: rayvn docs
+    url: /rayvn
+  - title: wardn docs
+    url: /wardn
+
+aux_links:
+  "rayvn.ink": "/"
