@@ -94,6 +94,8 @@ init() {
 
     assertValidVisibility
     [[ ${command} ]] || usage "missing command"
+
+    checkProjectDeps 'valt'
 }
 
 setCommand() {
@@ -109,7 +111,7 @@ assertValidVisibility() {
 
 # Boot rayvn with initial required libraries
 
-source rayvn.up --add 'valt' 'rayvn/core' 'valt/age' || exit
+source rayvn.up --add 'valt' 'rayvn/core' 'valt/age' 'rayvn/deps' || exit
 
 main "${@}"
 

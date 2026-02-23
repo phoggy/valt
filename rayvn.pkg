@@ -4,3 +4,10 @@ projectName='valt'
 projectVersion='0.1.1+'
 projectReleaseDate=''
 docsWorktree='../valt-pages'
+
+# Brew formula metadata (used by rayvn/deps for formula generation and runtime dep checks)
+declare -A nixBrewMap=([nodejs]='node' [phraze]='sts10/phraze/phraze')
+declare -a nixBrewExclude=(curl)
+declare -A nixBinaryMap=([nodejs]='node')
+declare -A nixPkgTapOverrides=([mrldPkg]='phoggy/mrld/mrld')
+brewTapRepo='phoggy/homebrew-rayvn'
