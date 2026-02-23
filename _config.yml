@@ -1,6 +1,7 @@
 title: valt
 description: Encrypted file archives using age encryption
 remote_theme: just-the-docs/just-the-docs
+color_scheme: dark
 url: https://rayvn.ink
 baseurl: /valt
 
