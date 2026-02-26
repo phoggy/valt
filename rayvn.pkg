@@ -10,4 +10,3 @@ declare -A nixBrewMap=([nodejs]='node' [phraze]='sts10/phraze/phraze')
 declare -a nixBrewExclude=(curl)
 declare -A nixBinaryMap=([nodejs]='node')
 declare -A nixPkgTapOverrides=([mrldPkg]='phoggy/mrld/mrld')
-brewTapRepo='phoggy/homebrew-rayvn'
