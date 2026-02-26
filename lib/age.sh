@@ -56,7 +56,7 @@ createAgeKeyPair() {
     declare -i capture=0
     [[ -n "${captureVarName}" ]] && capture=1
     local key="${ rage-keygen 2> /dev/null; }"
-    local publicKey="${ echo "${key}" | grep "public key: age1" | awk '{print $NF}'; }"
+    local publicKey="${ echo "${key}" | grep "public key: age1" | gawk '{print $NF}'; }"
     [[ -f ${keyFile} ]] && fail "${keyFile} should have been deleted!"
 
     (( capture )) && export _rayvnAnonymousPipe="${ makeTempDir 'XXXXXXXXXXXX'; }"
