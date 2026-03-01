@@ -31,6 +31,7 @@
 
 newSecureArchive() {
     local tarArgs=()
+    local recipients=()
     local fileCount=0
     local i path
 
@@ -40,9 +41,6 @@ newSecureArchive() {
     local timeZoneName='UTC'
     local addTimeStamp=0
     local force=0
-
-    # Recipients
-    local recipients=
 
 # TODO REMOVE
 #
@@ -66,8 +64,8 @@ newSecureArchive() {
         case "$1" in
             -C ) shift; tarArgs+=(-C "$1") ;;
             -d | --dest-dir) shift; assertDirectory "$1"; destDir="$1" ;;
-            -r | --recipient) shift; _assertArchiveRecipient "$1"; appendVar recipients "-r $1" ;;
-            -R | --recipients-file) shift; assertFile "$1" "recipients file"; appendVar recipients "-R $1" ;;
+            -r | --recipient) shift; _assertArchiveRecipient "$1"; recipients+=(-r "$1") ;;
+            -R | --recipients-file) shift; assertFile "$1" "recipients file"; recipients+=(-R "$1") ;;
             -n | --name) shift; name="$1" ;;
             -t | --timestamp) addTimeStamp=1 ;;
             -z | --timezone) shift; timeZoneName="$1" ;;
@@ -78,7 +76,7 @@ newSecureArchive() {
     done
 
     # Make sure we have one or more recipients
-    [[ -n ${recipients} ]] || fail "no recipients specified"
+    [[ ${#recipients[@]} ]] || fail "no recipients specified"
 
     # Make sure we have one or more files to add
 
@@ -102,7 +100,7 @@ newSecureArchive() {
 
     _createEncryptedArchive
 
-    mv "${archiveFile}" . # TODO remove
+    mv "${encryptedTarFile}" .; ls -l ${encryptedTarName} # TODO remove
 }
 
 verifySecureArchive() {
@@ -181,10 +179,9 @@ _removeExistingArchiveFile() {
 }
 
 _createEncryptedArchive() {
-debugVar tarArgs recipients encryptedTarFile
+debugVar tarArgs recipents encryptedTarFile
     # TODO: the -H pax arg for extended headers is gnu-tar. Worth it for new dependency?
-#    tar -cvJ -H pax "${tarArgs[@]}" 2> redStream | rage ${recipients} > ${encryptedTarFile} || fail # TODO remove 'v' option
-   tar cJ "${tarArgs[@]}" | rage -e ${recipients} > ${encryptedTarFile} || fail # TODO remove 'v' option
+    tar cJ "${tarArgs[@]}" | rage "${recipients[@]}" > ${encryptedTarFile} || fail
 }
 
 
