@@ -79,6 +79,7 @@ readPassword() {
     local -i pwned=
     local score=
     resultVar=''
+    [[ -v passwordVisibility ]] || declare -gx passwordVisibility='none'
 
     case ${passwordVisibility} in
         none) visible=0; show=0; prompt="${1}" ;;
