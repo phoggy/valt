@@ -89,8 +89,8 @@ readPassword() {
     esac
 
     if (( ! visible )); then
-        secureRequest "${prompt}" result true || fail
-        cursorUpToColumn 1 $(( ${#prompt} + 3 ))  # re-position back for check
+        secureRequest "${prompt}" result true < "${terminal}" || return $?
+        cursorUpToColumn 1 $(( ${#prompt} + 12))  # re-position back for check
     else
         _readPassword
     fi

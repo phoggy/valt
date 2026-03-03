@@ -46,19 +46,21 @@ init() {
     confirm=
     proxyCommand=
 
-    # Init debug log if enabled
+    # Emit debug header if enabled
 
     if (( _debug )); then
-        log $'--- BEGIN pinentry -----------------------------------------------------\n'
-        log "      date: ${ date; }"
-        log "  terminal: ${terminal}"
-        log "       pid: ${BASHPID}"
-        log "      args: ${*}"
+        declare -gx _logPrefix="${ show secondary 'pinentry: '; }"
+        log "${ show primary 'date' plain ${ date; } \
+                     primary "terminal" plain ${terminal} \
+                     primary 'pid' plain ${BASHPID} \
+                     primary 'args' plain "'${*}'" \
+                     nl \
+               ; }"
     fi
 
     # Find pinentry program to proxy, if requested
 
-    if [[ ${proxyPinEntry} ]]; then
+    if [[ -n ${proxyPinEntry} ]]; then
         local pinEntry
         for pinEntry in ${proxyPinEntry}; do
             log "Checking for ${pinEntry}"
@@ -69,8 +71,6 @@ init() {
             fi
         done
     fi
-
-    log $'\n'
 }
 
 serve() {
@@ -112,7 +112,13 @@ resetRequestState() {
 }
 
 log() {
-    (( _debug )) && echo "${@}" >> "${_debugLogFile}"
+    if (( _debug )); then
+        if (( _debugRemote )); then
+            printf '%s\r\n' "${_logPrefix}${*}" >&${_debugFd}
+        else
+            echo "${_logPrefix}${*}" >&${_debugFd}
+        fi
+    fi
 }
 
 onGetPin() {
@@ -143,16 +149,16 @@ getProxyPin() {
 getPin() {
     local p1 p2
     describe "${description}"
-    readPassword "${mainPrompt}" p1 ${timeout} true
+    readPassword "${mainPrompt}" p1 ${timeout} true || { respond "${cancelledError}"; return; }
     if [[ ${p1} == '' ]]; then
         respond "${emptyPinError}"
         return
     fi
-
     if [[ ${confirm} ]]; then
         local retries=3
         while (( retries > 0 )); do
-            readPassword "   ${confirmPrompt}" p2 ${timeout} false
+            log "calling readPassword ${confirmPrompt}"
+            readPassword "   ${confirmPrompt}" p2 ${timeout} false  || { respond "${cancelledError}"; return; }
             if [[ ${p2} == '' ]]; then
                 respond "${emptyPinError}"
                 return
