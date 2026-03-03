@@ -42,27 +42,84 @@ showAgeKeyPairAdvice() {
     echo
 }
 
-# Generate a new rage key pair, encrypting the private key with a passphrase via rage -p.
-# Args: keyFile publicKeyFile [captureVarName]
+# Generate a new age key pair with signing keys, encrypting the private key with a passphrase via rage -p.
+# Args: keyFile publicKeyFile publicSigningKeyFile [captureVarName]
 #
-#   keyFile        - path where the passphrase-encrypted private key file will be written
-#   publicKeyFile  - path where the plain-text public key will be written
-#   captureVarName - optional variable name to receive the passphrase entered during encryption
+#   keyFile               - path where the passphrase-encrypted private key file will be written
+#   publicKeyFile         - path where the plain-text public key will be written
+#   publicSigningKeyFile  - path where the plain-text signing public key will be written
+#   captureVarName        - optional variable name to receive the passphrase entered during encryption
+
 createAgeKeyPair() {
     useValtPinEntry
-    local keyFile="${1}"
-    local publicKeyFile="${2}"
-    local captureVarName="${3:-}"
-    declare -i capture=0
-    [[ -n "${captureVarName}" ]] && capture=1
-    local key="${ rage-keygen 2> /dev/null; }"
-    local publicKey="${ echo "${key}" | grep "public key: age1" | gawk '{print $NF}'; }"
-    [[ -f ${keyFile} ]] && fail "${keyFile} should have been deleted!"
+    local keyFile="$1"
+    local publicKeyFile="$2"
+    local publicSigningKeyFile="$3"
+    local captureVarName="${4:-}"
+    local capture=0
+    local ageCreated
+    local agePublicKey
+    local agePrivateKey=()
+    local valtKey=()
+    local index line
+    [[ -n "${keyFile}" ]] || invalidArgs "keyFile not provided"
+    [[ -n "${publicKeyFile}" ]] || invalidArgs "publicKeyFile not provided"
+    [[ -n "${publicSigningKeyFile}" ]] || invalidArgs "publicSigningKeyFile not provided"
 
-    (( capture )) && export _rayvnAnonymousPipe="${ makeTempDir 'XXXXXXXXXXXX'; }"
-debug 'encrypting key'
-    echo "${key}" | rage -p -o "${keyFile}" -
-debug 'encrypting key RETURN'
+    [[ -f ${keyFile} ]] && invalidArgs "${keyFile} should have been deleted!"
+    [[ -n "${captureVarName}" ]] && capture=1
+
+    # Generate the age private key (includes public key)
+
+    mapfile -t < <( rage-keygen 2> /dev/null ) agePrivateKey || fail
+
+    # Extract the created line and public key (hopefully future proof)
+
+    index=${ indexOf -r "created: " agePrivateKey; }
+    ageCreated="${agePrivateKey[index]}"
+    agePrivateKey=("${agePrivateKey[@]:0:index}" "${agePrivateKey[@]:index+1}")
+
+    index=${ indexOf -r "public key: age1" agePrivateKey; }
+    agePublicKey="${agePrivateKey[index]}"
+
+    # Generate unencrypted signing keys and load into our signingPrivateKey array
+
+    local signingPublicKey=()
+    local signingPrivateKey=()
+    local signingPublicKeyFile; signingPublicKeyFile="${ tempDirPath -r; }"
+    local signingPrivateKeyFile; signingPrivateKeyFile="${ tempDirPath -r; }"
+    minisign -G -p "${signingPublicKeyFile}" -s "${signingPrivateKeyFile}" -W > /dev/null || fail
+    mapfile -t < <(cat "${signingPublicKeyFile}") signingPublicKey || fail
+    mapfile -t < <(cat "${signingPrivateKeyFile}") signingPrivateKey || fail
+    rm "${signingPublicKeyFile}" "${signingPrivateKeyFile}"
+
+    # Construct the combined 'valt' private key
+
+    valtKey+=("${ageCreated}")
+    valtKey+=('#')
+    for line in "${signingPublicKey[@]}"; do
+        valtKey+=("${signingPublicKeyPrefix}${line}")
+    done
+    valtKey+=('#')
+    for line in "${signingPrivateKey[@]}"; do
+        valtKey+=("${signingPrivateKeyPrefix}${line}")
+    done
+    valtKey+=('#')
+    for line in "${agePrivateKey[@]}"; do
+        valtKey+=("${line}")
+    done
+
+    # Configure a pipe to capture the passphrase if requested
+
+    export _rayvnAnonymousPipe
+    (( capture )) && _rayvnAnonymousPipe="${ makeTempFile 'XXXXXXXXXXXX'; }"
+
+    # Encrypt the private key
+
+    echo "${valtKey[@]}" | rage -p -a -o "${keyFile}" - || bye
+
+    # Grab and return the passphrase if requested
+
     if (( capture )) && [[ -s "${_rayvnAnonymousPipe}" ]]; then
         local result
         read -r result < "${_rayvnAnonymousPipe}"
@@ -70,9 +127,13 @@ debug 'encrypting key RETURN'
         printf -v "${captureVarName}" '%s' "${result}"
     fi
 
-    [[ -f ${keyFile} ]] || fail "canceled"
-    echo "${publicKey}" > "${publicKeyFile}"
-    unset key
+    # Write out public key files
+
+    echo "${agePublicKey}" > "${publicKeyFile}"
+    printf '%s\n' "${signingPublicKey[@]}" > "${publicSigningKeyFile}"
+
+    # Turn off our pinentry
+
     disableValtPinEntry
 }
 
@@ -145,7 +206,9 @@ PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/age' PRIVATE �
 
 _init_valt_age() {
     require 'rayvn/core' 'valt/pinentry'
+    declare -grx ageFileExtension='age'
+    declare -grx tarFileExtension='tar.xz'
+    declare -grx signingPublicKeyPrefix='# [sign public] '
+    declare -grx signingPrivateKeyPrefix='# [sign secret] '
 }
 
-declare -grx ageFileExtension='age'
-declare -grx tarFileExtension='tar.xz'
