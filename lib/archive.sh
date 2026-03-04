@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# My library.
+# Secure archives.
 # Use via: require 'valt/archive'
 
 # Create an encrypted, signed archive from one or more files, directories and archives. Uses the tar file
