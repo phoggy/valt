@@ -2,6 +2,10 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
+// If PUPPETEER_EXECUTABLE_PATH is set (e.g. by Nix wrapProgram), use it; otherwise
+// puppeteer uses its own bundled Chromium (installed at build time by Brew/npm ci).
+const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+
 async function generatePDF(htmlFile, outputFile, footerTemplate) {
     // Convert to absolute paths
     const absoluteHtmlFile = path.resolve(htmlFile);
@@ -14,6 +18,7 @@ async function generatePDF(htmlFile, outputFile, footerTemplate) {
 
     const browser = await puppeteer.launch({
         headless: true,
+        ...(executablePath ? { executablePath } : {}),
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',

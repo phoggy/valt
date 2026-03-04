@@ -1,0 +1,7 @@
+{
+  "name": "valt-pdf",
+  "private": true,
+  "dependencies": {
+    "puppeteer": "^24"
+  }
+}

@@ -15,6 +15,25 @@
         rayvnPkg = rayvn.packages.${system}.default;
         mrldPkg = mrld.packages.${system}.default;
 
+        # Build puppeteer node_modules at derivation time (no runtime npm install).
+        # PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1: on Linux we use pkgs.chromium; on macOS
+        # pkgs.chromium is unavailable so pdf.sh detects a system browser at runtime.
+        pdfNodeDeps = pkgs.buildNpmPackage {
+          name = "valt-pdf-node-deps";
+          src = ./etc;
+          npmDepsHash = "sha256-n8o805M+VDZ5KvBTVdMxRhW5kLQYyhktYBjH1y84haY=";
+          dontNpmBuild = true;
+          npmInstallFlags = [ "--production" ];
+          env = {
+            PUPPETEER_SKIP_DOWNLOAD = "1";
+            PUPPETEER_SKIP_CHROME_DOWNLOAD = "1";
+          };
+          installPhase = ''
+            mkdir -p $out
+            cp -r node_modules $out/
+          '';
+        };
+
         # Runtime dependencies
         runtimeDeps = [
           pkgs.bash
@@ -24,6 +43,9 @@
           mrldPkg
           pkgs.curl
           pkgs.nodejs
+        ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
+          pkgs.chromium
+        ] ++ [
           pkgs.qrencode
           pkgs.exiftool
           pkgs.qpdf
@@ -57,7 +79,6 @@
             # Install etc/
             mkdir -p "$out/share/valt/etc"
             cp -r etc/* "$out/share/valt/etc/"
-
             # Install rayvn.pkg with version metadata
             sed '/^projectVersion=/d; /^projectReleaseDate=/d; /^projectFlake=/d; /^projectBuildRev=/d; /^projectNixpkgsRev=/d' \
                 rayvn.pkg > "$out/share/valt/rayvn.pkg"
@@ -74,11 +95,11 @@ EOF
             # Wrap valt with runtime dependencies on PATH and font config.
             # Include $out/bin so rayvn.up can find 'rayvn.up' and 'valt' via
             # PATH lookup for project root resolution.
-            # Note: Puppeteer/npm install happens at runtime in ~/.config/valt/node-js/
-            # via pdf.sh's _init_valt_pdf — nodejs (with npm) is on PATH for this.
             wrapProgram "$out/bin/valt" \
               --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath runtimeDeps}" \
-              --set FONTCONFIG_FILE "${pkgs.makeFontsConf { fontDirectories = fonts; }}"
+              --set FONTCONFIG_FILE "${pkgs.makeFontsConf { fontDirectories = fonts; }}" \
+              ${pkgs.lib.optionalString pkgs.stdenv.isLinux "--set PUPPETEER_EXECUTABLE_PATH \"${pkgs.chromium}/bin/chromium\""} \
+              --set VALT_PDF_DEPS_HOME "${pdfNodeDeps}"
 
             # Wrap valt-pinentry similarly
             wrapProgram "$out/bin/valt-pinentry" \
