@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Library supporting password/phrase generation
+# Enable/disable use of valt pinentry for password input.
 # Use via: require 'valt/pinentry'
 
 # Set PINENTRY_PROGRAM to valt's custom pinentry binary, enabling passphrase capture.

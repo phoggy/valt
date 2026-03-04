@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2155
 
-# Library supporting password/phrase breach testing
+# Password/phrase breach testing.
 # Use via: require 'valt/pwned'
 
 # Check whether a password appears in the HaveIBeenPwned breach database via k-anonymity API.

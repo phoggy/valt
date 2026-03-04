@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Library to generate PDF files from HTML.
+# Generate PDF files from HTML.
 # Use via: require 'valt/pdf'
 
 # Generate a PDF file from an HTML file using Puppeteer (Node.js).

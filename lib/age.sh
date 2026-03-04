@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Library supporting age file encryption via rage
+# Age file encryption via rage.
 # Use via: require 'valt/age'
 
 # Print guidance about creating an age key pair, including passphrase strength advice.
