@@ -2,7 +2,7 @@
 # shellcheck disable=SC2155
 
 # Library supporting password/phrase breach testing
-# Intended for use via: require 'valt/pwned'
+# Use via: require 'valt/pwned'
 
 # Check whether a password appears in the HaveIBeenPwned breach database via k-anonymity API.
 # Returns 0 if not found, 1 if the API could not be reached, 2 if the password has been breached.

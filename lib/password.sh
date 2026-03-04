@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Library supporting password/phrase generation
-# Intended for use via: require 'valt/passwords'
+# Use via: require 'valt/passwords'
 
 # TODO: don't display strength (via mrld) as it is inaccurate. Just pick a threshold and warn is week if below.
 
