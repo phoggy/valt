@@ -116,7 +116,7 @@ createAgeKeyPair() {
 
     # Encrypt the private key
 
-    echo "${valtKey[@]}" | rage -p -a -o "${keyFile}" - || bye
+    printf "%s\n" "${valtKey[@]}" | rage -p -a -o "${keyFile}" - || bye
 
     # Grab and return the passphrase if requested
 
@@ -178,6 +178,37 @@ armorAgeFile() {
     else
         fail "${ageFile} does not appear to be an age encrypted file"
     fi
+}
+
+tempSigningKeyFile() {
+    assertFile "$1"
+    useValtPinEntry
+
+    local encryptedPrivateKeyFile="$1"
+    local -n resultFileRef="$2"
+    local resultFile; resultFile="${ makeTempFile 'XXXXXXXX'; }"
+    local privateKey=()
+    local signingKey=()
+    local line
+
+    # Decrypt and map private key content (and skip check
+
+    export _skipReadPasswordCheck=1
+    mapfile -t < <( rage -d "${encryptedPrivateKeyFile}" 2> >(redStream) ) privateKey || fail
+    unset _skipReadPasswordCheck
+
+    # Extract the signing key
+
+    for line in "${privateKey[@]}"; do
+        if [[ ${line} == "${signingPrivateKeyPrefix}"* ]]; then
+            signingKey+=( "${line:${#signingPrivateKeyPrefix}}" )
+        fi
+    done
+
+    # Write it to the temp signing file and assign the result
+
+    printf "%s\n" "${signingKey[@]}" > "${resultFile}"
+    resultFileRef="${resultFile}"
 }
 
 # Populate a nameref variable with a multi-line sample text if not already set.
