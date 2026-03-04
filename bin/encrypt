@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2155
 
-require 'rayvn/core' 'valt/age'
+require 'rayvn/core' 'valt/keygen'
 
 usage() {
     echo

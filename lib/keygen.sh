@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# Age file encryption via rage.
-# Use via: require 'valt/age'
+# Encryption/signing key generation.
+# Use via: require 'valt/keygen'
 
 # Print guidance about creating an age key pair, including passphrase strength advice.
 showAgeKeyPairAdvice() {
@@ -202,9 +202,9 @@ HEREDOC
     fi
 }
 
-PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/age' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
+PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/keygen' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
-_init_valt_age() {
+_init_valt_keygen() {
     require 'rayvn/core' 'valt/pinentry'
     declare -grx ageFileExtension='age'
     declare -grx tarFileExtension='tar.xz'

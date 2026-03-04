@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-require 'rayvn/prompt' 'rayvn/config' 'valt/age' 'valt/pinentry'
+require 'rayvn/prompt' 'rayvn/config' 'valt/keygen' 'valt/pinentry'
 
 usage() {
     echo

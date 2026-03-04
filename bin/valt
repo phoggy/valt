@@ -111,7 +111,7 @@ assertValidVisibility() {
 
 # Boot rayvn with initial required libraries
 
-source rayvn.up --add 'valt' 'rayvn/core' 'valt/age' 'rayvn/deps' || exit
+source rayvn.up --add 'valt' 'rayvn/core' 'valt/keygen' 'rayvn/deps' || exit
 
 main "${@}"
 
