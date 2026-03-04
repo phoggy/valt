@@ -137,7 +137,7 @@ verifyEncryptedFile() {
         local decryptedFile="${ tempDirPath file; }"
         local verifyDir="${ tempDirPath file-content; }"
         show "Verifying" cyan "${outputFile}"
-        valt decrypt -i "${verifyKeyFile}" ${outputFile} -o "${decryptedFile}" -u "${verifyDir}" -f -q || fail
+        valt ../bin/decrypt -i "${verifyKeyFile}" ${outputFile} -o "${decryptedFile}" -u "${verifyDir}" -f -q || fail
 
         if [[ ${isArchive} ]]; then
             local file i
