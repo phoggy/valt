@@ -178,11 +178,10 @@ tempSigningKeyFile() {
     resultFileRef="${resultFile}"
 }
 
-
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/keys' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_keys() {
-    require 'rayvn/core' 'valt/pinentry'
+    require 'rayvn/core' 'valt/pinentry' 'valt/password' 'rayvn/prompt'
     declare -grx xkcdPasswordsUrl="https://xkcd.com/936/"
     declare -grx ageFileExtension='age'
     declare -grx tarFileExtension='tar.xz'
@@ -200,7 +199,6 @@ _maybeOfferPassphraseAdvice() {
     _readAdviceCount
     (( _adviceCount == 0 )) && _showPrivateKeyPassphraseAdvice
     if (( _adviceCount <= 1 )); then
-        require 'rayvn/prompt'
         local choiceIndex
         confirm "Do you already have a strong, memorable passphrase?" no yes choiceIndex || bye
         if (( choiceIndex == 0 )); then
@@ -210,10 +208,19 @@ _maybeOfferPassphraseAdvice() {
                 _setAdviceCount 1
                 bye
             fi
-            require 'valt/password'
-            generatePassphrase
-            show nl bold "Keep this passphrase someplace secure!"
-            show nl "If you want to generate a new passphrase, run:" primary "valt pass"
+            show nl "Ok, here a some to choose from:" nl
+            for i in {1..5}; do
+                generatePassphrase
+            done
+            echo
+            confirm "Does one of these work for you?" yep nope choiceIndex || bye
+            if (( choiceIndex == 1 )); then
+                show "Ok. If you want to do this later, run:" primary "valt pass"
+                _setAdviceCount 1
+                bye
+            fi
+            show nl "Good." primary italic "Keep this passphrase someplace secure!" nl
+            echo "Ok, now you'll need to enter it for your new keys"
             _setAdviceCount 2
         fi
     fi
@@ -227,8 +234,8 @@ _showPrivateKeyPassphraseAdvice() {
     echo "Rather than a typical password, a multi word 'passphrase' is a much better choice here since it will be far easier"
     echo "to remember. Just as with a password manager, the idea is that you remember one secret that gives you access to a"
     show "whole collection of encrypted data. Since human memory" bold italic "is" plain "fallible, it's very important that you keep"
-    echo "a copy of the private key in a password manager" bold " and written copies somewhere secure (e.g. a safe, a good friend, a"
-    echo "safe-deposit box) in case you forget or become incapacitated."
+    echo "a copy of the private key in a password manager" bold " and written copies somewhere secure (e.g. a safe, a good friend,"
+    echo "a safe-deposit box) in case you forget or become incapacitated."
     echo
     echo "The following are examples of passwords and passphrases, with rough estimates of 'crack' times using modern systems:"
     echo
