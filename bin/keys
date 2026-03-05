@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-require 'rayvn/prompt' 'rayvn/config' 'valt/keygen' 'valt/pinentry'
+require 'rayvn/prompt' 'rayvn/config' 'valt/keys' 'valt/pinentry'
 
 usage() {
     echo
@@ -204,22 +204,13 @@ assertKeyInfoArrayVar() {
     (( ${#nameRef[@]} > 0 )) || bye "The '${name}' array variable cannot be empty in ${keyInfoFile}."
 }
 
-
 createKeys() {
     echo
     header 1 "Generating keys"
-    if (( showKeyAdvice )); then
-        echo
-        showAgeKeyPairAdvice
-        local reply
-        confirm "Would you like help generating a passphrase?" y n reply
-        echo
-        [[ ${reply} == 'y' ]] && generatePass
-    fi
     if (( includePassphrase )); then
-        createAgeKeyPair "${privateKeyFile}" "${publicKeyFile}" _PHRASE || fail
+        createValtKeys "${privateKeyFile}" "${publicKeyFile}" _PHRASE || fail
     else
-        createAgeKeyPair "${privateKeyFile}" "${publicKeyFile}" || fail
+        createValtKeys "${privateKeyFile}" "${publicKeyFile}" || fail
         _PHRASE="(see Notes)"
     fi
     echo
@@ -234,11 +225,6 @@ createKeys() {
         echo
         show bold green "Verified" plain "that a file encrypted with" cyan "${publicKeyFile}" plain "decrypts with passphrase and the" cyan "${privateKeyFile}" plain "private key."
     fi
-}
-
-generatePass() {
-    show bold yellow "TODO" plain ": implement generatePass()!" # TODO!!
-    echo
 }
 
 createKeyDocument() {

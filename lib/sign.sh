@@ -18,6 +18,6 @@ signFile() {
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/sign' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_sign() {
-    require 'valt/keygen'
+    require 'valt/keys'
 }
 

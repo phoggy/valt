@@ -79,7 +79,7 @@ readPassword() {
     local -i pwned=
     local score=
     resultVar=''
-    (( _skipReadPasswordCheck )) && checkResult=false
+    (( skipReadPasswordCheck )) && checkResult=false
     [[ -v passwordVisibility ]] || declare -gx passwordVisibility='none'
 
     case ${passwordVisibility} in

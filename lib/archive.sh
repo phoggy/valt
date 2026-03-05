@@ -152,7 +152,7 @@ PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/archive' PRIVA
 #   - private valt key (encrypted): local, bitwarden (etc)
 
 _init_valt_archive() {
-    require 'rayvn/core' 'valt/keygen'
+    require 'rayvn/core' 'valt/keys'
 }
 
 _assertArchiveRecipient() {
