@@ -96,7 +96,7 @@ init() {
     assertValidVisibility
     [[ ${newPassphrase} || -n ${command} ]] || usage "missing command"
 
-    checkProjectDeps 'valt'
+    checkProjectDependencies 'valt'
 }
 
 setCommand() {
@@ -112,7 +112,7 @@ assertValidVisibility() {
 
 # Boot rayvn with initial required libraries
 
-source rayvn.up --add 'valt' 'rayvn/core' 'valt/keys' 'rayvn/deps' || exit
+source rayvn.up --add 'valt' 'rayvn/core' 'valt/keys' 'rayvn/dependencies' || exit
 
 main "${@}"
 

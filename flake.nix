@@ -43,6 +43,10 @@
           mrldPkg
           pkgs.curl
           pkgs.nodejs
+          pkgs.jq
+          pkgs.last
+          pkgs.minisign
+          pkgs.temp2
         ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
           pkgs.chromium
         ] ++ [
