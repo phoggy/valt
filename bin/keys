@@ -221,7 +221,7 @@ createKeys() {
         echo
         show bold "Verifying keys"
         echo
-        verifyAgeKeyPair "${privateKeyFile}" "${publicKeyFile}"
+        verifyValtKeys "${privateKeyFile}" "${publicKeyFile}"
         echo
         show bold green "Verified" plain "that a file encrypted with" cyan "${publicKeyFile}" plain "decrypts with passphrase and the" cyan "${privateKeyFile}" plain "private key."
     fi
@@ -245,7 +245,7 @@ createPdf() {
 
     # Set armoredKey var
 
-    armorAgeFile "${privateKeyFile}" armoredKey
+    armorValtKey "${privateKeyFile}" armoredKey
 
     # Copy asset files
 

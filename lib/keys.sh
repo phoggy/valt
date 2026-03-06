@@ -83,6 +83,7 @@ createValtKeys() {
 
     # Encrypt the private key
 
+    echo
     printf "%s\n" "${valtKey[@]}" | rage -p -a -o "${keyFile}" - || bye
 
     # Grab and return the passphrase if requested
@@ -104,22 +105,42 @@ createValtKeys() {
     disableValtPinEntry
 }
 
-# Verify an age key pair by encrypting sample text and decrypting it, then comparing.
+# Verify keys by encrypting sample text, signing, verify signature and decrypting, then comparing.
 # Fails if decryption does not reproduce the original (e.g. wrong passphrase).
-# Args: keyFile publicKeyFile
+# Args: keyFile publicKeyFile publicSigningKeyFile
 #
-#   keyFile       - path to the passphrase-encrypted private key file
-#   publicKeyFile - path to the plain-text public key file
-verifyAgeKeyPair() {
-    local sampleText
-    local keyFile="${1}"
-    local publicKeyFile="${2}"
-    local tempEncryptedFile="${ tempDirPath sample.age; }"
+#   keyFile               path where the passphrase-encrypted private key file will be written
+#   publicKeyFile         path where the plain-text public key will be written
+#   publicSigningKeyFile  path where the plain-text signing public key will be written
+
+verifyValtKeys() {
     useValtPinEntry
 
+    local keyFile="$1"
+    local publicKeyFile="$2"
+    local publicSigningKeyFile="$3"
+
+    assertFile "${keyFile}"
+    assertFile "${publicKeyFile}"
+    assertFile "${publicSigningKeyFile}"
+
+    local encryptedFile; encryptedFile="${ tempDirPath sample.age; }"
+    local signatureFle; signatureFile="${ tempDirPath sample.sig; }"
+    local sampleText
     _setSampleText sampleText
-    echo -n "${sampleText}" | rage -R "${publicKeyFile}" -o "${tempEncryptedFile}" || fail
-    local decrypted="${ rage -d -i "${keyFile}" "${tempEncryptedFile}" 2> /dev/null; }"
+
+    fail "TODO!"
+    # Encrypt
+    echo -n "${sampleText}" | rage -R "${publicKeyFile}" -o "${encryptedFile}" || fail
+
+    # Sign
+
+
+    # Verify signature
+
+    # Decrypt and compare
+
+    local decrypted="${ rage -d -i "${keyFile}" "${encryptedFile}" 2> /dev/null; }"
     diff -u <(echo -n "${sampleText}") <(echo "${decrypted}") > /dev/null || fail "not verified (wrong passphrase?)"
     disableValtPinEntry
 }
@@ -130,7 +151,8 @@ verifyAgeKeyPair() {
 #
 #   ageFile   - path to the binary age-encrypted file
 #   resultVar - nameref variable to receive the armored text
-armorAgeFile() {
+
+armorValtKey() {
     local ageFile="${1}"
     local -n resultVar="${2}"
     local header="${ head -n 1 "${ageFile}"; }"
