@@ -23,6 +23,7 @@ createValtKeys() {
     local agePublicKey
     local agePrivateKey=()
     local valtKey=()
+    local valtPubKey=()
     local index line
     [[ -n "${keyFile}" ]] || invalidArgs "keyFile not provided"
     [[ -n "${publicKeyFile}" ]] || invalidArgs "publicKeyFile not provided"
@@ -44,7 +45,7 @@ createValtKeys() {
     index=${ indexOf -r "${ageCreatedPrefix}" agePrivateKey; }
     ageCreated="${agePrivateKey[index]}"
     agePrivateKey=("${agePrivateKey[@]:0:index}" "${agePrivateKey[@]:index+1}")
-
+debugVar agePrivateKey
     index=${ indexOf -r "${agePublicKeyPrefix}" agePrivateKey; }
     line="${agePrivateKey[index]}"
     agePublicKey="${line:${#agePublicKeyPrefix}}"
@@ -60,7 +61,7 @@ createValtKeys() {
     mapfile -t < <(cat "${signingPrivateKeyFile}") signingPrivateKey || fail
     rm "${signingPublicKeyFile}" "${signingPrivateKeyFile}" &> /dev/null
 
-    # Construct the combined 'valt' private key
+    # Construct the combined 'valt.key' private key
 
     valtKey+=("${ageCreated}")
     valtKey+=('#')
@@ -75,6 +76,16 @@ createValtKeys() {
     for line in "${agePrivateKey[@]}"; do
         valtKey+=("${line}")
     done
+debugVar valtKey
+
+    # Construct the combined 'valt.pub' public key
+
+    for line in "${signingPublicKey[@]}"; do
+        valtPubKey+=("${signingPublicKeyPrefix}${line}")
+    done
+    valtPubKey+=("#")
+    valtPubKey+=("${agePublicKey}")
+debugVar valtPubKey
 
     # Configure a pipe to capture the passphrase if requested
 
@@ -95,9 +106,9 @@ createValtKeys() {
         printf -v "${captureVarName}" '%s' "${result}"
     fi
 
-    # Write out public key files
+    # Write out public keys
 
-    echo "${agePublicKey}" > "${publicKeyFile}"
+    printf '%s\n'  "${valtPubKey[@]}" > "${publicKeyFile}"
     printf '%s\n' "${signingPublicKey[@]}" > "${publicSigningKeyFile}"
 
     # Turn off our pinentry
@@ -169,35 +180,22 @@ armorValtKey() {
     fi
 }
 
+tempPublicKeyFile() {
+    local decrypt=false prefix="${agePublicKeyPrefix}"
+    local keyFile="$1" resultFileVar="$2"
+    _extractKeyToTempFile "${keyFile}" "${prefix}" ${decrypt} ${resultFileVar}
+}
+
+tempSigningPublicKeyFile() {
+    local decrypt=false prefix="${signingPublicKeyPrefix}"
+    local keyFile="$1" resultFileVar="$2"
+    _extractKeyToTempFile "${keyFile}" "${prefix}" ${decrypt} ${resultFileVar}
+}
+
 tempSigningKeyFile() {
-    assertFile "$1"
-    useValtPinEntry
-
-    local encryptedPrivateKeyFile="$1"
-    local -n resultFileRef="$2"
-    local resultFile; resultFile="${ makeTempFile 'XXXXXXXX'; }"
-    local privateKey=()
-    local signingKey=()
-    local line
-
-    # Decrypt and map private key content (and skip check
-
-    export skipReadPasswordCheck=1
-    mapfile -t < <( rage -d "${encryptedPrivateKeyFile}" 2> >(redStream) ) privateKey || fail
-    unset skipReadPasswordCheck
-
-    # Extract the signing key
-
-    for line in "${privateKey[@]}"; do
-        if [[ ${line} == "${signingPrivateKeyPrefix}"* ]]; then
-            signingKey+=( "${line:${#signingPrivateKeyPrefix}}" )
-        fi
-    done
-
-    # Write it to the temp signing file and assign the result
-
-    printf "%s\n" "${signingKey[@]}" > "${resultFile}"
-    resultFileRef="${resultFile}"
+    local decrypt=true prefix="${signingPrivateKeyPrefix}"
+    local keyFile="$1" resultFileVar="$2"
+    _extractKeyToTempFile "${keyFile}" "${prefix}" ${decrypt} ${resultFileVar}
 }
 
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/keys' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
@@ -217,21 +215,77 @@ _init_valt_keys() {
     declare -g _adviceCount=0
 }
 
+_extractKeyToTempFile() {
+    local keyFile="$1"
+    local keyPrefix="$2"
+    local decrypt="$3"
+    local -n resultFileRef="$4"
+    local _key=()
+    local resultArray=()
+    local resultFile; resultFile="${ makeTempFile 'XXXXXXXX'; }"
+debugVar keyFile keyPrefix decrypt
+    # Map private key to array
+
+    _readKeyToArray "${keyFile}" ${decrypt} _key
+ debugVar _key
+    (( ${#_key} == 0 )) && fail ")_key not assigned!" # TODO Fix and remove
+    # Extract the key
+
+    _extractKeyContent _key "${keyPrefix}" resultArray
+debugVar resultArray
+    # Write it to the temp signing file and assign the result
+
+    printf "%s\n" "${resultArray[@]}" > "${resultFile}"
+    resultFileRef="${resultFile}"
+}
+
+_readKeyToArray() {
+    assertFile "$1"
+    useValtPinEntry
+    local keyFile="$1"
+    local decrypt="$2"
+    local resultArrayRef="$3"
+    local _result=()
+debug "_readKeyToArray"
+    debugVar keyFile decrypt rayvnTest_ValtKeyPassphrase
+    if [[ ${decrypt} == true ]]; then
+        [[ -n "${rayvnTest_ValtKeyPassphrase}" ]] && debug "using passphrase to decrypt private key and map" || debug "requesting passphrase to decrypt private key and map"
+        export skipReadPasswordCheck=1
+        mapfile -t < <( rage -d "${keyFile}" 2> >(redStream) ) _result || fail
+        unset skipReadPasswordCheck
+    else
+debug "mapping public key"
+        mapfile -t "${keyFile}" _result || fail
+    fi
+    debugVar _result
+    debug "${_result[@]}"
+    resultArrayRef=("${_result[@]}")
+}
+
+_extractKeyContent() {
+    local -n valtKeyArrayRef="$1"
+    local keyPrefix="$2"
+    local -n _resultArrayRef="$3"
+    local line _result=()
+
+    for line in "${valtKeyArrayRef[@]}"; do
+        if [[ ${line} == "${keyPrefix}"* ]]; then
+            _result+=( "${line:${#keyPrefix}}" )
+        fi
+    done
+    debugVar _result
+    _resultArrayRef=( "${_result[@]}" )
+}
+
 _maybeOfferPassphraseAdvice() {
     _readAdviceCount
-    (( _adviceCount == 0 )) && _showPrivateKeyPassphraseAdvice
     if (( _adviceCount <= 1 )); then
         local choiceIndex
+        _showPrivateKeyPassphraseAdvice
         confirm "Do you already have a strong, memorable passphrase?" no yes choiceIndex || bye
         if (( choiceIndex == 0 )); then
-            confirm "Want to create a new random one?" yep nope choiceIndex || bye
-            if (( choiceIndex == 1 )); then
-                show "Ok. If you want to do this later, run:" primary "valt pass"
-                _setAdviceCount 1
-                bye
-            fi
-            show nl "Ok, here a some to choose from:" nl
-            for i in {1..5}; do
+            show nl "Ok, here a some randomly generated ones to choose from:" nl
+            for i in {1..10}; do
                 generatePassphrase
             done
             echo
@@ -242,7 +296,7 @@ _maybeOfferPassphraseAdvice() {
                 bye
             fi
             show nl "Good." primary italic "Keep this passphrase someplace secure!" nl
-            echo "Ok, now you'll need to enter it for your new keys"
+            echo "Ok, now you'll need to enter it for your new keys."
             _setAdviceCount 2
         fi
     fi
