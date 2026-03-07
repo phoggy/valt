@@ -50,6 +50,7 @@ init() {
 
     if (( _debug )); then
         declare -gx _logPrefix="${ show secondary 'pinentry: '; }"
+        log "BEGIN valt-pinentry"
         log "${ show primary 'date' plain ${ date; } \
                      primary "terminal" plain ${terminal} \
                      primary 'pid' plain ${BASHPID} \
@@ -94,7 +95,7 @@ serve() {
 
 onBye() {
     respond "OK closing connection"
-    log $'\n--- END pinentry -----------------------------------------------------\n'
+    log 'END valt-pinentry'
     exit 0
 }
 
@@ -148,37 +149,41 @@ getProxyPin() {
 
 getPin() {
     local p1 p2
-    describe "${description}"
-    readPassword "${mainPrompt}" p1 ${timeout} true || { respond "${cancelledError}"; return; }
-    if [[ ${p1} == '' ]]; then
-        respond "${emptyPinError}"
-        return
-    fi
-    if [[ ${confirm} ]]; then
-        local retries=3
-        while (( retries > 0 )); do
-            log "calling readPassword ${confirmPrompt}"
-            readPassword "   ${confirmPrompt}" p2 ${timeout} false  || { respond "${cancelledError}"; return; }
-            if [[ ${p2} == '' ]]; then
-                respond "${emptyPinError}"
-                return
-            fi
-
-            if [[ ${p1} == "${p2}" ]]; then
-                break
-            else
-                (( retries -= 1 ))
-                mismatchError "   ${confirmError}" ${retries}
-            fi
-        done
-        if (( retries <= 0 )); then
-            respond "${mismatchedPinError}"
-            secureEraseVars p1 p2
+    if [[ -n "${rayvnTest_ValtKeyPassphrase}" ]]; then
+        log "returning provided passphrase"
+        p1="${rayvnTest_ValtKeyPassphrase}"
+    else
+        describe "${description}"
+        readPassword "${mainPrompt}" p1 ${timeout} true || { respond "${cancelledError}"; return; }
+        if [[ ${p1} == '' ]]; then
+            respond "${emptyPinError}"
             return
         fi
-        respond "${pinRepeatedResponse}"
-    fi
+        if [[ ${confirm} ]]; then
+            local retries=3
+            while (( retries > 0 )); do
+                log "calling readPassword ${confirmPrompt}"
+                readPassword "   ${confirmPrompt}" p2 ${timeout} false  || { respond "${cancelledError}"; return; }
+                if [[ ${p2} == '' ]]; then
+                    respond "${emptyPinError}"
+                    return
+                fi
 
+                if [[ ${p1} == "${p2}" ]]; then
+                    break
+                else
+                    (( retries -= 1 ))
+                    mismatchError "   ${confirmError}" ${retries}
+                fi
+            done
+            if (( retries <= 0 )); then
+                respond "${mismatchedPinError}"
+                secureEraseVars p1 p2
+                return
+            fi
+            respond "${pinRepeatedResponse}"
+        fi
+    fi
     # Got it
 
     respond "D ${p1}"
