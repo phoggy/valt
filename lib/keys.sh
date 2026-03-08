@@ -181,13 +181,13 @@ armorValtKey() {
 }
 
 tempPublicKeyFile() {
-    local decrypt=false prefix="${agePublicKeyPrefix}"
+    local decrypt=true prefix="${agePublicKeyPrefix}"
     local keyFile="$1" resultFileVar="$2"
     _extractKeyToTempFile "${keyFile}" "${prefix}" ${decrypt} ${resultFileVar}
 }
 
 tempSigningPublicKeyFile() {
-    local decrypt=false prefix="${signingPublicKeyPrefix}"
+    local decrypt=true prefix="${signingPublicKeyPrefix}"
     local keyFile="$1" resultFileVar="$2"
     _extractKeyToTempFile "${keyFile}" "${prefix}" ${decrypt} ${resultFileVar}
 }
@@ -228,7 +228,7 @@ debugVar keyFile keyPrefix decrypt
 
     _readKeyToArray "${keyFile}" ${decrypt} _key
  debugVar _key
-    (( ${#_key} == 0 )) && fail ")_key not assigned!" # TODO Fix and remove
+    (( ${#_key} == 0 )) && fail "_key not assigned!" # TODO Fix and remove
     # Extract the key
 
     _extractKeyContent _key "${keyPrefix}" resultArray
@@ -244,7 +244,7 @@ _readKeyToArray() {
     useValtPinEntry
     local keyFile="$1"
     local decrypt="$2"
-    local resultArrayRef="$3"
+    local -n resultArrayRef="$3"
     local _result=()
 debug "_readKeyToArray"
     debugVar keyFile decrypt rayvnTest_ValtKeyPassphrase
