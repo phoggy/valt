@@ -5,19 +5,42 @@
 # Use via: require 'valt/keys'
 
 # Create new valt keys, encrypting the private key with a passphrase. May show passphrase advice and offer to generate passphrase.
-# Args: keyFile publicKeyFile publicSigningKeyFile [captureVarName]
+# Args: [keyName] [keyDir] [keyFileResultVar] [publicKeyFileResultVar] [publicSigningKeyFileVar] [testPassResultVar]
 #
-#   keyFile               path where the passphrase-encrypted private key file will be written
-#   publicKeyFile         path where the plain-text public key will be written
-#   publicSigningKeyFile  path where the plain-text signing public key will be written
-#   captureVarName        optional variable name to receive the passphrase entered during encryption
+# A '?' for any arg will ensure the default behavior.
+#
+#   keyName                  optional name prefix for keys
+#   keyDir                   optional directory path where key files will be written, default: ~/.config/valt
+#   keyFileResultVar         optional var name to assign the private key file
+#   keyFileResultVar         optional var name to assign the private key file
+#   publicKeyFileResultVar   optional var name to assign the public key file
+#   publicSigningKeyFileVar  optional var name to assign the signing public key file
+#   testPassResultVar        optional var name to assign the password for testing
 
 createValtKeys() {
     useValtPinEntry
-    local keyFile="$1"
-    local publicKeyFile="$2"
-    local publicSigningKeyFile="$3"
-    local captureVarName="${4:-}"
+
+    local keyName="${1:-?}"
+    local keyDir="${2:-?}"
+    local _keyFileResultVar="${3:-?}"
+    local _publicKeyFileResultVar="${4:-?}"
+    local _publicSigningKeyFileResultVar="${5:-?}"
+    local _testPassResultVar="${6:-?}"
+
+    local keyPrefix=
+    [[ ${keyName} != '?' ]] && keyPrefix="${keyName}-"
+    if [[ ${keyDir} == '?' ]]; then
+        # Force use of valt config dir
+        local origProject="${currentProjectName}"
+        currentProjectName='valt'
+        keyDir="${ configDirPath; }"
+        currentProjectName=${origProject}
+    else
+        assertDirectory "${keyDir}"
+    fi
+    local _keyFile="${keyDir}/${keyPrefix}${valtPrivateKeySuffix}"
+    local _publicKeyFile="${keyDir}/${keyPrefix}${valtPublicKeySuffix}"
+    local _publicSigningKeyFile="${keyDir}/${keyPrefix}${valtSigningPublicKeySuffix}"
     local capture=0
     local ageCreated
     local agePublicKey
@@ -25,12 +48,10 @@ createValtKeys() {
     local valtKey=()
     local valtPubKey=()
     local index line
-    [[ -n "${keyFile}" ]] || invalidArgs "keyFile not provided"
-    [[ -n "${publicKeyFile}" ]] || invalidArgs "publicKeyFile not provided"
-    [[ -n "${publicSigningKeyFile}" ]] || invalidArgs "publicSigningKeyFile not provided"
-
-    [[ -f ${keyFile} ]] && invalidArgs "${keyFile} should have been deleted!"
-    [[ -n "${captureVarName}" ]] && capture=1
+    _assertKeyFileDoesNotExist "${_keyFile}"
+    _assertKeyFileDoesNotExist "${_publicKeyFile}"
+    _assertKeyFileDoesNotExist "${_publicSigningKeyFile}"
+    [[ -n "${_testPassResultVar}" && "${_testPassResultVar}" != '?' ]] && capture=1
 
     # Maybe offer passphrase advice and/or generate passphrase if desired
 
@@ -45,7 +66,6 @@ createValtKeys() {
     index=${ indexOf -r "${ageCreatedPrefix}" agePrivateKey; }
     ageCreated="${agePrivateKey[index]}"
     agePrivateKey=("${agePrivateKey[@]:0:index}" "${agePrivateKey[@]:index+1}")
-debugVar agePrivateKey
     index=${ indexOf -r "${agePublicKeyPrefix}" agePrivateKey; }
     line="${agePrivateKey[index]}"
     agePublicKey="${line:${#agePublicKeyPrefix}}"
@@ -54,12 +74,12 @@ debugVar agePrivateKey
 
     local signingPublicKey=()
     local signingPrivateKey=()
-    local signingPublicKeyFile; signingPublicKeyFile="${ tempDirPath -r; }"
-    local signingPrivateKeyFile; signingPrivateKeyFile="${ tempDirPath -r; }"
-    minisign -G -p "${signingPublicKeyFile}" -s "${signingPrivateKeyFile}" -W > /dev/null || fail
-    mapfile -t < <(cat "${signingPublicKeyFile}") signingPublicKey || fail
-    mapfile -t < <(cat "${signingPrivateKeyFile}") signingPrivateKey || fail
-    rm "${signingPublicKeyFile}" "${signingPrivateKeyFile}" &> /dev/null
+    local _signingPublicKeyFile; _signingPublicKeyFile="${ tempDirPath -r; }"
+    local _signingPrivateKeyFile; _signingPrivateKeyFile="${ tempDirPath -r; }"
+    minisign -G -p "${_signingPublicKeyFile}" -s "${_signingPrivateKeyFile}" -W > /dev/null || fail
+    mapfile -t < <(cat "${_signingPublicKeyFile}") signingPublicKey || fail
+    mapfile -t < <(cat "${_signingPrivateKeyFile}") signingPrivateKey || fail
+    rm "${_signingPublicKeyFile}" "${_signingPrivateKeyFile}" &> /dev/null
 
     # Construct the combined 'valt.key' private key
 
@@ -76,7 +96,6 @@ debugVar agePrivateKey
     for line in "${agePrivateKey[@]}"; do
         valtKey+=("${line}")
     done
-debugVar valtKey
 
     # Construct the combined 'valt.pub' public key
 
@@ -85,35 +104,37 @@ debugVar valtKey
     done
     valtPubKey+=("#")
     valtPubKey+=("${agePublicKey}")
-debugVar valtPubKey
 
-    # Configure a pipe to capture the passphrase if requested
+    # Encrypt the private key, optionally capturing the password for testing
 
-    export _rayvnAnonymousPipe
-    (( capture )) && _rayvnAnonymousPipe="${ makeTempFile 'XXXXXXXXXXXX'; }"
-
-    # Encrypt the private key
-
-    echo
-    printf "%s\n" "${valtKey[@]}" | rage -p -a -o "${keyFile}" - || bye
-
-    # Grab and return the passphrase if requested
-
-    if (( capture )) && [[ -s "${_rayvnAnonymousPipe}" ]]; then
+    if (( capture )); then
+        export _valtTestTemp; _valtTestTemp="${ makeTempFifo; }"
+        printf "%s\n" "${valtKey[@]}" | rage -p -a -o "${_keyFile}" - &
+        local ragePid=$!
         local result
-        read -r result < "${_rayvnAnonymousPipe}"
-        rm -f "${_rayvnAnonymousPipe}" 2> /dev/null
-        printf -v "${captureVarName}" '%s' "${result}"
+        read -r result < "${_valtTestTemp}"
+        wait ${ragePid} || fail "encryption failed"
+        rm -f "${_valtTestTemp}" 2> /dev/null
+        unset _valtTestTemp
+        printf -v "${_testPassResultVar}" '%s' "${result}"
+    else
+        printf "%s\n" "${valtKey[@]}" | rage -p -a -o "${_keyFile}" - || bye
     fi
 
-    # Write out public keys
+    # Write public keys
 
-    printf '%s\n'  "${valtPubKey[@]}" > "${publicKeyFile}"
-    printf '%s\n' "${signingPublicKey[@]}" > "${publicSigningKeyFile}"
+    printf '%s\n'  "${valtPubKey[@]}" > "${_publicKeyFile}"
+    printf '%s\n' "${signingPublicKey[@]}" > "${_publicSigningKeyFile}"
 
     # Turn off our pinentry
 
     disableValtPinEntry
+
+    # Assign results if var specified
+
+    _assignResultIfVarName ${_keyFileResultVar} "${_keyFile}"
+    _assignResultIfVarName ${_publicKeyFileResultVar} "${_publicKeyFile}"
+    _assignResultIfVarName ${_publicSigningKeyFileResultVar} "${_publicSigningKeyFile}"
 }
 
 # Verify keys by encrypting sample text, signing, verify signature and decrypting, then comparing.
@@ -203,16 +224,31 @@ PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/keys' PRIVATE 
 _init_valt_keys() {
     require 'rayvn/core' 'valt/pinentry' 'valt/password' 'rayvn/prompt'
     declare -grx xkcdPasswordsUrl="https://xkcd.com/936/"
+    declare -grx valtPublicKeySuffix='valt.pub'
+    declare -grx valtPrivateKeySuffix='valt.key'
+    declare -grx valtSigningPublicKeySuffix='minisign.pub'
     declare -grx ageFileExtension='age'
     declare -grx tarFileExtension='tar.xz'
     declare -grx ageCreatedPrefix='# created: '
     declare -grx agePublicKeyPrefix='# public key: '
-    declare -grx signingPublicKeyPrefix='# [sign public] '
-    declare -grx signingPrivateKeyPrefix='# [sign secret] '
+    declare -grx signingPublicKeyPrefix='# [minisign.pub] '
+    declare -grx signingPrivateKeyPrefix='# [minisign.key] '
 
     local counterFile; counterFile="${ configDirPath 'advice.count'; }"
     declare -grx adviceCounterFile="${counterFile}"
     declare -g _adviceCount=0
+}
+
+_assertKeyFileDoesNotExist() {
+    [[ $1 != '?' && -f $1 ]] && invalidArgs "$1 already exists"
+}
+
+_assignResultIfVarName() {
+    local _resultVarName=$1
+    if [[ -n ${_resultVarName} && ${_resultVarName} != ? ]]; then
+        local -n _resultVarRef=${_resultVarName}
+        _resultVarRef="$2"
+    fi
 }
 
 _extractKeyToTempFile() {
@@ -223,16 +259,15 @@ _extractKeyToTempFile() {
     local _key=()
     local resultArray=()
     local resultFile; resultFile="${ makeTempFile 'XXXXXXXX'; }"
-debugVar keyFile keyPrefix decrypt
+
     # Map private key to array
 
     _readKeyToArray "${keyFile}" ${decrypt} _key
- debugVar _key
-    (( ${#_key} == 0 )) && fail "_key not assigned!" # TODO Fix and remove
+
     # Extract the key
 
     _extractKeyContent _key "${keyPrefix}" resultArray
-debugVar resultArray
+
     # Write it to the temp signing file and assign the result
 
     printf "%s\n" "${resultArray[@]}" > "${resultFile}"
@@ -246,19 +281,15 @@ _readKeyToArray() {
     local decrypt="$2"
     local -n resultArrayRef="$3"
     local _result=()
-debug "_readKeyToArray"
-    debugVar keyFile decrypt rayvnTest_ValtKeyPassphrase
+
     if [[ ${decrypt} == true ]]; then
-        [[ -n "${rayvnTest_ValtKeyPassphrase}" ]] && debug "using passphrase to decrypt private key and map" || debug "requesting passphrase to decrypt private key and map"
         export skipReadPasswordCheck=1
         mapfile -t < <( rage -d "${keyFile}" 2> >(redStream) ) _result || fail
         unset skipReadPasswordCheck
     else
-debug "mapping public key"
+
         mapfile -t "${keyFile}" _result || fail
     fi
-    debugVar _result
-    debug "${_result[@]}"
     resultArrayRef=("${_result[@]}")
 }
 
@@ -273,7 +304,6 @@ _extractKeyContent() {
             _result+=( "${line:${#keyPrefix}}" )
         fi
     done
-    debugVar _result
     _resultArrayRef=( "${_result[@]}" )
 }
 

@@ -150,7 +150,7 @@ getProxyPin() {
 getPin() {
     local p1 p2
     if [[ -n "${rayvnTest_ValtKeyPassphrase}" ]]; then
-        log "returning provided passphrase"
+        log "returning provided test passphrase"
         p1="${rayvnTest_ValtKeyPassphrase}"
     else
         describe "${description}"
@@ -187,7 +187,7 @@ getPin() {
     # Got it
 
     respond "D ${p1}"
-    [[ -v _rayvnAnonymousPipe ]] && echo "${p1}" > "${_rayvnAnonymousPipe}"
+    [[ -v _valtTestTemp ]] && echo "${p1}" > "${_valtTestTemp}"
     secureEraseVars p1 p2
     respond ${noError}
 }
