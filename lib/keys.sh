@@ -42,6 +42,8 @@ createValtKeys() {
     local _publicKeyFile="${keyDir}/${keyPrefix}${valtPublicKeySuffix}"
     local _publicSigningKeyFile="${keyDir}/${keyPrefix}${valtSigningPublicKeySuffix}"
     local capture=0
+    local armoredKey
+    local armoredKeyFile
     local ageCreated
     local agePublicKey
     local agePrivateKey=()
@@ -59,7 +61,7 @@ createValtKeys() {
 
     # Generate the age private key (includes public key)
 
-    mapfile -t < <( rage-keygen 2> /dev/null ) agePrivateKey || fail
+    mapfile -t agePrivateKey < <( rage-keygen 2> /dev/null ) || fail
 
     # Extract the created line and public key (hopefully future proof)
 
@@ -77,41 +79,16 @@ createValtKeys() {
     local _signingPublicKeyFile; _signingPublicKeyFile="${ tempDirPath -r; }"
     local _signingPrivateKeyFile; _signingPrivateKeyFile="${ tempDirPath -r; }"
     minisign -G -p "${_signingPublicKeyFile}" -s "${_signingPrivateKeyFile}" -W > /dev/null || fail
-    mapfile -t < <(cat "${_signingPublicKeyFile}") signingPublicKey || fail
-    mapfile -t < <(cat "${_signingPrivateKeyFile}") signingPrivateKey || fail
+    mapfile -t signingPublicKey < <(cat "${_signingPublicKeyFile}")  || fail
+    mapfile -t signingPrivateKey < <(cat "${_signingPrivateKeyFile}") || fail
     rm "${_signingPublicKeyFile}" "${_signingPrivateKeyFile}" &> /dev/null
-
-    # Construct the combined 'valt.key' private key
-
-    valtKey+=("${ageCreated}")
-    valtKey+=('#')
-    for line in "${signingPublicKey[@]}"; do
-        valtKey+=("${signingPublicKeyPrefix}${line}")
-    done
-    valtKey+=('#')
-    for line in "${signingPrivateKey[@]}"; do
-        valtKey+=("${signingPrivateKeyPrefix}${line}")
-    done
-    valtKey+=('#')
-    for line in "${agePrivateKey[@]}"; do
-        valtKey+=("${line}")
-    done
-
-    # Construct the combined 'valt.pub' public key
-
-    valtPubKey+=("${ageCreated}")
-    valtPubKey+=('#')
-    for line in "${signingPublicKey[@]}"; do
-        valtPubKey+=("${signingPublicKeyPrefix}${line}")
-    done
-    valtPubKey+=("#")
-    valtPubKey+=("${agePublicKey}")
 
     # Encrypt the private key, optionally capturing the password for testing
 
+    armoredKeyFile="${ makeTempFile; }"
     if (( capture )); then
         export _valtTestTemp; _valtTestTemp="${ makeTempFifo; }"
-        printf "%s\n" "${valtKey[@]}" | rage -p -a -o "${_keyFile}" - &
+        printf "%s\n" "${valtKey[@]}" | rage -p -a -o "${armoredKeyFile}" - &
         local ragePid=$!
         local result
         read -r result < "${_valtTestTemp}"
@@ -120,13 +97,37 @@ createValtKeys() {
         unset _valtTestTemp
         printf -v "${_testPassResultVar}" '%s' "${result}"
     else
-        printf "%s\n" "${valtKey[@]}" | rage -p -a -o "${_keyFile}" - || bye
+        printf "%s\n" "${valtKey[@]}" | rage -p -a -o "${armoredKeyFile}" - || bye
     fi
+    mapfile -t armoredKey < <( cat "${armoredKeyFile}" )
 
-    # Write public keys
+    # Construct the common key comments
+
+    local commonKey
+    commonKey=("${ageCreated}")
+    commonKey+=('#')
+    for line in "${signingPublicKey[@]}"; do
+        commonKey+=("${signingPublicKeyPrefix}${line}")
+    done
+    commonKey+=("#")
+
+    # Construct the combined 'valt.pub' public key
+
+    valtPubKey=( "${commonKey[@]}")
+    valtPubKey+=("${agePublicKey}")
+
+    # Construct the combined 'valt.key' private key
+
+    valtKey=("${commonKey[@]}")
+    valtKey+=( "${agePublicKeyPrefix}${agePublicKey}" )
+    valtKey+=('#')
+    valtKey+=("${armoredKey[@]}")
+
+    # Write keys
 
     printf '%s\n'  "${valtPubKey[@]}" > "${_publicKeyFile}"
     printf '%s\n' "${signingPublicKey[@]}" > "${_publicSigningKeyFile}"
+    printf '%s\n'  "${valtKey[@]}" > "${_keyFile}"
 
     # Turn off our pinentry
 
@@ -215,9 +216,21 @@ keyType() {
 
 extractPublicKey() {
     local keyFile="$1"
-    local keyType; keyType="${ keyFileType "${keyFile}"; }"
-
-    fail TODO # TODO
+    local keyType key pubKey _i line
+    _keyFileType "${keyFile}" keyType key
+    if [[ ${keyType} == "${valtSigningPublicKeySuffix}" || ${keyType} == "${valtPrivateKeySuffix}" ]]; then
+        # pub key is comment
+        index=${ indexOf -r "${agePublicKeyPrefix}"; }   # TODO change indexOf to return by ref!!
+        pubKey="${key[index]}"
+    else
+        # pub key is first non comment
+        for (( _i=0; _i < ${#key[@]}; _i++ )); do
+            if [[ ${key[_i]} != "# "* ]]; then
+                pubKey="${key[_i]}"
+            fi
+        done
+    fi
+    echo "${pubKey}"
 
 }
 
@@ -247,6 +260,7 @@ _init_valt_keys() {
     declare -grx agePublicKeyPrefix='# public key: '
     declare -grx signingPublicKeyPrefix='# [minisign.pub] '
     declare -grx signingPrivateKeyPrefix='# [minisign.key] '
+    declare -grx valtSigningPublicKeyPrefix='untrusted comment: minisign public key'
     declare -grx agePemBegin='-----BEGIN AGE ENCRYPTED FILE-----'
     declare -grx agePemEnd='-----END AGE ENCRYPTED FILE-----'
 
@@ -277,17 +291,16 @@ _keyFileType() {
     # Get the key without decryption if it is a valt.key
 
     _readKeyToArray "${_keyFile}" false _key
-    debugVar _key
 
-    # Determine type TODO: convert to constants
+    # Determine type
 
-    if [[ ${_key[0]} == "untrusted comment: minisign public key"* ]]; then
-        _type="minisign.pub"
-    elif  [[ ${_key[0]} == "# created "* ]]; then
-        if indexOf "${agePemBegin}" _key; then
-            _type='valt.key'
+    if [[ ${_key[0]} == "${valtSigningPublicKeyPrefix}"* ]]; then
+        _type="${valtSigningPublicKeySuffix}"
+    elif  [[ ${_key[0]} == "${ageCreatedPrefix}"* ]]; then
+        if indexOf "${agePemBegin}" _key > /dev/null ; then
+            _type="${valtPrivateKeySuffix}"
         else
-            _type='valt.pub'
+            _type="${valtPublicKeySuffix}"
         fi
     else
         fail "${_keyFile} is not a valt key file"
@@ -336,12 +349,11 @@ _readKeyToArray() {
     if [[ ${_decrypt} == true ]]; then
         useValtPinEntry
         export skipReadPasswordCheck=1
-        mapfile -t < <( rage -d "${_keyFile}" 2> >(redStream) ) _result || fail
+        mapfile -t _result < <( rage -d "${_keyFile}" 2> >(redStream) )  || fail
         unset skipReadPasswordCheck
         disableValtPinEntry
     else
-debugVar _keyFile
-        mapfile -t "${_keyFile}" _result || fail
+        mapfile -t _result < <(cat "${_keyFile}") || fail
     fi
     resultArrayRef=("${_result[@]}")
 }
