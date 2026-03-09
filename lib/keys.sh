@@ -99,6 +99,8 @@ createValtKeys() {
 
     # Construct the combined 'valt.pub' public key
 
+    valtPubKey+=("${ageCreated}")
+    valtPubKey+=('#')
     for line in "${signingPublicKey[@]}"; do
         valtPubKey+=("${signingPublicKeyPrefix}${line}")
     done
@@ -167,6 +169,7 @@ verifyValtKeys() {
 
     # Sign
 
+    fail TODO # TODO
 
     # Verify signature
 
@@ -184,38 +187,49 @@ verifyValtKeys() {
 #   ageFile   - path to the binary age-encrypted file
 #   resultVar - nameref variable to receive the armored text
 
-armorValtKey() {
+armorValtKey() {     # TODO: remove, armored at creation
     local ageFile="${1}"
     local -n resultVar="${2}"
     local header="${ head -n 1 "${ageFile}"; }"
     if [[ ${header} =~ ^age-encryption.org/v ]]; then
         # $'x' is bash magic for mapping escaped characters
-        local result=$'-----BEGIN AGE ENCRYPTED FILE-----\n'
+        local result=
+        result+=$'\n'
         # Platform-agnostic base64: try BSD -b flag first, fall back to GNU -w flag
         result+="${ cat "${ageFile}" | base64 -b 65 2>/dev/null || cat "${ageFile}" | base64 -w 65; }"
         result+=$'\n'
-        result+=$'-----END AGE ENCRYPTED FILE-----\n'
+        result+="${agePemEnd}"
+        result+=$'\n'
         resultVar=${result}
     else
         fail "${ageFile} does not appear to be an age encrypted file"
     fi
 }
 
-tempPublicKeyFile() {
-    local decrypt=true prefix="${agePublicKeyPrefix}"
-    local keyFile="$1" resultFileVar="$2"
-    _extractKeyToTempFile "${keyFile}" "${prefix}" ${decrypt} ${resultFileVar}
+keyType() {
+    local keyFile="$1"
+    local keyType
+    _keyFileType "${keyFile}" keyType
+    echo "${keyType}"
+}
+
+extractPublicKey() {
+    local keyFile="$1"
+    local keyType; keyType="${ keyFileType "${keyFile}"; }"
+
+    fail TODO # TODO
+
 }
 
 tempSigningPublicKeyFile() {
-    local decrypt=true prefix="${signingPublicKeyPrefix}"
-    local keyFile="$1" resultFileVar="$2"
+    local keyFile="$1"
+    local resultFileVar="$2" decrypt=true prefix="${signingPublicKeyPrefix}"
     _extractKeyToTempFile "${keyFile}" "${prefix}" ${decrypt} ${resultFileVar}
 }
 
 tempSigningKeyFile() {
-    local decrypt=true prefix="${signingPrivateKeyPrefix}"
-    local keyFile="$1" resultFileVar="$2"
+    local keyFile="$1"
+    local resultFileVar="$2" decrypt=true prefix="${signingPrivateKeyPrefix}"
     _extractKeyToTempFile "${keyFile}" "${prefix}" ${decrypt} ${resultFileVar}
 }
 
@@ -233,6 +247,8 @@ _init_valt_keys() {
     declare -grx agePublicKeyPrefix='# public key: '
     declare -grx signingPublicKeyPrefix='# [minisign.pub] '
     declare -grx signingPrivateKeyPrefix='# [minisign.key] '
+    declare -grx agePemBegin='-----BEGIN AGE ENCRYPTED FILE-----'
+    declare -grx agePemEnd='-----END AGE ENCRYPTED FILE-----'
 
     local counterFile; counterFile="${ configDirPath 'advice.count'; }"
     declare -grx adviceCounterFile="${counterFile}"
@@ -248,6 +264,42 @@ _assignResultIfVarName() {
     if [[ -n ${_resultVarName} && ${_resultVarName} != ? ]]; then
         local -n _resultVarRef=${_resultVarName}
         _resultVarRef="$2"
+    fi
+}
+
+_keyFileType() {
+    local _keyFile="$1"
+    local -n _keyFileTypeRef="$2"
+    local _keyArrayResultVar="${3:-}"
+    local _key=()
+    local _type _i line
+
+    # Get the key without decryption if it is a valt.key
+
+    _readKeyToArray "${_keyFile}" false _key
+    debugVar _key
+
+    # Determine type TODO: convert to constants
+
+    if [[ ${_key[0]} == "untrusted comment: minisign public key"* ]]; then
+        _type="minisign.pub"
+    elif  [[ ${_key[0]} == "# created "* ]]; then
+        if indexOf "${agePemBegin}" _key; then
+            _type='valt.key'
+        else
+            _type='valt.pub'
+        fi
+    else
+        fail "${_keyFile} is not a valt key file"
+    fi
+    debugVar _type
+    # Assign the type and key array (if requested)
+
+    _keyFileTypeRef="${_type}"
+
+    if [[ -n "${_keyArrayResultVar}" ]]; then
+        local -n _keyArrayResultRef="${_keyArrayResultVar}"
+        _keyArrayResultRef=("${_key[@]}")
     fi
 }
 
@@ -276,32 +328,33 @@ _extractKeyToTempFile() {
 
 _readKeyToArray() {
     assertFile "$1"
-    useValtPinEntry
-    local keyFile="$1"
-    local decrypt="$2"
+    local _keyFile="$1"
+    local _decrypt="$2"
     local -n resultArrayRef="$3"
     local _result=()
 
-    if [[ ${decrypt} == true ]]; then
+    if [[ ${_decrypt} == true ]]; then
+        useValtPinEntry
         export skipReadPasswordCheck=1
-        mapfile -t < <( rage -d "${keyFile}" 2> >(redStream) ) _result || fail
+        mapfile -t < <( rage -d "${_keyFile}" 2> >(redStream) ) _result || fail
         unset skipReadPasswordCheck
+        disableValtPinEntry
     else
-
-        mapfile -t "${keyFile}" _result || fail
+debugVar _keyFile
+        mapfile -t "${_keyFile}" _result || fail
     fi
     resultArrayRef=("${_result[@]}")
 }
 
 _extractKeyContent() {
     local -n valtKeyArrayRef="$1"
-    local keyPrefix="$2"
+    local _keyPrefix="$2"
     local -n _resultArrayRef="$3"
     local line _result=()
 
     for line in "${valtKeyArrayRef[@]}"; do
-        if [[ ${line} == "${keyPrefix}"* ]]; then
-            _result+=( "${line:${#keyPrefix}}" )
+        if [[ ${line} == "${_keyPrefix}"* ]]; then
+            _result+=( "${line:${#_keyPrefix}}" )
         fi
     done
     _resultArrayRef=( "${_result[@]}" )
