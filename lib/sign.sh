@@ -18,7 +18,7 @@ debugVar signatureFile
     # Extract the private key
 
     local signingKeyFile
-    tempSigningKeyFile "${privateKeyFile}" signingKeyFile
+    signingKeyToTempFile "${privateKeyFile}" signingKeyFile
 
     # Sign
 debugVar signingKeyFile fileToSign signatureFile

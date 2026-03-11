@@ -3,6 +3,8 @@
 # Secure archives.
 # Use via: require 'valt/archive'
 
+###############################################################################################################################
+#
 # ◇ DESIGN NOTES
 #
 # Archive tar is signed using minisign and encrypted with Age. Encryption provides confidentiality, signature provides
@@ -55,27 +57,50 @@
 #
 # All keys can be extracted from valt.key, and signature verification and encryption functions will accept the private key.
 #
-# ◇ Example valt.key (unencrypted)
-#
-#   # created: 2026-03-07T13:50:26-08:00
-#   #
-#   # [minisign.pub] untrusted comment: minisign public key FE4979E78E2E1766
-#   # [minisign.pub] RWRmFy6O53lJ/t0GTtODY5YTTBUXz5bL3Pes634anFLG6FBcOd9Vtq2E
-#   #
-#   # [minisign.key] untrusted comment: minisign encrypted secret key
-#   # [minisign.key] RWQAAEIyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZhcujud5Sf5hwqZU1EOkdWHPDpGoQ1dUE+NQ705tgqraOJn5gHYiLN0GTtODY5YTTBUXz5bL3Pes634anFLG6FBcOd9Vtq2EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
-#   #
-#   # public key: age1hv9f68gwdfsstpzmka92uqlkyuvc378xdfhmc37fhzexgfn2dfvsgg603l
-#   AGE-SECRET-KEY-1AC9FDAGJARFLNSZKZNT72HPZ74CZ4Q7MMMJJXAPESNGXTJHEQ65QXKWSL2
-#
 # ◇ Example valt.pub
 #
-#   # created: 2026-03-07T13:50:26-08:00
+#   # created: 2026-03-10T16:57:47-07:00
 #   #
-#   # [minisign.pub] untrusted comment: minisign public key FE4979E78E2E1766
-#   # [minisign.pub] RWRmFy6O53lJ/t0GTtODY5YTTBUXz5bL3Pes634anFLG6FBcOd9Vtq2E
+#   # [minisign.pub] untrusted comment: minisign public key 86DA637D4FBBE4E5
+#   # [minisign.pub] RWTl5LtPfWPahiYfMcUk9+c/cFAfruNplL79ijRei9i1HzJlDa741qHp
 #   #
-#   age1hv9f68gwdfsstpzmka92uqlkyuvc378xdfhmc37fhzexgfn2dfvsgg603l
+#   age1kqkzh9m0a2nhwypk3v6cj0fh78qdur5knkzcl4nwpxlh5pyuq33qyhauur
+#
+# ◇ Example valt.key prior to encryption (not stored)
+#
+#   # created: 2026-03-10T16:57:47-07:00
+#   #
+#   # [minisign.pub] untrusted comment: minisign public key 86DA637D4FBBE4E5
+#   # [minisign.pub] RWTl5LtPfWPahiYfMcUk9+c/cFAfruNplL79ijRei9i1HzJlDa741qHp
+#   #
+#   # [minisign.key] untrusted comment: minisign encrypted secret key
+#   # [minisign.key] RWQAAEIyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA5eS7T31j2oY/107MD2HNm7M18rU0E4aphJJ5b0iNep0Tk/2pgFY5biYfMcUk9+c/cFAfruNplL79ijRei9i1HzJlDa741qHpAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+#   #
+#   # public key: age1kqkzh9m0a2nhwypk3v6cj0fh78qdur5knkzcl4nwpxlh5pyuq33qyhauur
+#   AGE-SECRET-KEY-1KVCTA4K9RSW85YHCSE62L9XJ2ULTPG9ZVRF7K6KGGALCGYUDFHGQY2SYX7#
+#
+# ◇ Example valt.key
+#
+#   -----BEGIN AGE ENCRYPTED FILE-----
+#   YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IHNjcnlwdCBaQVZVdnlUM3MrL3ExeTRr
+#   Ym0wZ0lBIDE5CkNBczlucVdQTy9vV1dzeXNMTDNhNmRqbDhzcFdHWXdWbVlFSHhz
+#   UWxHdXMKLS0tIHhLSHJ6eVphelR0QlJjTGFhVkJDYUpwbE5HS3BrNVBhbzI2R3R3
+#   aVB6Z2cKJZaL7hk5rEA/2U9PoErZyRGCs6zc6hkx1h6Edu3xXbCcv+Ha03gukMH1
+#   YC+UyqpcgdVux7QZwDcUBzn4bRu70HpfPwh9Tn+lXZFA5ntp3nX9+o48gzu6CMDO
+#   0E5Mg/OQPDr0myDkPZkek7eXDS34LmvFAndIJI2KE5OOHWQOMs8ga+K+GIT5/uzi
+#   ylwiC4kCwA9a1C0nwCfJrKLwkh2ll6j6djV7i/4b8QWcrg8BE8TgpnRKXmmRSLnn
+#   eS21HEnUQk76z9wdGDNB+tn5cUsKKs92ghPBOh1jWdkGWDK9TFyPN35nFlpou/hC
+#   O+O9QMWkJdoTerhSDmvWPNjIm/mLtojz673Cg6xRMdqhHfQ7Sv2Kw3yTjLxLTCyM
+#   ZZGpj/Eww37Tdx7elQQ0BGZGl6gkU7jp3+BOZZgDFD2GIkRqix/LxCg0dPq+g8/b
+#   Q162GLCpnCz1wGUyUY4HkadfE3zg4A++TUMwE+dodWKcShGX8BKVEhUclH8B5pKS
+#   YAoFAbvMs8DIqycnc6A0zu7ouwaZQkNfIkmpPlsG/fTi6mHH3NbQguEioDKVkIfY
+#   rrgDWuPuUst6dEoc1NTbhmDzk/D37ipUZUAKHWong/PG8ljZLkRwfvm6hI9UcuW9
+#   lSusKKsVxILzF0PPXfzfxBMQ+jY2+pIRot5QbdItxAuc7UTGzpeKkRQ7Q6XoAle8
+#   vHJrI6+OdAl7nnQJrUhO8HZDYyxqTyZpQ68+8ArVyK1n5LtJNJq3vp2+vr2OgNKW
+#   ws0fdSu5PqvLoBCPBpAiXyWfy+35tipweu1qw8CwL4CqBlZStr+oA7K2ZVBTpFyk
+#   fRZrtCfkQK025fmjOBzwbhU5hbSsK/wlbwiZi1FX6m2pHnC5n+ypLy4xU1oTmvYa
+#   ztTsiA==
+#   -----END AGE ENCRYPTED FILE-----
 #
 # ◇ Passphrase Encryption
 #
@@ -94,7 +119,8 @@
 #
 #   valt.pub: local, bitwarden (etc.), users github, google drive, iCloud, etc.
 #   valt.key: local, bitwarden (etc.)
-
+#
+###############################################################################################################################
 
 
 

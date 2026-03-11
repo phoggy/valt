@@ -1,31 +1,32 @@
 #!/usr/bin/env bash
 
 # Encryption (Age) and signing (minisign) key generation and usage.
-# Generation produces Age & minisign public key files, and a combined 'valt' private key.
 # Use via: require 'valt/keys'
 
 # Create new valt keys, encrypting the private key with a passphrase. May show passphrase advice and offer to generate passphrase.
-# Args: [keyName] [keyDir] [keyFileResultVar] [publicKeyFileResultVar] [publicSigningKeyFileVar] [testPassResultVar]
+# Produces combinations of minisign (as comments) and Age keys:
 #
-# A '?' for any arg will ensure the default behavior.
+#   [name-]valt.pub: minisign public key comment + Age public key
+#   [name-]valt.key: minisign public key comment + Age public key comment + encrypted minisign secret key comment + Age secret key
 #
-#   keyName                  optional name prefix for keys
-#   keyDir                   optional directory path where key files will be written, default: ~/.config/valt
-#   keyFileResultVar         optional var name to assign the private key file
-#   keyFileResultVar         optional var name to assign the private key file
-#   publicKeyFileResultVar   optional var name to assign the public key file
-#   publicSigningKeyFileVar  optional var name to assign the signing public key file
-#   testPassResultVar        optional var name to assign the password for testing
+# Args: [keyName] [keyDir] [valtPubFileResultVar] [valtKeyFileResultVar] [testPassResultVar]
+#
+# Passing '?' for any arg will ensure the default behavior.
+#
+#   keyName               optional name prefix for keys
+#   keyDir                optional directory path where key files will be written, default: ~/.config/valt
+#   valtPubFileResultVar  optional var name to assign the valt.pub file
+#   valtKeyFileResultVar  optional var name to assign the valt.key file
+#   testPassResultVar     optional var name to assign the password for testing
 
 createValtKeys() {
     useValtPinEntry
 
     local keyName="${1:-?}"
     local keyDir="${2:-?}"
-    local _keyFileResultVar="${3:-?}"
-    local _publicKeyFileResultVar="${4:-?}"
-    local _publicSigningKeyFileResultVar="${5:-?}"
-    local _testPassResultVar="${6:-?}"
+    local _valtPubFileResultVar="${3:-?}"
+    local _valtKeyFileResultVar="${4:-?}"
+    local _testPassResultVar="${5:-?}"
 
     local keyPrefix=
     [[ ${keyName} != '?' ]] && keyPrefix="${keyName}-"
@@ -83,24 +84,6 @@ createValtKeys() {
     mapfile -t signingPrivateKey < <(cat "${_signingPrivateKeyFile}") || fail
     rm "${_signingPublicKeyFile}" "${_signingPrivateKeyFile}" &> /dev/null
 
-    # Encrypt the private key, optionally capturing the password for testing
-
-    armoredKeyFile="${ makeTempFile; }"
-    if (( capture )); then
-        export _valtTestTemp; _valtTestTemp="${ makeTempFifo; }"
-        printf "%s\n" "${valtKey[@]}" | rage -p -a -o "${armoredKeyFile}" - &
-        local ragePid=$!
-        local result
-        read -r result < "${_valtTestTemp}"
-        wait ${ragePid} || fail "encryption failed"
-        rm -f "${_valtTestTemp}" 2> /dev/null
-        unset _valtTestTemp
-        printf -v "${_testPassResultVar}" '%s' "${result}"
-    else
-        printf "%s\n" "${valtKey[@]}" | rage -p -a -o "${armoredKeyFile}" - || bye
-    fi
-    mapfile -t armoredKey < <( cat "${armoredKeyFile}" )
-
     # Construct the common key comments
 
     local commonKey
@@ -111,102 +94,104 @@ createValtKeys() {
     done
     commonKey+=("#")
 
-    # Construct the combined 'valt.pub' public key
+    # Construct valt.pub
 
-    valtPubKey=( "${commonKey[@]}")
+    valtPubKey=("${commonKey[@]}")
     valtPubKey+=("${agePublicKey}")
+printf '%s\n' "${valtPubKey[@]}"
 
-    # Construct the combined 'valt.key' private key
+    # Construct the combined 'valt.key' plaintext lines
 
-    valtKey=("${commonKey[@]}")
-    valtKey+=( "${agePublicKeyPrefix}${agePublicKey}" )
-    valtKey+=('#')
-    valtKey+=("${armoredKey[@]}")
+    local plainPrivate
+    plainPrivate=("${commonKey[@]}")
+    for line in "${signingPrivateKey[@]}"; do
+        plainPrivate+=("${signingPrivateKeyPrefix}${line}")
+    done
+    plainPrivate+=('#')
+    plainPrivate+=("${agePrivateKey[@]}")
+  printf '%s\n' "${plainPrivate[@]}"
+    # Encrypt the private components, optionally capturing the password for testing
+
+    armoredKeyFile="${ makeTempFile; }"
+    if (( capture )); then
+        export _valtTestTemp; _valtTestTemp="${ makeTempFifo; }"
+        printf "%s\n" "${plainPrivate[@]}" | rage -p -a -o "${armoredKeyFile}" - &
+        local ragePid=$!
+        local result
+        read -r result < "${_valtTestTemp}"
+        wait ${ragePid} || fail "encryption failed"
+        rm -f "${_valtTestTemp}" 2> /dev/null
+        unset _valtTestTemp
+        printf -v "${_testPassResultVar}" '%s' "${result}"
+    else
+        printf "%s\n" "${plainPrivate[@]}" | rage -p -a -o "${armoredKeyFile}" - || bye
+    fi
+    mapfile -t armoredKey < <( cat "${armoredKeyFile}" )
+
+    # Construct valt.key. Comments are ONLY supported WITHIN encrypted content. Sigh.
+
+    valtKey=("${armoredKey[@]}")
+    printf '%s\n' "${valtKey[@]}"
 
     # Write keys
 
-    printf '%s\n'  "${valtPubKey[@]}" > "${_publicKeyFile}"
-    printf '%s\n' "${signingPublicKey[@]}" > "${_publicSigningKeyFile}"
-    printf '%s\n'  "${valtKey[@]}" > "${_keyFile}"
-
-    # Turn off our pinentry
-
-    disableValtPinEntry
+    printf '%s\n' "${valtPubKey[@]}" > "${_publicKeyFile}"
+    printf '%s\n' "${valtKey[@]}" > "${_keyFile}"
 
     # Assign results if var specified
 
-    _assignResultIfVarName ${_keyFileResultVar} "${_keyFile}"
-    _assignResultIfVarName ${_publicKeyFileResultVar} "${_publicKeyFile}"
-    _assignResultIfVarName ${_publicSigningKeyFileResultVar} "${_publicSigningKeyFile}"
+    _assignResultIfVarName ${_valtPubFileResultVar} "${_publicKeyFile}"
+    _assignResultIfVarName ${_valtKeyFileResultVar} "${_keyFile}"
+
+    # Disable valt-pinentry
+
+    disableValtPinEntry
 }
 
 # Verify keys by encrypting sample text, signing, verify signature and decrypting, then comparing.
 # Fails if decryption does not reproduce the original (e.g. wrong passphrase).
-# Args: keyFile publicKeyFile publicSigningKeyFile
+# Args: keyFile valtPubFile valtKeyFile
 #
-#   keyFile               path where the passphrase-encrypted private key file will be written
-#   publicKeyFile         path where the plain-text public key will be written
-#   publicSigningKeyFile  path where the plain-text signing public key will be written
+#   valtPubFile  path to the valt.pub file
+#   valtKeyFile  path to the valt.key file
 
 verifyValtKeys() {
     useValtPinEntry
 
-    local keyFile="$1"
-    local publicKeyFile="$2"
-    local publicSigningKeyFile="$3"
+    local valtPubFile="$1"
+    local valtKeyFile="$2"
 
-    assertFile "${keyFile}"
-    assertFile "${publicKeyFile}"
-    assertFile "${publicSigningKeyFile}"
+    assertFile "${valtPubFile}"
+    assertFile "${valtKeyFile}"
 
     local encryptedFile; encryptedFile="${ tempDirPath sample.age; }"
-    local signatureFle; signatureFile="${ tempDirPath sample.sig; }"
+    local signatureFle; signatureFile="${ tempDirPath sample.minisign; }"
     local sampleText
     _setSampleText sampleText
 
-    fail "TODO!"
+    # TODO:
+    #   - extract public keys from both valt.key and valt.pub and ensure equal
+    #   - encrypt sample text file using valt.key
+    #   - sign encrypted sample file and verify signature
+    #   - decrypt using valt.key and ensure equal to sample text
+    fail TODO
+
     # Encrypt
-    echo -n "${sampleText}" | rage -R "${publicKeyFile}" -o "${encryptedFile}" || fail
+
+    echo -n "${sampleText}" | rage -R "${valtKeyFile}" -o "${encryptedFile}" || fail
 
     # Sign
-
-    fail TODO # TODO
 
     # Verify signature
 
     # Decrypt and compare
 
-    local decrypted="${ rage -d -i "${keyFile}" "${encryptedFile}" 2> /dev/null; }"
+    local decrypted="${ rage -d -i "${valtKeyFile}" "${encryptedFile}" 2> /dev/null; }"
     diff -u <(echo -n "${sampleText}") <(echo "${decrypted}") > /dev/null || fail "not verified (wrong passphrase?)"
     disableValtPinEntry
 }
 
-# Convert a binary age-encrypted file to PEM-style ASCII-armored text and store in a nameref variable.
-# Fails if the file does not appear to be a valid age-encrypted file.
-# Args: ageFile resultVar
-#
-#   ageFile   - path to the binary age-encrypted file
-#   resultVar - nameref variable to receive the armored text
-
-armorValtKey() {     # TODO: remove, armored at creation
-    local ageFile="${1}"
-    local -n resultVar="${2}"
-    local header="${ head -n 1 "${ageFile}"; }"
-    if [[ ${header} =~ ^age-encryption.org/v ]]; then
-        # $'x' is bash magic for mapping escaped characters
-        local result=
-        result+=$'\n'
-        # Platform-agnostic base64: try BSD -b flag first, fall back to GNU -w flag
-        result+="${ cat "${ageFile}" | base64 -b 65 2>/dev/null || cat "${ageFile}" | base64 -w 65; }"
-        result+=$'\n'
-        result+="${agePemEnd}"
-        result+=$'\n'
-        resultVar=${result}
-    else
-        fail "${ageFile} does not appear to be an age encrypted file"
-    fi
-}
-
+# accepts either valt.pub or valt.key, echos 'valt.pub', 'valt.key'
 keyType() {
     local keyFile="$1"
     local keyType
@@ -214,36 +199,39 @@ keyType() {
     echo "${keyType}"
 }
 
-extractPublicKey() {
+# accepts either valt.pub or valt.key
+publicEncryptionKey() {
     local keyFile="$1"
-    local keyType key pubKey _i line
+    local keyType key pubKey _idx line
     _keyFileType "${keyFile}" keyType key
-    if [[ ${keyType} == "${valtSigningPublicKeySuffix}" || ${keyType} == "${valtPrivateKeySuffix}" ]]; then
-        # pub key is comment
-        index=${ indexOf -r "${agePublicKeyPrefix}"; }   # TODO change indexOf to return by ref!!
-        pubKey="${key[index]}"
-    else
-        # pub key is first non comment
-        for (( _i=0; _i < ${#key[@]}; _i++ )); do
-            if [[ ${key[_i]} != "# "* ]]; then
-                pubKey="${key[_i]}"
-            fi
-        done
+    if [[ ${keyType} == "${valtPrivateKeySuffix}" ]]; then
+        _readKeyToArray "${keyFile}" true key
     fi
+    _idx=${ indexOf -r "${agePublicKeyPrefix}" key; }   # TODO change indexOf to return by ref!! add -p (prefix match) and -s (suffix match)
+    pubKey="${key[_idx]}"
+    pubKey=${pubKey:${#agePublicKeyPrefix}}
     echo "${pubKey}"
-
 }
 
-tempSigningPublicKeyFile() {
-    local keyFile="$1"
-    local resultFileVar="$2" decrypt=true prefix="${signingPublicKeyPrefix}"
-    _extractKeyToTempFile "${keyFile}" "${prefix}" ${decrypt} ${resultFileVar}
+# accepts either valt.pub or valt.key
+publicSigningKeyToTempFile() {
+    local keyFile="$1" resultFileVar="$2"
+    local keyType key decrypt=false
+    _keyFileType "${keyFile}" keyType key
+    [[ ${keyType} == "${valtPrivateKeySuffix}" ]] && decrypt=true
+    _extractKeyToTempFile "${keyFile}" "${signingPublicKeyPrefix}" ${decrypt} ${resultFileVar}
 }
 
-tempSigningKeyFile() {
-    local keyFile="$1"
-    local resultFileVar="$2" decrypt=true prefix="${signingPrivateKeyPrefix}"
-    _extractKeyToTempFile "${keyFile}" "${prefix}" ${decrypt} ${resultFileVar}
+# accepts valt.key only
+signingKeyToTempFile() {
+    local keyFile="$1" resultFileVar="$2"
+    local keyType key
+    _keyFileType "${keyFile}" keyType key
+    if [[ ${keyType} == "${valtPrivateKeySuffix}" ]]; then
+        _extractKeyToTempFile "${keyFile}" "${signingPrivateKeyPrefix}" true ${resultFileVar}
+    else
+        fail "requires key type '${valtPrivateKeySuffix}' found '${keyType}'"
+    fi
 }
 
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/keys' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
@@ -286,26 +274,16 @@ _keyFileType() {
     local -n _keyFileTypeRef="$2"
     local _keyArrayResultVar="${3:-}"
     local _key=()
-    local _type _i line
+    local _type line
 
-    # Get the key without decryption if it is a valt.key
+    # Get the key without decryption
 
     _readKeyToArray "${_keyFile}" false _key
 
     # Determine type
 
-    if [[ ${_key[0]} == "${valtSigningPublicKeyPrefix}"* ]]; then
-        _type="${valtSigningPublicKeySuffix}"
-    elif  [[ ${_key[0]} == "${ageCreatedPrefix}"* ]]; then
-        if indexOf "${agePemBegin}" _key > /dev/null ; then
-            _type="${valtPrivateKeySuffix}"
-        else
-            _type="${valtPublicKeySuffix}"
-        fi
-    else
-        fail "${_keyFile} is not a valt key file"
-    fi
-    debugVar _type
+    _type="${ _keyToType _key _keyFile; }"
+
     # Assign the type and key array (if requested)
 
     _keyFileTypeRef="${_type}"
@@ -316,6 +294,18 @@ _keyFileType() {
     fi
 }
 
+_keyToType() {
+    local -n _keyArrayRef=$1
+    local -n _fileRef=$2
+    if [[ ${_keyArrayRef[0]} == "${ageCreatedPrefix}"* ]]; then
+        echo "${valtPublicKeySuffix}"
+    elif [[ ${_keyArrayRef[0]} == "${agePemBegin}" ]]; then
+        echo "${valtPrivateKeySuffix}"
+    else
+        fail "${_fileRef} is not a valt.pub or valt.key file"
+    fi
+}
+
 _extractKeyToTempFile() {
     local keyFile="$1"
     local keyPrefix="$2"
@@ -323,7 +313,10 @@ _extractKeyToTempFile() {
     local -n resultFileRef="$4"
     local _key=()
     local resultArray=()
-    local resultFile; resultFile="${ makeTempFile 'XXXXXXXX'; }"
+    local resultFile
+
+    [[ "${decrypt}" == false && "${keyPrefix}" == "${signingPrivateKeyPrefix}" ]] && invalidArgs
+    resultFile="${ makeTempFile 'XXXXXXXX'; }"
 
     # Map private key to array
 
@@ -333,7 +326,7 @@ _extractKeyToTempFile() {
 
     _extractKeyContent _key "${keyPrefix}" resultArray
 
-    # Write it to the temp signing file and assign the result
+    # Write it to the temp file and assign the result
 
     printf "%s\n" "${resultArray[@]}" > "${resultFile}"
     resultFileRef="${resultFile}"
@@ -363,7 +356,6 @@ _extractKeyContent() {
     local _keyPrefix="$2"
     local -n _resultArrayRef="$3"
     local line _result=()
-
     for line in "${valtKeyArrayRef[@]}"; do
         if [[ ${line} == "${_keyPrefix}"* ]]; then
             _result+=( "${line:${#_keyPrefix}}" )
