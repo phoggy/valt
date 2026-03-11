@@ -49,14 +49,14 @@ init() {
     # Emit debug header if enabled
 
     if (( _debug )); then
-        declare -gx _logPrefix="${ show secondary 'pinentry: '; }"
-        log "BEGIN valt-pinentry"
-        log "${ show primary 'date' plain ${ date; } \
-                     primary "terminal" plain ${terminal} \
-                     primary 'pid' plain ${BASHPID} \
-                     primary 'args' plain "'${*}'" \
-                     nl \
+        _logPrefix=''
+        log "${ show nl secondary BEGIN valt-pinentry \
+                        primary "terminal" plain ${terminal} \
+                        primary 'pid' plain ${BASHPID} \
+                        primary 'args' plain "'${*}'" \
+                        secondary '--------' nl \
                ; }"
+        declare -gx _logPrefix="${ show secondary 'pinentry: '; }"
     fi
 
     # Find pinentry program to proxy, if requested
@@ -95,7 +95,8 @@ serve() {
 
 onBye() {
     respond "OK closing connection"
-    log 'END valt-pinentry'
+    _logPrefix=''
+    log "${ show nl secondary 'END valt-pinentry ---------------------------------------------' nl; }"
     exit 0
 }
 
@@ -243,7 +244,7 @@ mismatchError() {
     echo > ${terminal}
 }
 
-source rayvn.up --add valt 'rayvn/core' 'valt/password'
+source rayvn.up 'rayvn/core' 'valt/password'
 
 main "${@}"
 
