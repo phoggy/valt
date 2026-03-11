@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-require 'rayvn/prompt' 'valt/keys'
-
 usage() {
     echo
     show bold "Decrypt a file using an age private key."
@@ -109,5 +107,7 @@ replaceOutputFile() {
     rm -rf "${target}" || fail
     progress "${ show "Deleted" bold "${target}" ;}"
 }
+
+source rayvn.up 'rayvn/prompt' 'valt/keys'
 
 main "${@}"

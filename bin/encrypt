@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2155
 
-require 'rayvn/core' 'valt/keys'
-
 usage() {
     echo
     show bold "Encrypt one or more files or directories."
@@ -180,5 +178,7 @@ replaceOutputFile() {
     rm -rf "${outputFile}" || fail
     show "Deleted" bold "${outputFile}"
 }
+
+source rayvn.up 'rayvn/core' 'valt/keys'
 
 main "${@}"

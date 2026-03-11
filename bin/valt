@@ -38,7 +38,7 @@ main() {
         require 'valt/password'
         generatePassphrase
     elif [[ -n ${command} ]]; then
-        source ${command} -- "${commandOptions[@]}"
+        ${command} "${commandOptions[@]}"
     else
         usage
     fi

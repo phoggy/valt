@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-require 'rayvn/prompt' 'rayvn/config' 'valt/keys' 'valt/pinentry'
-
 usage() {
     echo
     show bold "Generate an age public key pair and backup documentation."
@@ -27,9 +25,9 @@ usage() {
     echo
     echo "Options"
     echo
-    echo "    -p, --prefix PREFIX           Use PREFIX for key file names. Defaults to ${USER}."
+    echo "    -n, --name NAME               Use NAME as prefix for key file names, e.g. bob-valt.pub & bob-valt.key."
     show "    -o, --output-dir PATH         Set output directory. Defaults to the" blue "${valtConfigDir}" plain "directory."
-    echo "    -f, --force                   Overwrite existing files."
+    echo "    -f, --force                   Overwrite existing key files."
     echo "    --no-verify                   Do not verify keys."
     echo "    --no-advice                   Do not show passphrase advice."
     echo "    --no-pdf                      Do not generate PDF file."
@@ -61,7 +59,7 @@ main() {
 }
 
 init() {
-    declare -gr keyInfoTemplateFile="${valtEtcDir}/key-info-template.sh"
+    declare -gr keyInfoTemplateFile="${valtHome}/etc/key-info-template.sh"
     declare -gr keyInfoFile="${valtConfigDir}/key.info"
     declare -gr cssMainFileName="key-doc.css"
     declare -gr logoFileName="phoggy.png"
@@ -78,7 +76,8 @@ init() {
     htmlTemplateFile="${valtEtcDir}/key-doc-template.html"
     cssOverrideFile=
     htmlFile=
-    prefix="${USER}"
+    name=
+    namePrefix=
     htmlFile=
 
     # Flags
@@ -93,7 +92,7 @@ init() {
     while (( ${#} > 0 )); do
         case "${1}" in
             --) ;;
-            -p | --prefix) shift; setPrefix "${1}";;
+            -n | --name) shift; name="${1}"; namePrefix="${name}-";;
             -d | --directory) shift; setDirVar outputDir "${1}" "output directory";;
             -t | --template) shift; setFileVar htmlTemplateFile "${1}" "html template file path" ;;
             -c | --css) shift; setFileVar cssOverrideFile "${1}" "CSS" ;;
@@ -109,8 +108,8 @@ init() {
         shift
     done
 
-    privateKeyFile="${outputDir}/${prefix}.key"
-    publicKeyFile="${outputDir}/${prefix}-public.key"
+    declare -g privateKeyFile="${outputDir}/${namePrefix}valt.key"
+    declare -g publicKeyFile="${outputDir}/${namePrefix}valt.pub"
 
     if (( force )); then
         rm "${publicKeyFile}" "${privateKeyFile}" 2> /dev/null
@@ -126,7 +125,7 @@ prepareForPdf() {
     if (( generatePdf )); then
         ensureKeyInfo
         require 'valt/pdf'
-        documentsFile="${outputDir}/${prefix}-key.pdf"
+        documentsFile="${outputDir}/${name}-key.pdf"
 
         if (( printPdf )); then
             local printers status prompt answer
@@ -156,7 +155,7 @@ prepareForPdf() {
 
 setPrefix() {
     assertValidFileName "${1}"
-    prefix="${1}"
+    name="${1}"
 }
 
 ensureKeyInfo() {
@@ -207,15 +206,17 @@ assertKeyInfoArrayVar() {
 createKeys() {
     echo
     header 1 "Generating keys"
+    local keyName='?'
+    [[ -n "${name}" ]] && keyName="${name}"
     if (( includePassphrase )); then
-        createValtKeys "${privateKeyFile}" "${publicKeyFile}" _PHRASE || fail
+        createValtKeys "${name}" "${outputDir}" ? ? _PHRASE || fail
     else
-        createValtKeys "${privateKeyFile}" "${publicKeyFile}" || fail
+        createValtKeys "${name}" "${outputDir}" || fail
         _PHRASE="(see Notes)"
     fi
     echo
-    show "Public key (aka 'recipient') file:" cyan "${publicKeyFile}"
-    show "Private key (aka 'identity') file:" cyan "${privateKeyFile}" plain "(also contains public key)"
+    show "Public key (aka 'recipient') file:" cyan "${publicKeyFile}"  plain "(includes public signing key)"
+    show "Private key (aka 'identity') file:" cyan "${privateKeyFile}" plain "(includes public key and both signing keys)"
 
     if (( verifyKeys )); then
         echo
@@ -239,13 +240,12 @@ createKeyDocument() {
 }
 
 createPdf() {
-# TODO!    local workDir=${ tempDirPath; }
-    local workDir="${PWD}"
+    local workDir; workDir=${ tempDirPath -r XXXXXX; }
     local footerTemplate
 
     # Set armoredKey var
 
-    armorValtKey "${privateKeyFile}" armoredKey
+    armoredKey="${ cat "${privateKeyFile}"; }"
 
     # Copy asset files
 
@@ -401,5 +401,7 @@ generateHtml() {
     done
     echo "${html}" > "${outputFile}"
 }
+
+source rayvn.up 'rayvn/prompt' 'rayvn/config' 'valt/keys' 'valt/pinentry'
 
 main "${@}"
