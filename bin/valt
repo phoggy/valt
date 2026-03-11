@@ -112,7 +112,7 @@ assertValidVisibility() {
 
 # Boot rayvn with initial required libraries
 
-source rayvn.up --add 'valt' 'rayvn/core' 'valt/keys' 'rayvn/dependencies' || exit
+source rayvn.up 'rayvn/core' 'valt/keys' 'rayvn/dependencies' || exit
 
 main "${@}"
 
