@@ -33,10 +33,8 @@ _init_valt_pdf() {
     requireNodeModules valt VALT_PDF_DEPS_HOME
 
     # PUPPETEER_EXECUTABLE_PATH set by Nix wrapProgram on Linux (pkgs.chromium).
-    # On Nix macOS the download was skipped (PUPPETEER_SKIP_DOWNLOAD + PUPPETEER_SKIP_CHROME_DOWNLOAD),
-    # so find a system browser.
-    # On Brew, puppeteer finds its own downloaded browser automatically (no env var needed).
-    if [[ -n "${VALT_PDF_DEPS_HOME:-}" && -z "${PUPPETEER_EXECUTABLE_PATH:-}" ]]; then
+    # On macOS (Nix or dev), Chrome download is skipped so find a system browser.
+    if [[ -z "${PUPPETEER_EXECUTABLE_PATH:-}" ]]; then
         local candidate
         for candidate in \
             "/Applications/Chromium.app/Contents/MacOS/Chromium" \

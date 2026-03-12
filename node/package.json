@@ -3,5 +3,8 @@
   "private": true,
   "dependencies": {
     "puppeteer": "^24"
+  },
+  "puppeteer": {
+    "skipDownload": true
   }
 }
