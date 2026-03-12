@@ -20,7 +20,7 @@
         # pkgs.chromium is unavailable so pdf.sh detects a system browser at runtime.
         pdfNodeDeps = pkgs.buildNpmPackage {
           name = "valt-pdf-node-deps";
-          src = ./etc;
+          src = ./node;
           npmDepsHash = "sha256-n8o805M+VDZ5KvBTVdMxRhW5kLQYyhktYBjH1y84haY=";
           dontNpmBuild = true;
           npmInstallFlags = [ "--production" ];
@@ -82,6 +82,11 @@
             # Install etc/
             mkdir -p "$out/share/valt/etc"
             cp -r etc/* "$out/share/valt/etc/"
+
+            # Install node/
+            mkdir -p "$out/share/valt/node"
+            cp node/*.js "$out/share/valt/node/"
+
             # Install rayvn.pkg with version metadata
             sed '/^projectVersion=/d; /^projectReleaseDate=/d; /^projectFlake=/d; /^projectBuildRev=/d; /^projectNixpkgsRev=/d' \
                 rayvn.pkg > "$out/share/valt/rayvn.pkg"

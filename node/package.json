@@ -1,5 +1,5 @@
 {
-  "name": "valt-pdf",
+  "name": "valt-node",
   "private": true,
   "dependencies": {
     "puppeteer": "^24"

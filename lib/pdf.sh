@@ -18,22 +18,19 @@ generatePdf() {
         fail "Usage: generatePdf <html-file> <output-file> [<footerTemplate>]"
     fi
 
-    if [ -n "${footerTemplate}" ]; then
-        NODE_PATH="${nodeJsHome}/node_modules" node "${valtEtcDir}/generate-pdf.js" "${htmlFile}" "${outputFile}" "${footerTemplate}" || fail
+    if [[ -n "${footerTemplate}" ]]; then
+        executeNodeScript valt generate-pdf.js "${htmlFile}" "${outputFile}" "${footerTemplate}" || fail
     else
-        NODE_PATH="${nodeJsHome}/node_modules" node "${valtEtcDir}/generate-pdf.js" "${htmlFile}" "${outputFile}" || fail
+        executeNodeScript valt generate-pdf.js "${htmlFile}" "${outputFile}" || fail
     fi
 }
 
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/pdf' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_pdf() {
-    require 'rayvn/core'
+    require 'rayvn/core' 'rayvn/node'
 
-    # VALT_PDF_DEPS_HOME set by Nix wrapProgram; Brew installs directly to config dir.
-    declare -gr nodeJsHome="${VALT_PDF_DEPS_HOME:-${ configDirPath node-js; }}"
-
-    [[ -d "${nodeJsHome}/node_modules" ]] || fail "PDF dependencies not found at '${nodeJsHome}'. Reinstall valt."
+    requireNodeModules valt VALT_PDF_DEPS_HOME
 
     # PUPPETEER_EXECUTABLE_PATH set by Nix wrapProgram on Linux (pkgs.chromium).
     # On Nix macOS the download was skipped (PUPPETEER_SKIP_DOWNLOAD + PUPPETEER_SKIP_CHROME_DOWNLOAD),
