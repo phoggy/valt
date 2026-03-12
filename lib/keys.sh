@@ -4,7 +4,7 @@
 # Use via: require 'valt/keys'
 
 # Create new valt keys, encrypting the private key with a passphrase. May show passphrase advice and offer to generate passphrase.
-# Produces combinations of minisign (as comments) and Age keys:
+# Produces keys that combine minisign keys (as comments) and Age keys:
 #
 #   [name-]valt.pub: minisign public key comment + Age public key
 #   [name-]valt.key: minisign public key comment + Age public key comment + encrypted minisign secret key comment + Age secret key
