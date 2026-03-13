@@ -65,10 +65,10 @@ createValtKeys() {
 
     # Extract the created line and public key (hopefully future proof)
 
-    index=${ indexOf -r "${ageCreatedPrefix}" agePrivateKey; }
+    indexOf -p "${ageCreatedPrefix}" agePrivateKey index
     ageCreated="${agePrivateKey[index]}"
     agePrivateKey=("${agePrivateKey[@]:0:index}" "${agePrivateKey[@]:index+1}")
-    index=${ indexOf -r "${agePublicKeyPrefix}" agePrivateKey; }
+    indexOf -p "${agePublicKeyPrefix}" agePrivateKey index
     line="${agePrivateKey[index]}"
     agePublicKey="${line:${#agePublicKeyPrefix}}"
 
@@ -78,6 +78,8 @@ createValtKeys() {
     local signingPrivateKey=()
     local _signingPublicKeyFile; _signingPublicKeyFile="${ tempDirPath -r; }"
     local _signingPrivateKeyFile; _signingPrivateKeyFile="${ tempDirPath -r; }"
+    ls -l ${_signingPublicKeyFile}
+    ls -l ${_signingPrivateKeyFile}
     minisign -G -p "${_signingPublicKeyFile}" -s "${_signingPrivateKeyFile}" -W > /dev/null || fail
     mapfile -t signingPublicKey < <(cat "${_signingPublicKeyFile}")  || fail
     mapfile -t signingPrivateKey < <(cat "${_signingPrivateKeyFile}") || fail
@@ -97,7 +99,6 @@ createValtKeys() {
 
     valtPubKey=("${commonKey[@]}")
     valtPubKey+=("${agePublicKey}")
-printf '%s\n' "${valtPubKey[@]}"
 
     # Construct the combined 'valt.key' plaintext lines
 
@@ -108,7 +109,7 @@ printf '%s\n' "${valtPubKey[@]}"
     done
     plainPrivate+=('#')
     plainPrivate+=("${agePrivateKey[@]}")
-  printf '%s\n' "${plainPrivate[@]}"
+
     # Encrypt the private components, optionally capturing the password for testing
 
     armoredKeyFile="${ makeTempFile; }"
@@ -127,10 +128,9 @@ printf '%s\n' "${valtPubKey[@]}"
     fi
     mapfile -t armoredKey < <( cat "${armoredKeyFile}" )
 
-    # Construct valt.key. Comments are ONLY supported WITHIN encrypted content. Sigh.
+    # Construct valt.key. Comments are ONLY supported WITHIN encrypted content, per the Age spec.
 
     valtKey=("${armoredKey[@]}")
-    printf '%s\n' "${valtKey[@]}"
 
     # Write keys
 
@@ -193,44 +193,42 @@ verifyValtKeys() {
 # accepts either valt.pub or valt.key, echos 'valt.pub', 'valt.key'
 keyType() {
     local keyFile="$1"
-    local keyType
-    _keyFileType "${keyFile}" keyType
-    echo "${keyType}"
+    while read line; do
+        if (( "${#line}" )); then # Ignore blank lines
+            if [[ ${line} == "${agePemBegin}" ]]; then
+                echo "${valtPrivateKeySuffix}"
+            elif [[ ${line} == "${ageCreatedPrefix}"* ]]; then
+                echo "${valtPublicKeySuffix}"
+            else
+                fail "not a valt key file"
+            fi
+            break;
+        fi
+    done < <( cat ${keyFile} )
 }
 
 # accepts either valt.pub or valt.key
 publicEncryptionKey() {
     local keyFile="$1"
-    local keyType key pubKey _idx line
-    _keyFileType "${keyFile}" keyType key
-    if [[ ${keyType} == "${valtPrivateKeySuffix}" ]]; then
-        _readKeyToArray "${keyFile}" true key
-    fi
-    _idx=${ indexOf -r "${agePublicKeyPrefix}" key; }   # TODO change indexOf to return by ref!! add -p (prefix match) and -s (suffix match)
-    pubKey="${key[_idx]}"
-    pubKey=${pubKey:${#agePublicKeyPrefix}}
-    echo "${pubKey}"
+    _extractKey "${keyFile}" true "${agePublicKeyPrefix}" 1
 }
 
 # accepts either valt.pub or valt.key
 publicSigningKeyToTempFile() {
-    local keyFile="$1" resultFileVar="$2"
-    local keyType key decrypt=false
-    _keyFileType "${keyFile}" keyType key
-    [[ ${keyType} == "${valtPrivateKeySuffix}" ]] && decrypt=true
-    _extractKeyToTempFile "${keyFile}" "${signingPublicKeyPrefix}" ${decrypt} ${resultFileVar}
+    local keyFile="$1"
+    local -n resultFileRef="$2"
+    local tempFile; tempFile="${ makeTempFile 'XXXXXXXX'; }"
+    _extractKey "${keyFile}" true "${signingPublicKeyPrefix}" 2 "${tempFile}"
+    resultFileRef="${tempFile}"
 }
 
 # accepts valt.key only
 signingKeyToTempFile() {
-    local keyFile="$1" resultFileVar="$2"
-    local keyType key
-    _keyFileType "${keyFile}" keyType key
-    if [[ ${keyType} == "${valtPrivateKeySuffix}" ]]; then
-        _extractKeyToTempFile "${keyFile}" "${signingPrivateKeyPrefix}" true ${resultFileVar}
-    else
-        fail "requires key type '${valtPrivateKeySuffix}' found '${keyType}'"
-    fi
+    local keyFile="$1"
+    local -n resultFileRef="$2"
+    local tempFile; tempFile="${ makeTempFile 'XXXXXXXX'; }"
+    _extractKey "${keyFile}" false "${signingPrivateKeyPrefix}" 2 "${tempFile}"
+    resultFileRef="${tempFile}"
 }
 
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/keys' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
@@ -268,99 +266,66 @@ _assignResultIfVarName() {
     fi
 }
 
-_keyFileType() {
-    local _keyFile="$1"
-    local -n _keyFileTypeRef="$2"
-    local _keyArrayResultVar="${3:-}"
-    local _key=()
-    local _type line
-
-    # Get the key without decryption
-
-    _readKeyToArray "${_keyFile}" false _key
-
-    # Determine type
-
-    _type="${ _keyToType _key _keyFile; }"
-
-    # Assign the type and key array (if requested)
-
-    _keyFileTypeRef="${_type}"
-
-    if [[ -n "${_keyArrayResultVar}" ]]; then
-        local -n _keyArrayResultRef="${_keyArrayResultVar}"
-        _keyArrayResultRef=("${_key[@]}")
-    fi
-}
-
-_keyToType() {
-    local -n _keyArrayRef=$1
-    local -n _fileRef=$2
-    if [[ ${_keyArrayRef[0]} == "${ageCreatedPrefix}"* ]]; then
-        echo "${valtPublicKeySuffix}"
-    elif [[ ${_keyArrayRef[0]} == "${agePemBegin}" ]]; then
-        echo "${valtPrivateKeySuffix}"
-    else
-        fail "${_fileRef} is not a valt.pub or valt.key file"
-    fi
-}
-
-_extractKeyToTempFile() {
+_extractKey() {
     local keyFile="$1"
-    local keyPrefix="$2"
-    local decrypt="$3"
-    local -n resultFileRef="$4"
-    local _key=()
-    local resultArray=()
-    local resultFile
+    local allowPublic=$2
+    local keyPrefix="$3"
+    local keyLineCount=$4
+    local resultFile="${5:-}" # echo if none else write to file.
+    local firstLine=1 lines=()
+    local line
 
-    [[ "${decrypt}" == false && "${keyPrefix}" == "${signingPrivateKeyPrefix}" ]] && invalidArgs
-    resultFile="${ makeTempFile 'XXXXXXXX'; }"
+    while read line; do
+        if (( "${#line}" )); then # Ignore blank lines
+            if (( firstLine )); then
+                if [[ ${line} == "${agePemBegin}" ]]; then
 
-    # Map private key to array
+                    # valt.key so decrypt and switch to reading that
 
-    _readKeyToArray "${keyFile}" ${decrypt} _key
+                    useValtPinEntry
+                    export skipReadPasswordCheck=1
+                    while read line; do
+                        if [[ ${line} == "${keyPrefix}"* ]]; then
+                            lines+=( "${line:${#keyPrefix}}" )
+                            (( --keyLineCount )) || break
+                        fi
+                    done < <( rage -d "${keyFile}" 2> >(redStream) )  || fail
+                    unset skipReadPasswordCheck
+                    disableValtPinEntry
+                    break;
 
-    # Extract the key
+                elif [[ ${allowPublic} == true ]]; then
 
-    _extractKeyContent _key "${keyPrefix}" resultArray
+                    # valt.pub is allowed, so continue processing lines.
+                    # If we're looking for the age public key we need to
+                    # switch the key prefix
 
-    # Write it to the temp file and assign the result
+                    [[ ${keyPrefix} == "${agePublicKeyPrefix}" ]] && keyPrefix='age1'
 
-    printf "%s\n" "${resultArray[@]}" > "${resultFile}"
-    resultFileRef="${resultFile}"
-}
-
-_readKeyToArray() {
-    assertFile "$1"
-    local _keyFile="$1"
-    local _decrypt="$2"
-    local -n resultArrayRef="$3"
-    local _result=()
-
-    if [[ ${_decrypt} == true ]]; then
-        useValtPinEntry
-        export skipReadPasswordCheck=1
-        mapfile -t _result < <( rage -d "${_keyFile}" 2> >(redStream) )  || fail
-        unset skipReadPasswordCheck
-        disableValtPinEntry
-    else
-        mapfile -t _result < <(cat "${_keyFile}") || fail
-    fi
-    resultArrayRef=("${_result[@]}")
-}
-
-_extractKeyContent() {
-    local -n valtKeyArrayRef="$1"
-    local _keyPrefix="$2"
-    local -n _resultArrayRef="$3"
-    local line _result=()
-    for line in "${valtKeyArrayRef[@]}"; do
-        if [[ ${line} == "${_keyPrefix}"* ]]; then
-            _result+=( "${line:${#_keyPrefix}}" )
+                    if [[ ${line} == "${keyPrefix}"* ]]; then
+                        lines+=( "${line}" )
+                        (( --keyLineCount )) || break
+                    fi
+                    firstLine=0
+                else
+                    fail "requires key type '${valtPrivateKeySuffix}'"
+                fi
+            else
+                if [[ ${line} == "${keyPrefix}"* ]]; then
+                    lines+=( "${line}" )
+                    (( --keyLineCount )) || break
+                fi
+            fi
         fi
-    done
-    _resultArrayRef=( "${_result[@]}" )
+    done < <( cat "${keyFile}" )
+
+    # Write the lines to the result file or to stdout
+
+    if [[ -n "${resultFile}" ]]; then
+        printf '%s\n' "${lines[@]}" > "${resultFile}" || fail
+    else
+        printf '%s\n' "${lines[@]}"
+    fi
 }
 
 _maybeOfferPassphraseAdvice() {
