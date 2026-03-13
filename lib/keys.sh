@@ -21,7 +21,6 @@
 
 createValtKeys() {
     useValtPinEntry
-
     local keyName="${1:-?}"
     local keyDir="${2:-?}"
     local _valtPubFileResultVar="${3:-?}"
@@ -365,26 +364,28 @@ _extractKeyContent() {
 }
 
 _maybeOfferPassphraseAdvice() {
-    _readAdviceCount
-    if (( _adviceCount <= 1 )); then
-        local choiceIndex
-        _showPrivateKeyPassphraseAdvice
-        confirm "Do you already have a strong, memorable passphrase?" no yes choiceIndex || bye
-        if (( choiceIndex == 0 )); then
-            show nl "Ok, here a some randomly generated ones to choose from:" nl
-            for i in {1..10}; do
-                generatePassphrase
-            done
-            echo
-            confirm "Does one of these work for you?" yep nope choiceIndex || bye
-            if (( choiceIndex == 1 )); then
-                show "Ok. If you want to do this later, run:" primary "valt pass"
-                _setAdviceCount 1
-                bye
+    if (( ! skipKeyPassphraseAdvice )); then
+        _readAdviceCount
+        if (( _adviceCount <= 1 )); then
+            local choiceIndex
+            _showPrivateKeyPassphraseAdvice
+            confirm "Do you already have a strong, memorable passphrase?" no yes choiceIndex || bye
+            if (( choiceIndex == 0 )); then
+                show nl "Ok, here a some randomly generated ones to choose from:" nl
+                for i in {1..10}; do
+                    generatePassphrase
+                done
+                echo
+                confirm "Does one of these work for you?" yep nope choiceIndex || bye
+                if (( choiceIndex == 1 )); then
+                    show "Ok. If you want to do this later, run:" primary "valt pass"
+                    _setAdviceCount 1
+                    bye
+                fi
+                show nl "Good." primary italic "Keep this passphrase someplace secure!" nl
+                echo "Ok, now you'll need to enter it for your new keys."
+                _setAdviceCount 2
             fi
-            show nl "Good." primary italic "Keep this passphrase someplace secure!" nl
-            echo "Ok, now you'll need to enter it for your new keys."
-            _setAdviceCount 2
         fi
     fi
 }

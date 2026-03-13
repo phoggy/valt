@@ -40,7 +40,7 @@ usage() {
     show bold "Document Customization"
     echo
     echo "The HTML template can be changed from the default and CSS style overrides can be applied. The default template"
-    show "and primary CSS file can be found in the" blue "${valtEtcDir}" plain "directory."
+    show "and primary CSS file can be found in the" blue "${valtHome}/etc" plain "directory."
     echo
     show "Template substitutions are performed with variables defined in the" blue "key.info" plain "file. Note that keys"
     echo "prefixed with an underscore are reserved for system use."
@@ -59,8 +59,11 @@ main() {
 }
 
 init() {
-    declare -gr keyInfoTemplateFile="${valtHome}/etc/key-info-template.sh"
+    currentProjectName='valt' # force, since part of valt project
+    local configDir; configDir="${ configDirPath; }"
+    declare -gr valtConfigDir="${configDir}"
     declare -gr keyInfoFile="${valtConfigDir}/key.info"
+    declare -gr keyInfoTemplateFile="${valtHome}/etc/key-info-template.sh"
     declare -gr cssMainFileName="key-doc.css"
     declare -gr logoFileName="phoggy.png"
     declare -gr assetFiles=("${cssMainFileName}" "${logoFileName}")
@@ -72,8 +75,8 @@ init() {
     defaultPrinter=
 
     # Options
-    outputDir="${valtConfigDir}"
-    htmlTemplateFile="${valtEtcDir}/key-doc-template.html"
+    outputDir="${ configDirPath; }"
+    htmlTemplateFile="${valtHome}/etc/key-doc-template.html"
     cssOverrideFile=
     htmlFile=
     name=
@@ -81,13 +84,13 @@ init() {
     htmlFile=
 
     # Flags
-    declare -gi force=0
-    declare -gi verifyKeys=1
-    declare -gi showKeyAdvice=1
-    declare -gi generatePdf=1
-    declare -gi includePassphrase=1
-    declare -gi printPdf=1
-    declare -gi deletePdfAfterPrint=1
+    declare -g force=0
+    declare -g verifyKeys=1
+    declare -g generatePdf=1
+    declare -g includePassphrase=1
+    declare -g printPdf=1
+    declare -g deletePdfAfterPrint=1
+    declare -gx skipKeyPassphraseAdvice=0
 
     while (( ${#} > 0 )); do
         case "${1}" in
@@ -97,10 +100,10 @@ init() {
             -t | --template) shift; setFileVar htmlTemplateFile "${1}" "html template file path" ;;
             -c | --css) shift; setFileVar cssOverrideFile "${1}" "CSS" ;;
             --no-verify) verifyKeys=0 ;;
-            --no-advice) showKeyAdvice=0 ;;
+            --no-advice) skipKeyPassphraseAdvice=1 ;;
             --no-pdf) generatePdf=0; includePassphrase=0; printPdf=0; deletePdfAfterPrint=0 ;;
             --no-passphrase) includePassphrase=0; printPdf=0; deletePdfAfterPrint=0 ;;
-            -q | --quick) showKeyAdvice=0; verifyKeys=0 ;;
+            -q | --quick) skipKeyPassphraseAdvice=1; verifyKeys=0 ;;
             -f | --force) force=1 ;;
             -h | --help | help) usage ;;
             -*) usage "Unknown option: ${1}" ;;
@@ -250,7 +253,7 @@ createPdf() {
     # Copy asset files
 
     for assetFile in "${assetFiles[@]}"; do
-        cp "${valtEtcDir}/${assetFile}" "${workDir}/${assetFile}" || fail
+        cp "${valtHome}/etc/${assetFile}" "${workDir}/${assetFile}" || fail
     done
 
     if [[ ${cssOverrideFile} ]]; then
@@ -324,7 +327,7 @@ generateFooterTemplate() {
             }
             exit
         }
-        ' "${valtEtcDir}/key-doc.css"; }"
+        ' "${valtHOme}/etc/key-doc.css"; }"
 
     cat <<- EOF
 		<style>
