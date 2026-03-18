@@ -145,8 +145,8 @@
 #
 # Options:
 #
-#     -d, --dest-dir       Specify the archive destination directory. Defaults to ${PWD}.
-#     -n, --name NAME      Specify the archive file name prefix. Defaults to ${USER}.
+#     -d, --dest-dir       Specify the archive destination directory (default: ${PWD}).
+#     -n, --name NAME      Specify the archive file name prefix (default: ${USER}).
 #     -t, --timestamp      Add a timestamp to the archive file name.
 #     -z, --timezone NAME  Specify the timezone to use for timestamps, e.g. 'America/Los_Angeles'.
 #     -u, --user-text      User text to include in readme. Can contain '\n'.
@@ -184,6 +184,23 @@ newSecureArchive() {
         esac
         shift
     done
+
+# TODO:
+#
+#    Implementation gap vs. design: The current _createEncryptedArchive pipes tar | rage directly, but signing requires the tar on disk first. The actual flow needs to be:
+#    1. Create payload.tar to temp
+#    2. Minisign payload.tar → .minisig
+#    3. Bundle payload + sig + keys + readme into inner tar
+#    4. Encrypt inner tar with rage → encrypted.tar.xz.age
+#    5. Minisign the .age file → outer .minisig
+#    6. Bundle everything into the outer .valt tar
+#
+#    Signing key extraction: To sign, valt needs the minisign private key out of the passphrase-encrypted valt.key. That means decrypting it first, extracting the embedded key, using it,
+#    then clearing it. This is where the FIFO passphrase flow we discussed becomes relevant — you'll need the passphrase after rage finishes decrypting.
+#
+#
+#  minisign dependency: Not yet in flake.nix / rayvn.pkg.
+#
 
     # Make sure we have one or more recipients
 
@@ -262,7 +279,7 @@ _removeExistingArchiveFile() {
 }
 
 _createEncryptedArchive() {
-debugVar tarArgs recipents encryptedTarFile
+debugVar tarArgs recipients encryptedTarFile
     # TODO: the -H pax arg for extended headers is gnu-tar. Worth it for new dependency?
     tar cJ "${tarArgs[@]}" | rage "${recipients[@]}" > ${encryptedTarFile} || fail
 }
