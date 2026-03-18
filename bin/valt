@@ -20,12 +20,12 @@ usage() {
     echo "    -h, --help            Print this help message and exit."
     echo "    -v                    Print the version and exit."
     echo "    --version             Print the version with release date and exit."
-    echo "    --visibility MODE     Set password/phrase input visibility: 'none', 'hide', or 'show' (default=none)."
+    echo "    --visibility MODE     Set password/phrase input visibility: 'none', 'hide', or 'show' (default: none)."
     echo
     echo "Environment Variables"
     echo
     echo "    VALT_VISIBILITY       Set default visibility mode."
-    echo "    VALT_TIMEOUT          Set input timeout, in seconds. Defaults to 30."
+    echo "    VALT_TIMEOUT          Set input timeout, in seconds (default: 30)."
     echo
     show "Run" bold blue "${projectName}" plain italic "COMMAND" plain bold blue "--help" plain "for more information on a command."
     echo
@@ -82,8 +82,8 @@ init() {
             -h | --help) [[ ${command} ]] && appendVar commandOptions "${1}" || usage ;;
             -v) projectVersion valt; exit 0 ;;
             --version) projectVersion valt true; exit 0 ;;
-            --debug) setDebug showOnExit ;;
-            --debug-new) setDebug clearLog showOnExit ;;
+            --debug) setDebug showLogOnExit ;;
+            --debug-new) setDebug clearLog showLogOnExit ;;
             --debug-out) setDebug tty "${ tty; }" ;;
             --debug-tty) shift; setDebug tty "${1}" ;;
             *) commandOptions+=("${1}") ;;
