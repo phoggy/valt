@@ -38,19 +38,17 @@ main() {
         require 'valt/password'
         generatePassphrase
     elif [[ -n ${command} ]]; then
-        ${command} "${commandOptions[@]}"
+        executeWithCleanVars ${command} "${commandOptions[@]}"  # TODO: revisit need for clear vars!
     else
         usage
     fi
 }
 
 init() {
-    allNewFilesUserOnly
-    useValtPinEntry
-    readonly rageProjectUrl='https://github.com/str4d/rage'
 
     # Global constants
 
+    declare -grx rageProjectUrl='https://github.com/str4d/rage'
     declare -grx valtBinDir="${valtHome}/bin"
     declare -grx valtConfigDir="${ configDirPath; }"
     declare -grx valtProjectUrl='https://github.com/phoggy/valt'
@@ -112,7 +110,7 @@ assertValidVisibility() {
 
 # Boot rayvn with initial required libraries
 
-source rayvn.up 'rayvn/core' 'valt/keys' 'rayvn/dependencies' || exit
+source rayvn.up 'rayvn/core' 'rayvn/dependencies' || exit
 
 main "${@}"
 
