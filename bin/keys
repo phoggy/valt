@@ -26,7 +26,7 @@ usage() {
     echo "Options"
     echo
     echo "    -n, --name NAME               Use NAME as prefix for key file names, e.g. bob-valt.pub & bob-valt.key."
-    show "    -o, --output-dir PATH         Set output directory. Defaults to the" blue "${valtConfigDir}" plain "directory."
+    show "    -o, --output-dir PATH         Set output directory (default:" blue "${valtConfigDir}" plain glue ")."
     echo "    -f, --force                   Overwrite existing key files."
     echo "    --no-verify                   Do not verify keys."
     echo "    --no-advice                   Do not show passphrase advice."
