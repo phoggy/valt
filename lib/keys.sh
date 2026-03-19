@@ -78,8 +78,6 @@ createValtKeys() {
     local signingPrivateKey=()
     local _signingPublicKeyFile; _signingPublicKeyFile="${ tempDirPath -r; }"
     local _signingPrivateKeyFile; _signingPrivateKeyFile="${ tempDirPath -r; }"
-    ls -l ${_signingPublicKeyFile}
-    ls -l ${_signingPrivateKeyFile}
     minisign -G -p "${_signingPublicKeyFile}" -s "${_signingPrivateKeyFile}" -W > /dev/null || fail
     mapfile -t signingPublicKey < <(cat "${_signingPublicKeyFile}")  || fail
     mapfile -t signingPrivateKey < <(cat "${_signingPrivateKeyFile}") || fail
