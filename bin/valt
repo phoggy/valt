@@ -49,7 +49,7 @@ init() {
     # Global constants
 
     declare -grx rageProjectUrl='https://github.com/str4d/rage'
-    declare -grx valtBinDir="${valtHome}/bin"
+    declare -grx valtBinDir="${0%/*}"
     declare -grx valtConfigDir="${ configDirPath; }"
     declare -grx valtProjectUrl='https://github.com/phoggy/valt'
 
