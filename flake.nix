@@ -49,7 +49,7 @@
         ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
           pkgs.chromium
         ] ++ [
-          pkgs.qrencode
+          pkgs.qrtool
           pkgs.exiftool
           pkgs.qpdf
         ];

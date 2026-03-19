@@ -55,7 +55,6 @@ main() {
     if (( generatePdf )); then
         createKeyDocument
     fi
-    echo
 }
 
 init() {
@@ -69,7 +68,7 @@ init() {
     declare -gr assetFiles=("${cssMainFileName}" "${logoFileName}")
     declare -gr cssOverrideFileName='override.css'
     declare -gr htmlFileName='note.html'
-    declare -gr qrCodeFileName='qr.png'
+    declare -gr qrCodeFileName='qr.svg'
     qrCodeFile=
     armoredKey=
     defaultPrinter=
@@ -106,6 +105,10 @@ init() {
             -q | --quick) skipKeyPassphraseAdvice=1; verifyKeys=0 ;;
             -f | --force) force=1 ;;
             -h | --help | help) usage ;;
+            --debug) setDebug showLogOnExit ;;
+            --debug-new) setDebug clearLog showLogOnExit ;;
+            --debug-out) setDebug tty "${ tty; }" ;;
+            --debug-tty) shift; setDebug tty "${1}" ;;
             -*) usage "Unknown option: ${1}" ;;
         esac
         shift
@@ -128,7 +131,7 @@ prepareForPdf() {
     if (( generatePdf )); then
         ensureKeyInfo
         require 'valt/pdf'
-        documentsFile="${outputDir}/${name}-key.pdf"
+        documentsFile="${outputDir}/${namePrefix}key.pdf"
 
         if (( printPdf )); then
             local printers status prompt answer
@@ -208,7 +211,7 @@ assertKeyInfoArrayVar() {
 
 createKeys() {
     echo
-    header 1 "Generating keys"
+    header 2 "Generating Keys"
     local keyName='?'
     [[ -n "${name}" ]] && keyName="${name}"
     if (( includePassphrase )); then
@@ -234,8 +237,7 @@ createKeys() {
 createKeyDocument() {
     local options=
     echo
-    show bold "Generating documentation"
-    echo
+    header 2 "Generating Key Documentation"
     createPdf
     echo
     show "Keys documented in" cyan "${documentsFile}"
@@ -243,12 +245,12 @@ createKeyDocument() {
 }
 
 createPdf() {
-    local workDir; workDir=${ tempDirPath -r XXXXXX; }
+    local workDir; workDir=${ makeTempDir; }
     local footerTemplate
 
     # Set armoredKey var
 
-    armoredKey="${ cat "${privateKeyFile}"; }"
+    readFile "${privateKeyFile}" armoredKey
 
     # Copy asset files
 
@@ -263,7 +265,10 @@ createPdf() {
     # Create QR code
 
     qrCodeFile="${workDir}/${qrCodeFileName}"
-    echo "${armoredKey}" | qrencode -l H -o "${qrCodeFile}" || fail
+    if ! qrtool encode -r "${privateKeyFile}" -l h -t svg -o "${qrCodeFile}" 2>/dev/null; then
+        show warning "Key data exceeds H-level QR capacity; falling back to M-level (reduced error correction)"
+        qrtool encode -r "${privateKeyFile}" -l m -t svg -o "${qrCodeFile}" || fail
+    fi
     assertFileExists "${qrCodeFile}"
 
     # Generate substituted html file and footer template
@@ -277,14 +282,14 @@ createPdf() {
     # generate the pdf
 
     cd ${workDir} || fail
-    generatePdf "${htmlFile}" "${documentsFile}" "${footerTemplate}" || fail
+    generatePdf "${htmlFile}" "${documentsFile}" "${footerTemplate}" > /dev/null || fail
 
     # Set metadata and encrypt with a strong password
 
     local title='Private Key Pair Backup & Usage Instructions'
-    local creator="${ projectVersion valt; }, ${valtProjectUrl}"
+    local creator; creator="${ projectVersion valt; }, ${valtProjectUrl}"
     local subject="File decryption."
-    local keywords="${author}, valt, private key, backup, encryption, decryption, security"
+    local keywords; keywords="${author}, valt, private key, backup, encryption, decryption, security"
 
     exiftool \
         -Title="${title}" \
@@ -300,7 +305,7 @@ createPdf() {
     # password should never be required. Note that if we ever want actual form fields,
     # the --modify option must be changed to allow filling.
 
-    local ownerPW="${ phraze; }"
+    local ownerPW; ownerPW="${ phraze; }"
     local userPW=''
 
     qpdf ${documentsFile} \
@@ -309,7 +314,7 @@ createPdf() {
 }
 
 generateFooterTemplate() {
-    local footerClass="${ awk '
+    local footerClass; footerClass="${ awk '
         /^[[:space:]]*\.footer[[:space:]]*\{/ {
             print
             brace_count = 1
@@ -327,7 +332,7 @@ generateFooterTemplate() {
             }
             exit
         }
-        ' "${valtHOme}/etc/key-doc.css"; }"
+        ' "${valtHome}/etc/key-doc.css"; }"
 
     cat <<- EOF
 		<style>
@@ -346,13 +351,13 @@ generateFooterTemplate() {
 
 generateHtml() {
     local outputFile="${1}"
-    local html="${ < ${htmlTemplateFile}; }" || fail
-    local contact note value
+    local html contact note value
+    readFile "${htmlTemplateFile}" html || fail
 
     # Set built-in substitution values (clobbering any that the user might have defined)
 
     local _GREETING="${greeting}"
-    local _DATE="${ date "+%B %d, %Y %r %Z"; }"
+    local _DATE; _DATE="${ date "+%B %d, %Y %r %Z"; }"
     local _CSS_PATH="${cssMainFileName}"
     local _LOGO_PATH="${logoFileName}"
     local _QR_CODE_PATH="${qrCodeFileName}"
