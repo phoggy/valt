@@ -3,9 +3,9 @@
 
 usage() {
     echo
-    show bold "Public key encryption of files and directories, using" cyan "rage" plain "(see" blue "${rageProjectUrl}" plain ")."
+    show bold "Public key encryption of files and directories, using" cyan "rage" off "(see" blue "${rageProjectUrl}" off ")."
     echo
-    show "Usage:" bold blue "${projectName}" plain "[OPTIONS]" italic "COMMAND"
+    show "Usage:" bold blue "${projectName}" off "[OPTIONS]" italic "COMMAND"
     echo
     echo "Commands"
     echo
@@ -27,7 +27,7 @@ usage() {
     echo "    VALT_VISIBILITY       Set default visibility mode."
     echo "    VALT_TIMEOUT          Set input timeout, in seconds (default: 30)."
     echo
-    show "Run" bold blue "${projectName}" plain italic "COMMAND" plain bold blue "--help" plain "for more information on a command."
+    show "Run" bold blue "${projectName}" off italic "COMMAND" off bold blue "--help" off "for more information on a command."
     echo
     bye "${@}"
 }
