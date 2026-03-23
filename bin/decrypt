@@ -29,7 +29,7 @@ main() {
 init() {
     file=
     unpackDir=
-    identities=
+    identities=()
     decryptedFile=
 
     # Flags
@@ -41,7 +41,7 @@ init() {
     while (( ${#} > 0 )); do
         case "${1}" in
             --) ;;
-            -i|--identity) shift; assertFile "${1}"; appendVar identities "-i ${1}" ;;
+            -i|--identity) shift; assertFile "${1}"; identities+=(-i "${1}") ;;
             -u|--unpack-dir) shift; unpackDir="${1}" ;;
             -n|--no-unpack) unpack=0 ;;
             -o|--output) shift; decryptedFile="${1}" ;;
@@ -54,7 +54,7 @@ init() {
         shift
     done
 
-    [[ ${identities} ]] || fail "no identities specified"
+    [[ ${#identities[@]} ]] || fail "no identities specified"
     [[ ${file} ]] || fail "no file provided"
     [[ ${decryptedFile} ]] || decryptedFile="${ basename -- "${file}" .${ageFileExtension}; }"
 }
@@ -74,7 +74,7 @@ progress() {
 decryptFile() {
     [[ -f ${decryptedFile} ]] && replaceOutputFile "${decryptedFile}"
     progress "${ show "Decrypting" cyan "${file}" off "to" bold "${decryptedFile}" ;}"
-    rage -d ${identities} "${file}" -o "${decryptedFile}" 2> >(redStream) || fail
+    rage -d "${identities[@]}" "${file}" -o "${decryptedFile}" 2> >(redStream) || fail
 }
 
 unpackFile() {

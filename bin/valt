@@ -46,7 +46,7 @@ main() {
         require 'valt/password'
         generatePassphrase
     elif [[ -n ${command} ]]; then
-        executeWithCleanVars ${command} "${commandOptions[@]}"  # TODO: revisit need for clear vars!
+        executeWithCleanVars ${command} "${commandOptions[@]}"  # TODO: revisit need for clean vars!
     else
         usage
     fi
@@ -71,7 +71,7 @@ init() {
 
     newPassphrase=0
     command=
-    commandOptions=
+    commandOptions=()
 
     # Parse input
 
@@ -85,7 +85,7 @@ init() {
             decrypt) setCommand decrypt ;;
             --expert) expertMode=true ;; # TODO update usage when implemented
             --visibility) shift; passwordVisibility="${1}" ;;
-            -h | --help) [[ ${command} ]] && appendVar commandOptions "${1}" || usage ;;
+            -h | --help) [[ ${command} ]] && commandOptions+=("${1}") || usage ;;
             -v) projectVersion valt; exit 0 ;;
             --version) projectVersion valt true; exit 0 ;;
             --debug) setDebug --showLogOnExit ;;

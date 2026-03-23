@@ -36,7 +36,7 @@ init() {
     files=()
 
     # Options
-    recipients=
+    recipients=()
     name=
     timeZoneName='UTC'
     verifyKeyFile=
@@ -55,8 +55,8 @@ init() {
     while (( ${#} > 0 )); do
         case "${1}" in
             --) ;;
-            -r|--recipient) shift; assertRecipient "${1}"; appendVar recipients "-r ${1}" ;;
-            -R|--recipients-file) shift; assertFile "${1}" "recipients file"; appendVar recipients "-R ${1}" ;;
+            -r|--recipient) shift; assertRecipient "${1}"; recipients+=(-r "${1}") ;;
+            -R|--recipients-file) shift; assertFile "${1}" "recipients file"; recipients+=(-R "${1}") ;;
             -n|--name) shift; name="${1}" ;;
             -t|--timestamp) addTimeStamp=1 ;;
             -z|--timezone) shift; timeZoneName="${1}" ;;
@@ -70,7 +70,7 @@ init() {
         shift
     done
 
-    [[ ${recipients} ]] || fail "no recipients specified"
+    [[ ${#recipients[@]} ]] || fail "no recipients specified"
     [[ ${verifyKeyFile} ]] || deleteOriginal=0
     initializeFiles
 }
@@ -125,7 +125,7 @@ addFile() {
 encryptFile() {
     [[ -f ${outputFile} ]] && replaceOutputFile "${outputFile}"
     show "Encrypting ${description} to" cyan "${outputFile}"
-    rage --encrypt ${recipients} "${inputFile}" -o "${outputFile}"
+    rage --encrypt "${recipients[@]}" "${inputFile}" -o "${outputFile}"
     verifyEncryptedFile
     deleteOriginalFile
 }
