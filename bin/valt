@@ -29,6 +29,14 @@ usage() {
     echo
     show "Run" bold blue "${projectName}" off italic "COMMAND" off bold blue "--help" off "for more information on a command."
     echo
+    echo "Debug Options:"
+    echo
+    echo "    --debug           Enable debug, write output to log file and show on exit."
+    echo "    --debug-new       Enable debug, clear log file, write output to log file and show on exit."
+    echo "    --debug-out       Enable debug, write output to the current terminal."
+    echo "    --debug-tty TTY   Enable debug, write output to the specified TTY (e.g., /dev/ttys001)."
+    echo "    --debug-tty .     Enable debug, write output to the TTY path read from the '${HOME}/.debug.tty' file."
+    echo
     bye "${@}"
 }
 
@@ -80,10 +88,10 @@ init() {
             -h | --help) [[ ${command} ]] && appendVar commandOptions "${1}" || usage ;;
             -v) projectVersion valt; exit 0 ;;
             --version) projectVersion valt true; exit 0 ;;
-            --debug) setDebug showLogOnExit ;;
-            --debug-new) setDebug clearLog showLogOnExit ;;
-            --debug-out) setDebug tty "${ tty; }" ;;
-            --debug-tty) shift; setDebug tty "${1}" ;;
+            --debug) setDebug --showLogOnExit ;;
+            --debug-new) setDebug --clearLog --showLogOnExit ;;
+            --debug-out) setDebug --tty "${ tty; }" ;;
+            --debug-tty) shift; setDebug --tty "${1}" ;;
             *) commandOptions+=("${1}") ;;
         esac
         shift
