@@ -5,7 +5,7 @@ usage() {
     echo
     show bold "Encrypt one or more files or directories."
     echo
-    show "Usage:" bold blue "valt encrypt ${scriptName}" off "[OPTIONS] -r RECIPIENT PATH..."
+    show "Usage:" bold blue "valt encrypt ${scriptName}" "[OPTIONS] -r RECIPIENT PATH..."
     echo
     echo "If a single file is specified, it is encrypted as '<name>[-<timestamp>].age', where <name> defaults to the file name."
     echo "Otherwise, a compressed and encrypted tar file is produced as '<name>[-<timestamp>].tar.xz.age', where name defaults"
@@ -151,7 +151,7 @@ verifyEncryptedFile() {
             diff -r "${files[0]}" ${decryptedFile} &> /dev/null || fail "do not match!"
             show bold green "ok"
         fi
-        show "Decrypted" cyan "${outputFile}" off "is" bold green "verified"
+        show "Decrypted" cyan "${outputFile}" "is" bold green "verified"
     fi
 }
 
@@ -170,7 +170,7 @@ replaceOutputFile() {
     local reply
     local outputFile="${1}"
     if (( ! force )); then
-        show bold "${outputFile}" off "already exists."
+        show bold "${outputFile}" "already exists."
         prompt "${ show red "Replace all output files?" ;}" y n reply
         [[ ${reply} != "y" ]] && exit 0
         force=1

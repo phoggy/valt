@@ -270,8 +270,8 @@ _removeExistingArchiveFile() {
     if [[ -e "${archiveFile}" ]]; then
         if (( ! force )); then
             local answer
-            show primary "${archiveFile}" off "already exists."
-            prompt "${ show -n primary "${archiveFile}" off "already exists. Replace it?" ;}" yes no answer
+            show primary "${archiveFile}" "already exists."
+            prompt "${ show -n primary "${archiveFile}" "already exists. Replace it?" ;}" yes no answer
             [[ ${answer} == "yes" ]] || exit 0
         fi
         rm "${archiveFile}" || fail

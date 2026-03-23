@@ -51,9 +51,9 @@ init() {
     if (( _debug )); then
         _logPrefix=''
         log "${ show nl secondary BEGIN valt-pinentry \
-                        primary "terminal" off ${terminal} \
-                        primary 'pid' off ${BASHPID} \
-                        primary 'args' off "'${*}'" \
+                        primary "terminal" ${terminal} \
+                        primary 'pid' ${BASHPID} \
+                        primary 'args' "'${*}'" \
                         secondary '--------' nl \
                ; }"
         declare -gx _logPrefix="${ show secondary 'pinentry: '; }"
@@ -240,7 +240,7 @@ mismatchError() {
     local remaining=${2}
     local retries='retries'
     (( remaining == 1 )) && retries='retry'
-    show red "${error}" off "(${remaining} ${retries} remain)" > ${terminal}
+    show red "${error}" "(${remaining} ${retries} remain)" > ${terminal}
     echo > ${terminal}
 }
 

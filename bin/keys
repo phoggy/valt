@@ -4,14 +4,14 @@ usage() {
     echo
     show bold "Generate an age public key pair and backup documentation."
     echo
-    show "Usage:" bold blue "valt keys" off "[OPTIONS]"
+    show "Usage:" bold blue "valt keys" "[OPTIONS]"
     echo
-    show "Private keys are encrypted and a strong passphrase is" bold green "highly" off "encouraged; advice and an opportunity to"
+    show "Private keys are encrypted and a strong passphrase is" bold green "highly" "encouraged; advice and an opportunity to"
     echo "generate one will be offered."
     echo
     echo "A PDF file will be created containing your keys, also in encrypted form, to serve as a backup for you and/or your"
     echo "successors. Detailed usage instructions are included. Keys are represented as a QR code and again in a text format"
-    show "(often called \"paper keys\"). Content will be personalized: you will be prompted to edit a" blue "key.info" off "file."
+    show "(often called \"paper keys\"). Content will be personalized: you will be prompted to edit a" blue "key.info" "file."
     echo
     echo "By default, the passphrase you enter when creating the keys will be included in the generated PDF and you will be"
     echo "prompted to select a printer and choose a copy count. After printing, the PDF will be deleted to keep your passphrase"
@@ -19,14 +19,14 @@ usage() {
     echo
     show "  " bold "store the documents in secure locations, e.g. safe deposit box/fire safe and/or with trusted people!"
     echo
-    show "If you specify the --no-passphrase option, you will not be prompted to the print the PDF. However, you" bold "must" off "still"
+    show "If you specify the --no-passphrase option, you will not be prompted to the print the PDF. However, you" bold "must" "still"
     echo "make the passphrase available to whomever has access to the document! To ensure this, the 'notes' property in the"
-    show blue "key.info" off "will be required and should be used to help guide the reader to access the passphrase."
+    show blue "key.info" "will be required and should be used to help guide the reader to access the passphrase."
     echo
     echo "Options"
     echo
     echo "    -n, --name NAME               Use NAME as prefix for key file names, e.g. bob-valt.pub & bob-valt.key."
-    show "    -o, --output-dir PATH         Set output directory (default:" blue "${valtConfigDir}" off glue ")."
+    show "    -o, --output-dir PATH         Set output directory (default:" blue "${valtConfigDir}" glue ")."
     echo "    -f, --force                   Overwrite existing key files."
     echo "    --no-verify                   Do not verify keys."
     echo "    --no-advice                   Do not show passphrase advice."
@@ -40,9 +40,9 @@ usage() {
     show bold "Document Customization"
     echo
     echo "The HTML template can be changed from the default and CSS style overrides can be applied. The default template"
-    show "and primary CSS file can be found in the" blue "${valtHome}/etc" off "directory."
+    show "and primary CSS file can be found in the" blue "${valtHome}/etc" "directory."
     echo
-    show "Template substitutions are performed with variables defined in the" blue "key.info" off "file. Note that keys"
+    show "Template substitutions are performed with variables defined in the" blue "key.info" "file. Note that keys"
     echo "prefixed with an underscore are reserved for system use."
     echo
     echo "The template can be specified with the --template option, and default styles can be extended using the --css option."
@@ -140,7 +140,7 @@ prepareForPdf() {
             status="${ echo "${printers}" | jq -r --arg name "${defaultPrinter}" '.SPPrintersDataType[] | select(._name == $name) | .status'; }"
             echo
             if [[ ${status} == offline ]]; then
-                show "Your default printer '${defaultPrinter}' is" bold red "offline" off "."
+                show "Your default printer '${defaultPrinter}' is" bold red "offline" "."
                 echo "If you just powered on, it may take up to a minute before it appears online."
                 prompt "Continue without printing key documentation" y n answer
                 [[ ${answer} == y ]] || exit 0
@@ -182,7 +182,7 @@ ensureKeyInfo() {
     fi
 
     echo
-    show "The" bold "key.info" off "file at" blue "${valtConfigDir}" off "${status} completed."
+    show "The" bold "key.info" "file at" blue "${valtConfigDir}" "${status} completed."
     echo "Please edit and complete it before proceeding."
     bye
 }
@@ -221,8 +221,8 @@ createKeys() {
         _PHRASE="(see Notes)"
     fi
     echo
-    show "Public key (aka 'recipient') file:" cyan "${publicKeyFile}"  off "(includes public signing key)"
-    show "Private key (aka 'identity') file:" cyan "${privateKeyFile}" off "(includes public key and both signing keys)"
+    show "Public key (aka 'recipient') file:" cyan "${publicKeyFile}"  "(includes public signing key)"
+    show "Private key (aka 'identity') file:" cyan "${privateKeyFile}" "(includes public key and both signing keys)"
 
     if (( verifyKeys )); then
         echo
@@ -230,7 +230,7 @@ createKeys() {
         echo
         verifyValtKeys "${privateKeyFile}" "${publicKeyFile}"
         echo
-        show bold green "Verified" off "that a file encrypted with" cyan "${publicKeyFile}" off "decrypts with passphrase and the" cyan "${privateKeyFile}" off "private key."
+        show bold green "Verified" "that a file encrypted with" cyan "${publicKeyFile}" "decrypts with passphrase and the" cyan "${privateKeyFile}" "private key."
     fi
 }
 
