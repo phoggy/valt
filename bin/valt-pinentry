@@ -179,7 +179,7 @@ getPin() {
             done
             if (( retries <= 0 )); then
                 respond "${mismatchedPinError}"
-                secureEraseVars p1 p2
+                eraseVars p1 p2
                 return
             fi
             respond "${pinRepeatedResponse}"
@@ -189,7 +189,7 @@ getPin() {
 
     respond "D ${p1}"
     [[ -v _valtTestTemp ]] && echo "${p1}" > "${_valtTestTemp}"
-    secureEraseVars p1 p2
+    eraseVars p1 p2
     respond ${noError}
 }
 
