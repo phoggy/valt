@@ -46,7 +46,7 @@ main() {
         require 'valt/password'
         generatePassphrase
     elif [[ -n ${command} ]]; then
-        executeWithCleanVars ${command} "${commandOptions[@]}"  # TODO: revisit need for clean vars!
+        execute ${command} "${commandOptions[@]}"  # TODO: revisit need for clean vars!
     else
         usage
     fi
