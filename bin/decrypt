@@ -74,7 +74,7 @@ progress() {
 decryptFile() {
     [[ -f ${decryptedFile} ]] && replaceOutputFile "${decryptedFile}"
     progress "${ show "Decrypting" cyan "${file}" "to" bold "${decryptedFile}" ;}"
-    rage -d "${identities[@]}" "${file}" -o "${decryptedFile}" 2> >(redStream) || fail
+    rage -d "${identities[@]}" "${file}" -o "${decryptedFile}" 2> >(errorStream) || fail
 }
 
 unpackFile() {
