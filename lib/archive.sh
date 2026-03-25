@@ -168,7 +168,7 @@ newSecureArchive() {
 
     # Parse options
 
-    while (( ${#} > 0 )); do
+    while (( $# > 0 )); do
         case "$1" in
             -C ) shift; tarArgs+=(-C "$1") ;;
             -d | --dest-dir) shift; assertDirectory "$1"; destDir="$1" ;;
