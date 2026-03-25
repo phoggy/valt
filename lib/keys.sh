@@ -398,7 +398,7 @@ _writeAdviceCount() {
 }
 
 _setSampleText() {
-    local -n resultVar="${1}"
+    local -n resultVar="$1"
     if [[ ! ${resultVar} ]]; then
         IFS='' read -d '' -r resultVar <<'HEREDOC'
                                 🌑🌒🌓🌔🌕🌖🌗🌘
