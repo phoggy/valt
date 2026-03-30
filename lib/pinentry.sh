@@ -16,7 +16,7 @@ disableValtPinEntry() {
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/pinentry' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_pinentry() {
-    require 'rayvn/core'
+    :
 }
 
 

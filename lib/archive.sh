@@ -183,7 +183,7 @@ PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/archive' PRIVA
 
 
 _init_valt_archive() {
-    require 'rayvn/core' 'valt/keys'
+    require 'valt/keys'
 }
 
 _assertArchiveRecipient() {
