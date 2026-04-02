@@ -2,9 +2,6 @@
   "name": "valt-node",
   "private": true,
   "dependencies": {
-    "puppeteer": "^24"
-  },
-  "puppeteer": {
-    "skipDownload": true
+    "puppeteer": "^24.40.0"
   }
 }

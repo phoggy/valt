@@ -120,5 +120,11 @@ _valtNpmWritePackageJson() {
     } > "${tmpFile}" && mv "${tmpFile}" "${packageJsonFile}"
 
     show success "Updated ${packageJsonFile}"
-    show nl "Run 'nix build' to verify, then commit node/package.json and update npmDepsHash in flake.nix"
+    show nl "Next steps:"
+    echo
+    printList \
+        "Commit node/package.json" \
+        "Run 'nix build' — it will fail with the correct hash in the error output" \
+        "Copy the hash and update npmDepsHash in flake.nix" \
+        "Run 'nix build' again to verify"
 }
