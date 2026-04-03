@@ -8,7 +8,7 @@
 #
 # · ARGS
 #
-#   projectName (string)  Name of the project (default: currentProjectName).
+#   projectName (string)  Name of the project (default: ${currentProjectName}).
 #   envVar (string)       If set and non-empty in the environment, use its value as nodeHome directly.
 #
 # · EXAMPLE
@@ -23,10 +23,7 @@ requireNodeModules() {
     if [[ -n "${envVar}" && -n "${!envVar}" ]]; then
         nodeHome="${!envVar}"
     else
-        local savedProjectName="${currentProjectName}"
-        currentProjectName="${projectName}"
-        nodeHome=${ configDirPath "node"; }
-        currentProjectName="${savedProjectName}"
+        nodeHome=${ configDirPath -p "${projectName}" "node"; }
         ensureDir "${nodeHome}"
 
         if [[ ! -d "${nodeHome}/node_modules" ]]; then
