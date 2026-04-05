@@ -88,16 +88,13 @@ init() {
             -h | --help) [[ ${command} ]] && commandOptions+=("${1}") || usage ;;
             -v) projectVersion valt; exit 0 ;;
             --version) projectVersion valt true; exit 0 ;;
-            --debug) setDebug --showLogOnExit ;;
-            --debug-new) setDebug --clearLog --showLogOnExit ;;
-            --debug-out) setDebug --tty "${ tty; }" ;;
-            --debug-tty) shift; setDebug --tty "${1}" ;;
+            --debug*) setDebug "$@"; shift $? ;;
             *) commandOptions+=("${1}") ;;
         esac
         shift
     done
 
-#    debugVar passwordVisibility expertMode proxyPinEntry command commandOptions
+    #    debugVar passwordVisibility expertMode proxyPinEntry command commandOptions
 
     assertValidVisibility
     [[ ${newPassphrase} || -n ${command} ]] || usage "missing command"
