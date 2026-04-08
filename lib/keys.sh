@@ -15,12 +15,12 @@
 #
 # ◇ Example valt.pub
 #
-#   # created: 2026-03-10T16:57:47-07:00
+#   # created: 2026-04-08T15:20:15-07:00
 #   #
-#   # [minisign.pub] untrusted comment: minisign public key 86DA637D4FBBE4E5
-#   # [minisign.pub] RWTl5LtPfWPahiYfMcUk9+c/cFAfruNplL79ijRei9i1HzJlDa741qHp
+#   # [minisign.pub] untrusted comment: minisign public key EE5CD48146AE435D
+#   # [minisign.pub] RWRdQ65GgdRc7jF1xg1QozGtd1gWfi7I4RJ58i8ElDvV4qCuzE+zENKo
 #   #
-#   age1kqkzh9m0a2nhwypk3v6cj0fh78qdur5knkzcl4nwpxlh5pyuq33qyhauur
+#   # age1pq1m43p0m52f544e868gyh09rx0wrr6jg8thvcr5cekpdkhzapwa7jjdgh54zlnjp0wny04tcae7h3k5x0s25l3znxpvvq  [ ... ]
 #
 # ◇ Example valt.key prior to encryption (not stored)
 #
@@ -30,32 +30,17 @@
 #   # [minisign.pub] RWTl5LtPfWPahiYfMcUk9+c/cFAfruNplL79ijRei9i1HzJlDa741qHp
 #   #
 #   # [minisign.key] untrusted comment: minisign encrypted secret key
-#   # [minisign.key] RWQAAEIyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA5eS7T31j2oY  ...
+#   # [minisign.key] RWQAAEIyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA5eS7T31j2oY  [ ... ]
 #   # public key: age1kqkzh9m0a2nhwypk3v6cj0fh78qdur5knkzcl4nwpxlh5pyuq33qyhauur
 #   AGE-SECRET-KEY-1KVCTA4K9RSW85YHCSE62L9XJ2ULTPG9ZVRF7K6KGGALCGYUDFHGQY2SYX7#
 #
 # ◇ Example valt.key
 #
-#   -----BEGIN AGE ENCRYPTED FILE-----
-#   YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IHNjcnlwdCBaQVZVdnlUM3MrL3ExeTRr
-#   Ym0wZ0lBIDE5CkNBczlucVdQTy9vV1dzeXNMTDNhNmRqbDhzcFdHWXdWbVlFSHhz
-#   UWxHdXMKLS0tIHhLSHJ6eVphelR0QlJjTGFhVkJDYUpwbE5HS3BrNVBhbzI2R3R3
-#   aVB6Z2cKJZaL7hk5rEA/2U9PoErZyRGCs6zc6hkx1h6Edu3xXbCcv+Ha03gukMH1
-#   YC+UyqpcgdVux7QZwDcUBzn4bRu70HpfPwh9Tn+lXZFA5ntp3nX9+o48gzu6CMDO
-#   0E5Mg/OQPDr0myDkPZkek7eXDS34LmvFAndIJI2KE5OOHWQOMs8ga+K+GIT5/uzi
-#   ylwiC4kCwA9a1C0nwCfJrKLwkh2ll6j6djV7i/4b8QWcrg8BE8TgpnRKXmmRSLnn
-#   eS21HEnUQk76z9wdGDNB+tn5cUsKKs92ghPBOh1jWdkGWDK9TFyPN35nFlpou/hC
-#   O+O9QMWkJdoTerhSDmvWPNjIm/mLtojz673Cg6xRMdqhHfQ7Sv2Kw3yTjLxLTCyM
-#   ZZGpj/Eww37Tdx7elQQ0BGZGl6gkU7jp3+BOZZgDFD2GIkRqix/LxCg0dPq+g8/b
-#   Q162GLCpnCz1wGUyUY4HkadfE3zg4A++TUMwE+dodWKcShGX8BKVEhUclH8B5pKS
-#   YAoFAbvMs8DIqycnc6A0zu7ouwaZQkNfIkmpPlsG/fTi6mHH3NbQguEioDKVkIfY
-#   rrgDWuPuUst6dEoc1NTbhmDzk/D37ipUZUAKHWong/PG8ljZLkRwfvm6hI9UcuW9
-#   lSusKKsVxILzF0PPXfzfxBMQ+jY2+pIRot5QbdItxAuc7UTGzpeKkRQ7Q6XoAle8
-#   vHJrI6+OdAl7nnQJrUhO8HZDYyxqTyZpQ68+8ArVyK1n5LtJNJq3vp2+vr2OgNKW
-#   ws0fdSu5PqvLoBCPBpAiXyWfy+35tipweu1qw8CwL4CqBlZStr+oA7K2ZVBTpFyk
-#   fRZrtCfkQK025fmjOBzwbhU5hbSsK/wlbwiZi1FX6m2pHnC5n+ypLy4xU1oTmvYa
-#   ztTsiA==
-#   -----END AGE ENCRYPTED FILE-----
+#   # age-encryption.org/v1
+#   # -> scrypt WzB5/xdYAB/DggwzorWYPg 18
+#   # tdtd2Ew1tyQU2b34sGgI6o2YajyADGt/0D+eW2GN3bk
+#   # --- VX6tiDvvH5VCkb44Ifnca1R9eUQuk9RauYKrZ9U2Cto
+#   # [... 1565 bytes binary data ...]
 #
 # ◇ Passphrase Encryption
 #
@@ -95,7 +80,7 @@
 #   keyDir                optional directory path where key files will be written, default: ~/.config/valt
 #   valtPubFileResultVar  optional var name to assign the valt.pub file
 #   valtKeyFileResultVar  optional var name to assign the valt.key file
-#   testPassResultVar     optional var name to assign the password for testing
+#   testPassResultVar     optional var name to assign the password to for testing
 
 createValtKeys() {
     useValtPinEntry
@@ -109,10 +94,7 @@ createValtKeys() {
     [[ ${keyName} != '?' ]] && keyPrefix="${keyName}-"
     if [[ ${keyDir} == '?' ]]; then
         # Force use of valt config dir
-        local origProject="${currentProjectName}"
-        currentProjectName='valt'
-        keyDir="${ configDirPath; }"
-        currentProjectName=${origProject}
+        keyDir="${ configDirPath -p 'valt'; }"
     else
         assertDirectory "${keyDir}"
     fi
@@ -120,8 +102,7 @@ createValtKeys() {
     local _publicKeyFile="${keyDir}/${keyPrefix}${valtPublicKeySuffix}"
     local _publicSigningKeyFile="${keyDir}/${keyPrefix}${valtSigningPublicKeySuffix}"
     local capture=0
-    local armoredKey
-    local armoredKeyFile
+    local encryptedKey
     local ageCreated
     local agePublicKey
     local agePrivateKey=()
@@ -137,9 +118,9 @@ createValtKeys() {
 
     _maybeOfferPassphraseAdvice
 
-    # Generate the age private key (includes public key)
+    # Generate the post-quantum age private key (includes public key)
 
-    mapfile -t agePrivateKey < <( rage-keygen 2> /dev/null ) || fail
+    mapfile -t agePrivateKey < <( age-keygen -pq 2> /dev/null ) || fail
 
     # Extract the created line and public key (hopefully future proof)
 
@@ -186,27 +167,13 @@ createValtKeys() {
     plainPrivate+=('#')
     plainPrivate+=("${agePrivateKey[@]}")
 
-    # Encrypt the private components, optionally capturing the password for testing
+    # Encrypt the private components, optionally capturing the passphrase for testing
 
-    armoredKeyFile="${ makeTempFile; }"
-    if (( capture )); then
-        export _valtTestTemp; _valtTestTemp="${ makeTempFifo; }"
-        printf "%s\n" "${plainPrivate[@]}" | rage -p -a -o "${armoredKeyFile}" - &
-        local ragePid=$!
-        local result
-        read -r result < "${_valtTestTemp}"
-        wait ${ragePid} || fail "encryption failed"
-        rm -f "${_valtTestTemp}" 2> /dev/null
-        unset _valtTestTemp
-        printf -v "${_testPassResultVar}" '%s' "${result}"
-    else
-        printf "%s\n" "${plainPrivate[@]}" | rage -p -a -o "${armoredKeyFile}" - || bye
-    fi
-    mapfile -t armoredKey < <( cat "${armoredKeyFile}" )
+    _encryptKey plainPrivate encryptedKey "${_testPassResultVar}"
 
     # Construct valt.key. Comments are ONLY supported WITHIN encrypted content, per the Age spec.
 
-    valtKey=("${armoredKey[@]}")
+    valtKey=("${encryptedKey[@]}")
 
     # Write keys
 
@@ -222,6 +189,7 @@ createValtKeys() {
 
     disableValtPinEntry
 }
+
 
 # Verify keys by encrypting sample text, signing, verify signature and decrypting, then comparing.
 # Fails if decryption does not reproduce the original (e.g. wrong passphrase).
@@ -253,7 +221,7 @@ verifyValtKeys() {
 
     # Encrypt
 
-    echo -n "${sampleText}" | rage -R "${valtKeyFile}" -o "${encryptedFile}" || fail
+    echo -n "${sampleText}" | age -R "${valtKeyFile}" -o "${encryptedFile}" || fail
 
     # Sign
 
@@ -261,7 +229,7 @@ verifyValtKeys() {
 
     # Decrypt and compare
 
-    local decrypted="${ rage -d -i "${valtKeyFile}" "${encryptedFile}" 2> /dev/null; }"
+    local decrypted="${ age -d -i "${valtKeyFile}" "${encryptedFile}" 2> /dev/null; }"
     diff -u <(echo -n "${sampleText}") <(echo "${decrypted}") > /dev/null || fail "not verified (wrong passphrase?)"
     disableValtPinEntry
 }
@@ -310,7 +278,7 @@ signingKeyToTempFile() {
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/keys' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_keys() {
-    require 'rayvn/core' 'valt/pinentry' 'valt/password' 'rayvn/prompt'
+    require 'valt/pinentry' 'valt/password' 'rayvn/prompt'
     declare -grx xkcdPasswordsUrl="https://xkcd.com/936/"
     declare -grx valtPublicKeySuffix='valt.pub'
     declare -grx valtPrivateKeySuffix='valt.key'
@@ -328,6 +296,40 @@ _init_valt_keys() {
     local counterFile; counterFile="${ configDirPath 'advice.count'; }"
     declare -grx adviceCounterFile="${counterFile}"
     declare -g _adviceCount=0
+}
+
+_encryptKey() {
+    local -n keyRef=$1
+    local encryptedKeyVar=$2
+    local captureVar="${3:-}"
+    local tempFile; tempFile="${ makeTempFile; }"
+    local phraze passFd
+
+    # Get the user's passphrase
+
+    if [[ -n ${rayvnTest_ValtKeyPassphrase} ]]; then
+        phraze="${rayvnTest_ValtKeyPassphrase}"
+    else
+        readVerifiedPassword phraze || fail
+    fi
+
+    # Encrypt. Feed the passphrase via a dynamically allocated fd using process
+    # substitution — printf exits after writing, closing the write end of the pipe,
+    # so the plugin's io.ReadAll receives EOF immediately and does not hang.
+    # See https://github.com/FiloSottile/age/blob/main/cmd/age-plugin-batchpass/plugin-batchpass.go
+
+    exec {passFd}< <(printf '%s' "${phraze}")
+    printf "%s\n" "${keyRef[@]}" | AGE_PASSPHRASE_FD="${passFd}" age -e -j batchpass > "${tempFile}" || bye
+    exec {passFd}<&-
+
+    # Map the encrypted key and delete the temp file
+
+    mapfile -t "${encryptedKeyVar}" < <( cat "${tempFile}" )
+    rm "${tempFile}" 2> /dev/null
+
+    # Capture if we're in test mode
+
+    [[ -n "${captureVar}" ]] && printf -v "${captureVar}" '%s' "${phraze}"
 }
 
 _assertKeyFileDoesNotExist() {
@@ -365,7 +367,7 @@ _extractKey() {
                             lines+=( "${line:${#keyPrefix}}" )
                             (( --keyLineCount )) || break
                         fi
-                    done < <( rage -d "${keyFile}" 2> >(redStream) )  || fail
+                    done < <( age -d "${keyFile}" 2> >(redStream) )  || fail
                     unset skipReadPasswordCheck
                     disableValtPinEntry
                     break;
@@ -432,31 +434,37 @@ _maybeOfferPassphraseAdvice() {
 }
 
 _showPrivateKeyPassphraseAdvice() {
-    echo "Normally you will need only a single set of keys for all your file encryption needs. Your new private key will itself"
-    echo "be encrypted so that it can be safely stored anywhere: the password you enter here will always be required to use it."
-    echo "You'll be prompted to enter it twice for verification."
+    echo "Normally you will need only a single key pair for all your file encryption needs. Your new private key will itself"
+    echo "be encrypted so that it can be safely stored anywhere: the password you enter here will be" italic "required" "to use it."
+    echo "You'll be prompted to enter it twice for verification during key generation."
     echo
-    echo "Rather than a typical password, a multi word 'passphrase' is a much better choice here since it will be far easier"
-    echo "to remember. Just as with a password manager, the idea is that you remember one secret that gives you access to a"
-    show "whole collection of encrypted data. Since human memory" bold italic "is" plain "fallible, it's very important that you keep"
-    echo "a copy of the private key in a password manager" bold " and written copies somewhere secure (e.g. a safe, a good friend,"
-    echo "a safe-deposit box) in case you forget or become incapacitated."
+    echo "Rather than a typical password, a multi word 'passphrase' is a" italic "much" "better choice since it is far easier to"
+    echo "remember. Just as with a password manager, the idea is that you remember" bold "one" "secret that gives you access to a"
+    show "all of your encrypted data. Since human memory" bold italic "is" "fallible, it is extremely important that you keep"
+    show "copies on paper somewhere secure (e.g. a safe-deposit box, home safe, trusted family or friend) in case you forget or"
+    show "become incapacitated. Your private key (valt.key) can be printed and stored along with it."
+    echo
+    echo "If you use a password manager (" italic "strongly recommended" glue "), definitely store the keys and password in it!"
+    echo
+    echo "When you create a key pair, valt will generate a document containing your private key along with instructions for use."
+    echo "This document is intended to be the 'paper copy' that you store somewhere secure. It will contain your passphrase, "
+    echo "automatically if sent directly to your printer, or space for you to write it if not."
     echo
     echo "The following are examples of passwords and passphrases, with rough estimates of 'crack' times using modern systems:"
     echo
-    show "  " bold cyan "My dog Oscar" plain "                    ⮕ " bold green "easy" plain "to remember" red "non-random" plain "&" red "short" plain ":  6 days to crack"
-    show "  " bold cyan "BkZB&XWGj%3Tx" plain "                   ⮕ " bold red "hard" plain "to remember random password:     31 years to crack"
-    show "  " bold cyan "repossess thursday flaky lazy" plain "   ⮕ " bold "fair" plain "to remember random passphrase:   centuries to crack"
+    show "  " bold cyan "My dog Oscar" "                    ⮕ " bold green "easy" "to remember" red "non-random" "&" red "short" ":  6 days to crack"
+    show "  " bold cyan "BkZB&XWGj%3Tx" "                   ⮕ " bold red "hard" "to remember random password:     31 years to crack"
+    show "  " bold cyan "repossess thursday flaky lazy" "   ⮕ " bold "fair" "to remember random passphrase:   centuries to crack"
     echo
-    show "A good passphrase requires randomness, and we humans are very bad at that. There's a famous" magenta "xkcd" plain "comic on"
-    show "this subject" blue "${xkcdPasswordsUrl}" plain "that ends with this gem:"
+    show "A good passphrase requires randomness, and we humans are very bad at that. There's a famous" magenta "xkcd" "comic on"
+    show "this subject" blue "${xkcdPasswordsUrl}" "that ends with this gem:"
     echo
     echo "     Through 20 years of effort, we've successfully trained everyone to use passwords that"
     echo "     are hard for humans to remember, but easy for computers to guess."
     echo "                                                                           — Randall Munroe"
     echo
     echo "That comic makes another important point in the last cell: creating a mental scene to represent your passphrase is an"
-    show italic "excellent" plain "way to help remember it."
+    show italic "excellent" "way to help remember it."
     echo
 }
 
