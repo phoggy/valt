@@ -50,7 +50,7 @@ generatePassphrase() {
 #   timeout   - seconds to wait for each entry before timing out (default: 30)
 readVerifiedPassword() {
     local p1 p2
-    local -n resultVar="${1}"
+    local -n resultVar="$1"
     local timeout="${2:-30}"
     readPassword "Password" p1 "${timeout}" true || fail
     [[ ${p1} == '' ]] && fail "cancelled"  > ${terminal}
@@ -69,8 +69,8 @@ readVerifiedPassword() {
 #   checkResult - if 'true', check strength and breach status (default: 'true')
 readPassword() {
     local result count=0 mask key
-    local prompt="${ show bold "${1}: "; }"
-    local -n resultVar="${2}"
+    local prompt; prompt="${ show bold "$1: "; }"
+    local -n resultVar="$2"
     local timeout="${3:-30}"
     local checkResult="${4:-true}"
     local -i cancelled=0
@@ -83,7 +83,7 @@ readPassword() {
     [[ -v passwordVisibility ]] || declare -gx passwordVisibility='none'
 
     case ${passwordVisibility} in
-        none) visible=0; show=0; prompt="${1}" ;;
+        none) visible=0; show=0; prompt="$1" ;;
         hide) show=0 ;;
         show) show=1 ;;
         *) fail "unknown visibility mode: ${passwordVisibility}"
@@ -104,7 +104,7 @@ readPassword() {
         if [[ ${checkResult} == true ]]; then
             IFS=',' read -r -a score <<< "${ echo "${result}" | mrld -t; }"
             echo -n "  ⮕  ${score[0]} (${score[1]}/4), ${score[2]} to crack" > ${terminal}
-            hasNotBeenPwned "${result}"; pwned=${?}
+            hasNotBeenPwned "${result}"; pwned=$?
         fi
     fi
     echo > ${terminal} # complete the line
@@ -128,7 +128,7 @@ readPassword() {
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/password' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_password() {
-    require 'rayvn/core' 'rayvn/prompt' 'valt/pwned'
+    require 'rayvn/prompt' 'valt/pwned'
 }
 
 _readPassword() {
