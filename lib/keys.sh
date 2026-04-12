@@ -31,7 +31,7 @@
 #   #
 #   # [minisign.key] untrusted comment: minisign encrypted secret key
 #   # [minisign.key] RWQAAEIyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA5eS7T31j2oY  [ ... ]
-#   # public key: age1kqkzh9m0a2nhwypk3v6cj0fh78qdur5knkzcl4nwpxlh5pyuq33qyhauur
+#   # public key: age1pq1m43p0m52f544e868gyh09rx0wrr6jg8thvcr5cekpdkhzapwa7jjdgh54zlnjp0wny04tcae7h3k5x0s25l3znxpvvq  [ ... ]
 #   AGE-SECRET-KEY-1KVCTA4K9RSW85YHCSE62L9XJ2ULTPG9ZVRF7K6KGGALCGYUDFHGQY2SYX7#
 #
 # ◇ Example valt.key
@@ -83,12 +83,11 @@
 #   testPassResultVar     optional var name to assign the password to for testing
 
 createValtKeys() {
-    useValtPinEntry
     local keyName="${1:-?}"
     local keyDir="${2:-?}"
     local _valtPubFileResultVar="${3:-?}"
     local _valtKeyFileResultVar="${4:-?}"
-    local _testPassResultVar="${5:-?}"
+    local _testPassResultVar="${5:-}"
 
     local keyPrefix=
     [[ ${keyName} != '?' ]] && keyPrefix="${keyName}-"
@@ -102,17 +101,17 @@ createValtKeys() {
     local _publicKeyFile="${keyDir}/${keyPrefix}${valtPublicKeySuffix}"
     local _publicSigningKeyFile="${keyDir}/${keyPrefix}${valtSigningPublicKeySuffix}"
     local capture=0
-    local encryptedKey
     local ageCreated
     local agePublicKey
     local agePrivateKey=()
-    local valtKey=()
     local valtPubKey=()
     local index line
     _assertKeyFileDoesNotExist "${_keyFile}"
     _assertKeyFileDoesNotExist "${_publicKeyFile}"
     _assertKeyFileDoesNotExist "${_publicSigningKeyFile}"
-    [[ -n "${_testPassResultVar}" && "${_testPassResultVar}" != '?' ]] && capture=1
+    if [[ -n "${_testPassResultVar}" ]]; then
+        [[ "${_testPassResultVar}" == '?' ]] && unset _testPassResultVar || capture=1
+    fi
 
     # Maybe offer passphrase advice and/or generate passphrase if desired
 
@@ -167,29 +166,20 @@ createValtKeys() {
     plainPrivate+=('#')
     plainPrivate+=("${agePrivateKey[@]}")
 
-    # Encrypt the private components, optionally capturing the passphrase for testing
+    # Encrypt the private components directly to the key file, optionally capturing the passphrase for testing
 
-    _encryptKey plainPrivate encryptedKey "${_testPassResultVar}"
+    _encryptKey plainPrivate "${_keyFile}" "${_testPassResultVar}"
+    chmod 600 "${_keyFile}" 2> /dev/null
 
-    # Construct valt.key. Comments are ONLY supported WITHIN encrypted content, per the Age spec.
-
-    valtKey=("${encryptedKey[@]}")
-
-    # Write keys
+    # Write public key
 
     printf '%s\n' "${valtPubKey[@]}" > "${_publicKeyFile}"
-    printf '%s\n' "${valtKey[@]}" > "${_keyFile}"
 
     # Assign results if var specified
 
     _assignResultIfVarName ${_valtPubFileResultVar} "${_publicKeyFile}"
     _assignResultIfVarName ${_valtKeyFileResultVar} "${_keyFile}"
-
-    # Disable valt-pinentry
-
-    disableValtPinEntry
 }
-
 
 # Verify keys by encrypting sample text, signing, verify signature and decrypting, then comparing.
 # Fails if decryption does not reproduce the original (e.g. wrong passphrase).
@@ -199,8 +189,6 @@ createValtKeys() {
 #   valtKeyFile  path to the valt.key file
 
 verifyValtKeys() {
-    useValtPinEntry
-
     local valtPubFile="$1"
     local valtKeyFile="$2"
 
@@ -209,8 +197,7 @@ verifyValtKeys() {
 
     local encryptedFile; encryptedFile="${ tempDirPath sample.age; }"
     local signatureFle; signatureFile="${ tempDirPath sample.minisign; }"
-    local sampleText
-    _setSampleText sampleText
+    local sampleText; _setSampleText sampleText
 
     # TODO:
     #   - extract public keys from both valt.key and valt.pub and ensure equal
@@ -231,7 +218,6 @@ verifyValtKeys() {
 
     local decrypted="${ age -d -i "${valtKeyFile}" "${encryptedFile}" 2> /dev/null; }"
     diff -u <(echo -n "${sampleText}") <(echo "${decrypted}") > /dev/null || fail "not verified (wrong passphrase?)"
-    disableValtPinEntry
 }
 
 # accepts either valt.pub or valt.key, echos 'valt.pub', 'valt.key'
@@ -239,7 +225,7 @@ keyType() {
     local keyFile="$1"
     while read line; do
         if (( "${#line}" )); then # Ignore blank lines
-            if [[ ${line} == "${agePemBegin}" ]]; then
+            if [[ ${line} == "${ageEncryptedBegin}" || ${line} == "${agePemBegin}" ]]; then
                 echo "${valtPrivateKeySuffix}"
             elif [[ ${line} == "${ageCreatedPrefix}"* ]]; then
                 echo "${valtPublicKeySuffix}"
@@ -261,7 +247,7 @@ publicEncryptionKey() {
 publicSigningKeyToTempFile() {
     local keyFile="$1"
     local -n resultFileRef="$2"
-    local tempFile; tempFile="${ makeTempFile 'XXXXXXXX'; }"
+    local tempFile; tempFile="${ makeTempFile; }"
     _extractKey "${keyFile}" true "${signingPublicKeyPrefix}" 2 "${tempFile}"
     resultFileRef="${tempFile}"
 }
@@ -270,7 +256,7 @@ publicSigningKeyToTempFile() {
 signingKeyToTempFile() {
     local keyFile="$1"
     local -n resultFileRef="$2"
-    local tempFile; tempFile="${ makeTempFile 'XXXXXXXX'; }"
+    local tempFile; tempFile="${ makeTempFile; }"
     _extractKey "${keyFile}" false "${signingPrivateKeyPrefix}" 2 "${tempFile}"
     resultFileRef="${tempFile}"
 }
@@ -278,7 +264,7 @@ signingKeyToTempFile() {
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/keys' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_keys() {
-    require 'valt/pinentry' 'valt/password' 'rayvn/prompt'
+    require 'valt/password' 'rayvn/prompt'
     declare -grx xkcdPasswordsUrl="https://xkcd.com/936/"
     declare -grx valtPublicKeySuffix='valt.pub'
     declare -grx valtPrivateKeySuffix='valt.key'
@@ -290,8 +276,8 @@ _init_valt_keys() {
     declare -grx signingPublicKeyPrefix='# [minisign.pub] '
     declare -grx signingPrivateKeyPrefix='# [minisign.key] '
     declare -grx valtSigningPublicKeyPrefix='untrusted comment: minisign public key'
+    declare -grx ageEncryptedBegin='age-encryption.org/v1'
     declare -grx agePemBegin='-----BEGIN AGE ENCRYPTED FILE-----'
-    declare -grx agePemEnd='-----END AGE ENCRYPTED FILE-----'
 
     local counterFile; counterFile="${ configDirPath 'advice.count'; }"
     declare -grx adviceCounterFile="${counterFile}"
@@ -300,9 +286,8 @@ _init_valt_keys() {
 
 _encryptKey() {
     local -n keyRef=$1
-    local encryptedKeyVar=$2
+    local destFile=$2
     local captureVar="${3:-}"
-    local tempFile; tempFile="${ makeTempFile; }"
     local phraze passFd
 
     # Get the user's passphrase
@@ -313,19 +298,16 @@ _encryptKey() {
         readVerifiedPassword phraze || fail
     fi
 
-    # Encrypt. Feed the passphrase via a dynamically allocated fd using process
+    # Encrypt directly to destFile. Feed the passphrase via a dynamically allocated fd using process
     # substitution — printf exits after writing, closing the write end of the pipe,
     # so the plugin's io.ReadAll receives EOF immediately and does not hang.
     # See https://github.com/FiloSottile/age/blob/main/cmd/age-plugin-batchpass/plugin-batchpass.go
+    # Note: do NOT use -a (ASCII armor) — the binary format is required to avoid QR code size limits.
+    # Binary output must never be read into a bash array; write directly to the destination file.
 
     exec {passFd}< <(printf '%s' "${phraze}")
-    printf "%s\n" "${keyRef[@]}" | AGE_PASSPHRASE_FD="${passFd}" age -e -j batchpass > "${tempFile}" || bye
+    printf "%s\n" "${keyRef[@]}" | AGE_PASSPHRASE_FD="${passFd}" age -e -j batchpass > "${destFile}" || bye
     exec {passFd}<&-
-
-    # Map the encrypted key and delete the temp file
-
-    mapfile -t "${encryptedKeyVar}" < <( cat "${tempFile}" )
-    rm "${tempFile}" 2> /dev/null
 
     # Capture if we're in test mode
 
@@ -351,25 +333,32 @@ _extractKey() {
     local keyLineCount=$4
     local resultFile="${5:-}" # echo if none else write to file.
     local firstLine=1 lines=()
-    local line
-
+    local line phraze passFd plain=()
     while read line; do
         if (( "${#line}" )); then # Ignore blank lines
             if (( firstLine )); then
-                if [[ ${line} == "${agePemBegin}" ]]; then
+                if [[ ${line} == "${ageEncryptedBegin}" || ${line} == "${agePemBegin}" ]]; then
 
                     # valt.key so decrypt and switch to reading that
 
-                    useValtPinEntry
-                    export skipReadPasswordCheck=1
-                    while read line; do
+                    if [[ -n ${rayvnTest_ValtKeyPassphrase} ]]; then
+                        phraze="${rayvnTest_ValtKeyPassphrase}"
+                    else
+                        readPassword "Password" phraze 30 false || fail
+                    fi
+                    local plainFile; plainFile="${ makeTempFile; }"
+                    exec {passFd}< <(printf '%s' "${phraze}")
+                    cat "${keyFile}" | AGE_PASSPHRASE_FD="${passFd}" age -d -j batchpass > "${plainFile}" 2> >(errorStream) || fail
+                    exec {passFd}<&-
+                    mapfile -t plain < "${plainFile}"
+                    rm "${plainFile}" 2> /dev/null
+
+                    for line in "${plain[@]}"; do
                         if [[ ${line} == "${keyPrefix}"* ]]; then
                             lines+=( "${line:${#keyPrefix}}" )
                             (( --keyLineCount )) || break
                         fi
-                    done < <( age -d "${keyFile}" 2> >(redStream) )  || fail
-                    unset skipReadPasswordCheck
-                    disableValtPinEntry
+                    done
                     break;
 
                 elif [[ ${allowPublic} == true ]]; then
@@ -486,8 +475,7 @@ _writeAdviceCount() {
 _setSampleText() {
     local -n resultVar="$1"
     if [[ ! ${resultVar} ]]; then
-        IFS='' read -d '' -r resultVar <<'HEREDOC'
-                                🌑🌒🌓🌔🌕🌖🌗🌘
+        IFS='' read -d '' -r resultVar <<'QUOTE'
 
             But the Raven, sitting lonely on the placid bust, spoke only
         That one word, as if his soul in that one word he did outpour.
@@ -496,7 +484,6 @@ _setSampleText() {
         On the morrow he will leave me, as my Hopes have flown before.”
                          Then the bird said “Nevermore.”
 
-                                🌑🌒🌓🌔🌕🌖🌗🌘
-HEREDOC
+QUOTE
     fi
 }
