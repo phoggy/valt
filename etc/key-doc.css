@@ -63,7 +63,7 @@ pre {
     font-family: var(--font-family-code);
     white-space: pre-wrap;         /* wrap long lines instead of horizontal scrolling */
     word-break: break-all;         /* break words if needed */
-    font-size: 14px;
+    font-size: 12px;
     background-color: #f9f9f9; /* Light background color */
     padding: 1em;
     overflow: visible;             /* allow full rendering */

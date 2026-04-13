@@ -168,7 +168,7 @@ createValtKeys() {
 
     # Encrypt the private components directly to the key file, optionally capturing the passphrase for testing
 
-    _encryptKey plainPrivate "${_keyFile}" "${_testPassResultVar}"
+    _encryptKeyToFile plainPrivate "${_keyFile}" "${_testPassResultVar}"
     chmod 600 "${_keyFile}" 2> /dev/null
 
     # Write public key
@@ -261,6 +261,13 @@ signingKeyToTempFile() {
     resultFileRef="${tempFile}"
 }
 
+armorKeyFile() {
+    local keyFile=$1
+    printf '%s\n' "${agePemBegin}"
+    base64 < "${keyFile}" | fold -w 64
+    printf '%s\n' "${agePemEnd}"
+}
+
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/keys' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_keys() {
@@ -278,13 +285,13 @@ _init_valt_keys() {
     declare -grx valtSigningPublicKeyPrefix='untrusted comment: minisign public key'
     declare -grx ageEncryptedBegin='age-encryption.org/v1'
     declare -grx agePemBegin='-----BEGIN AGE ENCRYPTED FILE-----'
-
+    declare -grx agePemEnd='-----END AGE ENCRYPTED FILE-----'
     local counterFile; counterFile="${ configDirPath 'advice.count'; }"
     declare -grx adviceCounterFile="${counterFile}"
     declare -g _adviceCount=0
 }
 
-_encryptKey() {
+_encryptKeyToFile() {
     local -n keyRef=$1
     local destFile=$2
     local captureVar="${3:-}"
@@ -298,20 +305,22 @@ _encryptKey() {
         readVerifiedPassword phraze || fail
     fi
 
-    # Encrypt directly to destFile. Feed the passphrase via a dynamically allocated fd using process
-    # substitution — printf exits after writing, closing the write end of the pipe,
-    # so the plugin's io.ReadAll receives EOF immediately and does not hang.
-    # See https://github.com/FiloSottile/age/blob/main/cmd/age-plugin-batchpass/plugin-batchpass.go
-    # Note: do NOT use -a (ASCII armor) — the binary format is required to avoid QR code size limits.
-    # Binary output must never be read into a bash array; write directly to the destination file.
+    # Capture if requested by caller
+
+    [[ -n "${captureVar}" ]] && printf -v "${captureVar}" '%s' "${phraze}"
+
+    # Feed the passphrase via a dynamically allocated fd using process substitution: printf exits after
+    # writing, closing the write end of the pipe, so the batchpass plugin's io.ReadAll receives EOF
+    # immediately and will not hang waiting for it. See plugin source at
+    # https://github.com/FiloSottile/age/blob/main/cmd/age-plugin-batchpass/plugin-batchpass.go
+
+    # We can no longer use -a (ASCII armor) with post-quantum keys since it hits QR code size limits.
+    # Binary data can't be read into a bash array since it is treated as a string and will be mangled,
+    # so we must write it directly to the file.
 
     exec {passFd}< <(printf '%s' "${phraze}")
     printf "%s\n" "${keyRef[@]}" | AGE_PASSPHRASE_FD="${passFd}" age -e -j batchpass > "${destFile}" || bye
     exec {passFd}<&-
-
-    # Capture if we're in test mode
-
-    [[ -n "${captureVar}" ]] && printf -v "${captureVar}" '%s' "${phraze}"
 }
 
 _assertKeyFileDoesNotExist() {

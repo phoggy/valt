@@ -95,7 +95,7 @@ init() {
         case "${1}" in
             --) ;;
             -n | --name) shift; name="${1}"; namePrefix="${name}-";;
-            -d | --directory) shift; setDirVar outputDir "${1}" "output directory";;
+            -o | --output-dir) shift; setDirVar outputDir "${1}" "output directory";;
             -t | --template) shift; setFileVar htmlTemplateFile "${1}" "html template file path" ;;
             -c | --css) shift; setFileVar cssOverrideFile "${1}" "CSS" ;;
             --no-verify) verifyKeys=0 ;;
@@ -259,14 +259,16 @@ createPdf() {
         cp "${cssOverrideFile}" "${workDir}/${cssOverrideFileName}" || fail
     fi
 
-    # Create QR code
+    # Create QR code using the best error correction level we can given the file size
 
     qrCodeFile="${workDir}/${qrCodeFileName}"
-    if ! qrtool encode -r "${privateKeyFile}" -l h -t svg -o "${qrCodeFile}" 2>/dev/null; then
-        show warning "Key data exceeds H-level QR capacity; falling back to M-level (reduced error correction)"
-        qrtool encode -r "${privateKeyFile}" -l m -t svg -o "${qrCodeFile}" || fail
-    fi
+    createQRCodeSvg "${privateKeyFile}" "${qrCodeFile}"
     assertFileExists "${qrCodeFile}"
+
+    # Get the key in armored form and checksum to include as a backup in case of QR code issues
+
+    armoredKey="${ armorKeyFile ${privateKeyFile}; }"
+    _CHECKSUM="${ sha256sum ${privateKeyFile} | head -c 16; }"
 
     # Generate substituted html file and footer template
 
@@ -308,6 +310,41 @@ createPdf() {
     qpdf ${documentsFile} \
         --encrypt "${userPW}" "${ownerPW}" 256 --modify=none -- \
         --replace-input  || fail
+}
+
+createQRCodeSvg() {
+    local inputFile="$1"
+    local outputFile="$2"
+    local size; size=$(( ${ wc -c < "${inputFile}"; } ))
+    local level
+
+    # Use the best error correction level we can given the file size
+    #
+    #    ┌───────┬───────────┐
+    #    │ Level │ Max bytes │
+    #    ├───────┼───────────┤
+    #    │ L     │ 2953      │
+    #    ├───────┼───────────┤
+    #    │ M     │ 1817      │
+    #    ├───────┼───────────┤
+    #    │ Q     │ 1273      │
+    #    ├───────┼───────────┤
+    #    │ H     │ 858       │
+    #    └───────┴───────────┘
+
+    local level;
+    if (( size <= 858 )); then
+        level=H
+    elif (( size <= 1273 )); then
+        level=Q
+    elif (( size <= 1817 )); then
+        level=M
+    elif (( size <= 2953 )); then
+        level=L
+    else
+        fail "cannot construct QR code, data size too large"
+    fi
+    qrtool encode -r "${inputFile}" -l "${level}" -t svg -o "${outputFile}" || fail
 }
 
 generateFooterTemplate() {

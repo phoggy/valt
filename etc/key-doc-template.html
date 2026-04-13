@@ -145,18 +145,50 @@
 
         <h1 id="instructions">Instructions</h1>
 
+        This section assumes familiarity with the terminal and using command line tools.
+
+        <h2>Prerequisites</h2>
+
+        <p>The private key and the passphrase used to encrypt it are required. Hopefully you have the key in digital form, perhaps
+            on a USB/thumb drive or in a file (it should have a '.key' file suffix). If you don't, the Paper Key section below
+            has two forms of backup: a QR code and ("<code>PEM</code>" formatted) text, both containing the encrypted
+            private key. Instructions for recreating the digital key from these are provided. </p>
+
+        <p>The passphrase used when the key was created is likely printed on the Passphrase page of this document, but it may be
+            stored separately. In the latter case, there may be hints on where to find it in the Notes section.</p>
+
+        <p>You need a command line tool that performs <a href="https://github.com/C2SP/C2SP/blob/main/age.md">age file
+            encryption and decryption</a>:</p>
+
+        <ul>
+            <li><a href="https://github.com/FiloSottile/age">age 1.3.0+ </a></li>
+            <li>Another implementation chosen from <a href="https://github.com/FiloSottile/age">here</a>, so long as it supports
+                the -pq option with the keygen command.</li>
+            <li>The code used to create this document, as it is a fancy convenience wrapper around <code>age</code>. Source and
+                instructions can be found at <a href="https://github.com/phoggy/valt">github.com/phoggy/valt</a>.</li>
+        </ul>
+
+        <h2>Decrypting A File</h2>
+
+        <p>If you have <a href="https://nixos.org/download/">Nix</a> installed, the simplest way to decrypt is:</p>
+
+        <pre><code>nix run github:phoggy/valt#recover -- decrypt -i KEY_FILE ENCRYPTED_FILE</code></pre>
+
+        <p>This downloads and runs the recovery tool automatically — no other software needs to be installed.</p>
+
+        <p>If you installed <code>age</code>:</p>
+
+        <pre><code>rage -d -i YOUR_KEY_FILE -o DECRYPTED_FILE ENCRYPTED_FILE</code></pre>
+
+        <p>If you installed <code>valt</code>:</p>
+
+        <pre><code>valt decrypt -i YOUR_KEY_FILE -o DECRYPTED_FILE ENCRYPTED_FILE</code></pre>
+
+        <p>In all cases you will be prompted to enter the passphrase that protects the private key.</p>
+
+        <div class="page-break"></div>
+
         <h2>Paper Key</h2>
-
-        <p>Hopefully you have the key in digital form, perhaps on a USB drive or in a file. If you don't, this section has two
-        forms of backup. Both the QR code and ("<code>.pem</code>" formatted) text below contain the <em>encrypted</em>
-        private key.</p>
-
-        <p>To use the QR code, just open the camera app on your phone and point it at the image. You should see
-            the same text as below (maybe just the beginning). Send that text to you computer and save it as a file.</p>
-
-        <p>If that fails, try scanning the text below and send/save it as a file. If you don't know how, search the web for
-            "scanning text on phone". Worst case, you can always type it in by hand(!), including the leading and trailing
-            lines, each of which begins and ends with 5 dashes.</p>
 
         <img src="${_QR_CODE_PATH}" alt="QR Code">
 
@@ -164,42 +196,25 @@
 
         <pre><code>${_ARMORED_KEY}</code></pre>
 
-        <div class="page-break"></div>
-
-        <h2>Prerequisites</h2>
-
-        <p>Using the private key to decrypt a file requires the passphrase used when it was created. It is normally printed
-            on the last page of this document, but it may be stored separately.</p>
-
-        <p>You also need a command line tool that performs <a href="https://github.com/C2SP/C2SP/blob/main/age.md">age file
-            encryption</a>:</p>
-
-        <ul>
-            <li><a href="https://github.com/str4d/rage">rage</a></li>
-            <li><a href="https://github.com/FiloSottile/age">age</a></li>
-        </ul>
-
-        <p>The code used to create this document is a wrapper around <code>rage</code> and can also encrypt/decrypt files. The
-            source code and instructions can be found at
-            <a href="https://github.com/phoggy/valt">github.com/phoggy/valt</a>.</p>
-
-        <p>There are other implementations to choose from <a href="https://github.com/FiloSottile/age">here</a>.</p>
-
-        <h2>Decrypting A File</h2>
-
-        <p>If you have <a href="https://nixos.org/download/">Nix</a> installed, the simplest way to decrypt is:</p>
-
-        <pre><code>nix run github:phoggy/valt#recover -- decrypt -i YOUR_KEY_FILE ENCRYPTED_FILE</code></pre>
-
-        <p>This downloads and runs the recovery tool automatically — no other software needs to be installed.</p>
-
-        <p>Alternatively, if you have <code>rage</code> installed directly:</p>
-
-        <pre><code>rage -d -i YOUR_KEY_FILE -o DECRYPTED_FILE ENCRYPTED_FILE</code></pre>
-
-        <p>In both cases, you will be prompted for the passphrase that protects the private key.</p>
+        checksum: <pre><code>${_CHECKSUM}</code></pre>
 
         <div class="page-break"></div>
+
+        <h2>Converting a Paper Key</h2>
+
+        <p>The QR code contains a binary file so the usual phone camera decoding will likely not work. Instead, take a photo
+            and move it to your computer. Use <code>qrtool</code> to convert the image:
+            <ol>
+                <li><code>brew install qrtool; qrtool decode -t svg IMAGE-FILE</code> or</li>
+                <li><code>nix run nixpkgs#qrtool -- decode -t svg IMAGE-FILE</code></li>
+            </ol>
+
+        <p>If that fails, try scanning the PEM text and send/save it as a file. If you don't know how, search the web for
+            "scanning text on phone". Verify that the result matches the checksum to guard against scanning errors:
+            <code>sha256sum KEY-FILE | head -c 16</code>.</p>
+
+        <p>Absolute worst case: you can always type it in by hand. Extremely tedious, but it <em>can</em> be done. Be sure to
+            include the leading and trailing lines, each of which begins and ends with 5 dashes</p>
 
         <h2>Passphrase</h2>
 
