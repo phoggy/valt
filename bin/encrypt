@@ -13,16 +13,15 @@ usage() {
     echo
     echo "Options:"
     echo
-    echo "    -r, --recipient RECIPIENT      Encrypt to the specified RECIPIENT (public key). May be repeated."
-    echo "    -R, --recipients-file PATH     Encrypt to the recipients (public keys) listed at PATH. May be repeated."
-    echo "    -n, --name NAME                Specify the output file name prefix."
-    echo "    -t, --timestamp                Add a timestamp to the output file name."
-    echo "    -z, --timezone NAME            Specify the timezone to use for timestamps, e.g. 'America/Los_Angeles'."
-    echo "    -v, --verify IDENTITY          Use the identity file (private key) at IDENTITY to verify the encrypted file."
-    echo "    -f, --force                    Replace any existing output file without asking."
-    echo "    -d, --delete                   Delete input file(s) after verification (ignored otherwise)."
-    echo "    -h, --help                     Display usage and exit."
-    echo "    --version                      Display version and exit."
+    echo "    -r, --recipient RECIPIENT   Encrypt to the specified RECIPIENT (public key). May be repeated."
+    echo "    -R, --recipients-file PATH  Encrypt to the recipients (public keys) listed at PATH. May be repeated."
+    echo "    -n, --name NAME             Specify the output file name prefix."
+    echo "    -t, --timestamp             Add a timestamp to the output file name."
+    echo "    -z, --timezone NAME         Specify the timezone to use for timestamps, e.g. 'America/Los_Angeles'."
+    echo "    -v, --verify IDENTITY       Use the identity file (private key) at IDENTITY to verify the encrypted file."
+    echo "    -f, --force                 Replace any existing output file without asking."
+    echo "    -d, --delete                Delete input file(s) after verification (ignored otherwise)."
+    commonOptions 32 false
     bye "${@}"
 }
 
@@ -64,6 +63,7 @@ init() {
             -f|--force) force=1 ;;
             -d|--delete) deleteOriginal=1 ;;
             -h|--help) usage ;;
+            --debug*) setDebug "$@"; shift $? ;;
             -*) usage "Unknown option: ${1}" ;;
             *) addFile "${1}"
         esac

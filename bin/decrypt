@@ -16,7 +16,7 @@ usage() {
     echo "    -o, --output OUTPUT      Write the result to the file at path OUTPUT."
     echo "    -f, --force              Replace any existing output file(s) without asking."
     echo "    -q, --quiet              Don't write progress."
-    echo "    -h, --help               Display usage."
+    commonOptions 29 false
     bye "${@}"
 }
 
@@ -48,6 +48,7 @@ init() {
             -f|--force) force=1 ;;
             -q|--quiet) quiet=1 ;;
             -h | --help) usage ;;
+            --debug*) setDebug "$@"; shift $? ;;
             -*) usage "Unknown arg: ${1}" ;;
            *) setFile "${1}"
         esac

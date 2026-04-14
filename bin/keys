@@ -25,17 +25,17 @@ usage() {
     echo
     echo "Options"
     echo
-    echo "    -n, --name NAME               Use NAME as prefix for key file names, e.g. bob-valt.pub & bob-valt.key."
-    show "    -o, --output-dir PATH         Set output directory (default:" blue "${valtConfigDir}" glue ")."
-    echo "    -f, --force                   Overwrite existing key files."
-    echo "    --no-verify                   Do not verify keys."
-    echo "    --no-advice                   Do not show passphrase advice."
-    echo "    --no-pdf                      Do not generate PDF file."
-    echo "    --no-passphrase               Do not include the passphrase on the PDF file."
-    echo "    --no-passphrase               Do not include the passphrase on the PDF file."
-    echo "    -t, --template TEMPLATE       Use the TEMPLATE html file instead of the default for PDF generation."
-    echo "    -c, --css CSS                 Apply style overrides from the CSS file for PDF generation."
-    echo "    -h, --help                    Display usage and exit."
+    echo "    -n, --name NAME          Set NAME to use for key files, e.g. bob.pub, bob.key. Defaults to valt.pub, valt.key."
+    show "    -o, --output-dir PATH    Set output directory (default:" blue "${valtConfigDir}" glue ")."
+    echo "    -f, --force              Overwrite existing key files."
+    echo "    --no-verify              Do not verify keys."
+    echo "    --no-advice              Do not show passphrase advice."
+    echo "    --no-pdf                 Do not generate PDF file."
+    echo "    --no-passphrase          Do not include the passphrase on the PDF file."
+    echo "    --no-passphrase          Do not include the passphrase on the PDF file."
+    echo "    -t, --template TEMPLATE  Use the TEMPLATE html file instead of the default for PDF generation."
+    echo "    -c, --css CSS            Apply style overrides from the CSS file for PDF generation."
+    commonOptions 29 false
     echo
     show bold "Document Customization"
     echo
