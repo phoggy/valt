@@ -78,7 +78,7 @@
 #   valt.pub:  minisign public key comment + age public key
 #   valt.key:  minisign public key comment + age public key + minisign secret key + age secret key
 #
-# ◇ USAGE
+# · USAGE
 #
 #   createValtKeys [keyName] [keyDir] [valtPubFileResultVar] [valtKeyFileResultVar] [testPassResultVar]
 #
@@ -90,11 +90,11 @@
 #   valtKeyFileResultVar (stringRef)  Optional var name to assign the valt.key file.
 #   testPassResultVar (stringRef)     Optional var name to assign the password to for tests.
 #
-# ◇ EXAMPLE
+# · EXAMPLE
 #
 #   createValtKeys                          # creates valt.pub and valt.key files in the ~/.config/valt/ directory.
 #   createValtKeys '?' '?' pubFile keyFile  # same as above but assigns key paths to pubFile keyFile vars.
-#   createValtKeys diane                      # creates bob-valt.pub and bob-valt.key in the ~/.config/valt/ directory.
+#   createValtKeys diane                    # creates diane.pub and diane.key in the ~/.config/valt/ directory.
 
 createValtKeys() {
     local keyName="${1:-valt}"
@@ -193,12 +193,13 @@ createValtKeys() {
     _assignResultIfVarName ${_valtKeyFileResultVar} "${_keyFile}"
 }
 
-# Verify keys by encrypting sample text, signing, verify signature and decrypting, then comparing.
-# Fails if decryption does not reproduce the original (e.g. wrong passphrase).
-# Args: keyFile valtPubFile valtKeyFile
+# ◇ Verifies a valt key pair by encrypting sample text with the public key, then decrypting
+#   with the private key and comparing results. Fails if they do not match.
 #
-#   valtPubFile  path to the valt.pub file
-#   valtKeyFile  path to the valt.key file
+# · ARGS
+#
+#   valtPubFile (string)  Path to the valt.pub file.
+#   valtKeyFile (string)  Path to the valt.key file.
 
 verifyValtKeys() {
     local valtPubFile="$1"
@@ -232,7 +233,12 @@ verifyValtKeys() {
     diff -u <(echo -n "${sampleText}") <(echo "${decrypted}") > /dev/null || fail "not verified (wrong passphrase?)"
 }
 
-# accepts either valt.pub or valt.key, echos 'valt.pub', 'valt.key'
+# ◇ Outputs the key type suffix for a valt key file, either valtPublicKeySuffix or valtPrivateKeySuffix.
+#
+# · ARGS
+#
+#   keyFile (string)  Path to a valt .pub or .key file.
+
 keyType() {
     local keyFile="$1"
     while read line; do
@@ -249,13 +255,24 @@ keyType() {
     done < <( cat ${keyFile} )
 }
 
-# accepts either valt.pub or valt.key
+# ◇ Outputs the public encryption key from a valt public or private key file.
+#
+# · ARGS
+#
+#   keyFile (string)  Path to the key file.
+
 publicEncryptionKey() {
     local keyFile="$1"
     _extractKey "${keyFile}" true "${agePublicKeyPrefix}" 1
 }
 
-# accepts either valt.pub or valt.key
+# ◇ Extracts the public signing key from a valt private key file into a temp file.
+#
+# · ARGS
+#
+#   keyFile (string)           Path to the valt private key file.
+#   resultFileRef (stringRef)  Name of the variable to receive the path to the temp public signing key file.
+
 publicSigningKeyToTempFile() {
     local keyFile="$1"
     local -n resultFileRef="$2"
@@ -264,7 +281,13 @@ publicSigningKeyToTempFile() {
     resultFileRef="${tempFile}"
 }
 
-# accepts valt.key only
+# ◇ Extracts the signing key from a valt private key file into a temp file.
+#
+# · ARGS
+#
+#   keyFile (string)        Path to the valt private key file.
+#   resultFileRef (string)  Name of the variable to receive the path to the temp private signing key file.
+
 signingKeyToTempFile() {
     local keyFile="$1"
     local -n resultFileRef="$2"
@@ -272,6 +295,12 @@ signingKeyToTempFile() {
     _extractKey "${keyFile}" false "${signingPrivateKeyPrefix}" 2 "${tempFile}"
     resultFileRef="${tempFile}"
 }
+
+# ◇ Outputs an ASCII-armored PEM-style encoding of a key file to stdout.
+#
+# · ARGS
+#
+#   keyFile (string)  Path to the key file to armor.
 
 armorKeyFile() {
     local keyFile=$1
