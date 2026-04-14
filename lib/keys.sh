@@ -526,7 +526,7 @@ _writeAdviceCount() {
 _setSampleText() {
     local -n resultVar="$1"
     if [[ ! ${resultVar} ]]; then
-        IFS='' read -d '' -r resultVar <<'QUOTE'
+        IFS='' read -d '' -r resultVar <<- EOF
 
             But the Raven, sitting lonely on the placid bust, spoke only
         That one word, as if his soul in that one word he did outpour.
@@ -535,6 +535,6 @@ _setSampleText() {
         On the morrow he will leave me, as my Hopes have flown before.”
                          Then the bird said “Nevermore.”
 
-QUOTE
+EOF
     fi
 }
