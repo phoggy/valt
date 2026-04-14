@@ -72,40 +72,46 @@
 # ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 
-# Create new valt keys, encrypting the private key with a passphrase. May show passphrase advice and offer to generate passphrase.
-# Produces keys that combine minisign keys (as comments) and Age keys:
+# ◇ Create new valt keys, encrypting the private key with a passphrase. May show passphrase advice and offer to generate
+#   passphrases. Produces keys that combine minisign keys (as comments) and age keys:
 #
-#   [name-]valt.pub: minisign public key comment + Age public key
-#   [name-]valt.key: minisign public key comment + Age public key comment + encrypted minisign secret key comment + Age secret key
+#   valt.pub:  minisign public key comment + age public key
+#   valt.key:  minisign public key comment + age public key + minisign secret key + age secret key
 #
-# Args: [keyName] [keyDir] [valtPubFileResultVar] [valtKeyFileResultVar] [testPassResultVar]
+# ◇ USAGE
 #
-# Passing '?' for any arg will ensure the default behavior.
+#   createValtKeys [keyName] [keyDir] [valtPubFileResultVar] [valtKeyFileResultVar] [testPassResultVar]
 #
-#   keyName               optional name prefix for keys
-#   keyDir                optional directory path where key files will be written, default: ~/.config/valt
-#   valtPubFileResultVar  optional var name to assign the valt.pub file
-#   valtKeyFileResultVar  optional var name to assign the valt.key file
-#   testPassResultVar     optional var name to assign the password to for testing
+#   A '?' may be passed for any arg to enable passing a subsequent value.
+#
+#   keyName (string)                  Optional name to use instead of 'valt', e.g. 'test' -> test.key & test.pub.
+#   keyDir (string)                   Optional directory path where key files will be written, default: ~/.config/valt.
+#   valtPubFileResultVar (stringRef)  Optional var name to assign the valt.pub file.
+#   valtKeyFileResultVar (stringRef)  Optional var name to assign the valt.key file.
+#   testPassResultVar (stringRef)     Optional var name to assign the password to for tests.
+#
+# ◇ EXAMPLE
+#
+#   createValtKeys                          # creates valt.pub and valt.key files in the ~/.config/valt/ directory.
+#   createValtKeys '?' '?' pubFile keyFile  # same as above but assigns key paths to pubFile keyFile vars.
+#   createValtKeys diane                      # creates bob-valt.pub and bob-valt.key in the ~/.config/valt/ directory.
 
 createValtKeys() {
-    local keyName="${1:-?}"
+    local keyName="${1:-valt}"
     local keyDir="${2:-?}"
     local _valtPubFileResultVar="${3:-?}"
     local _valtKeyFileResultVar="${4:-?}"
     local _testPassResultVar="${5:-}"
 
-    local keyPrefix=
-    [[ ${keyName} != '?' ]] && keyPrefix="${keyName}-"
     if [[ ${keyDir} == '?' ]]; then
         # Force use of valt config dir
         keyDir="${ configDirPath -p 'valt'; }"
     else
         assertDirectory "${keyDir}"
     fi
-    local _keyFile="${keyDir}/${keyPrefix}${valtPrivateKeySuffix}"
-    local _publicKeyFile="${keyDir}/${keyPrefix}${valtPublicKeySuffix}"
-    local _publicSigningKeyFile="${keyDir}/${keyPrefix}${valtSigningPublicKeySuffix}"
+    local _keyFile="${keyDir}/${keyName}.${valtPrivateKeySuffix}"
+    local _publicKeyFile="${keyDir}/${keyName}.${valtPublicKeySuffix}"
+    local _publicSigningKeyFile="${keyDir}/${keyName}.${valtPublicKeySuffix}"
     local capture=0
     local ageCreated
     local agePublicKey
@@ -279,9 +285,10 @@ PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/keys' PRIVATE 
 _init_valt_keys() {
     require 'valt/password' 'rayvn/prompt'
     declare -grx xkcdPasswordsUrl="https://xkcd.com/936/"
-    declare -grx valtPublicKeySuffix='valt.pub'
-    declare -grx valtPrivateKeySuffix='valt.key'
-    declare -grx valtSigningPublicKeySuffix='minisign.pub'
+    declare -grx valtPublicKeySuffix='pub'
+    declare -grx valtPrivateKeySuffix='key'
+    declare -grx valtPublicKeyType='valt.pub'
+    declare -grx valtPrivateKeyType='valt.key'
     declare -grx ageFileExtension='age'
     declare -grx tarFileExtension='tar.xz'
     declare -grx ageCreatedPrefix='# created: '
