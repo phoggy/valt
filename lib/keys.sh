@@ -1,12 +1,21 @@
 #!/usr/bin/env bash
 
+# Encryption and signing key generation and usage.
+# Use via: require 'valt/keys'
+
 # ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 #
 # ◇ DESIGN NOTES
 #
-# Age supports '#' comments in both public and private keys. A valt key is passphrase encrypted in PEM format and contains both
-# minisign keys and Age public key as comments, along with Age private key. A valt public key is plaintext and is an Age public
-# key with minisign public key as comment(s).
+# Valt uses age file encryption system and minisign digital signatures (see https://github.com/filosottile/age and
+# https://github.com/jedisct1/minisign).
+#
+# Quantum resistant encryption keys are used exclusively as defense against the real possibility of quantum computers that can
+# break keys based on 256-bit elliptic curves, the current best practice. A consequence of this choice is significantly larger
+# public keys, from 63 bytes to 1960 bytes.
+#
+# A valt key is passphrase encrypted and contains both minisign keys and age public key as comments, along with age private key.
+# A valt public key is plaintext and is an Age public key with minisign public key as comment(s).
 #
 #   valt.key: secure private key used by valt for signing and decryption
 #   valt.pub: public key used by valt for signature verification and encryption
@@ -45,15 +54,15 @@
 # ◇ Passphrase Encryption
 #
 # Users are shown password/phrase advice on key gen to encourage strong, memorable passphrase use, then asked if they already
-# have one. If no, then shown a set of generated ones to choose from. This behavior is suppressed after second key gen.
+# have one. If not, a set of generated ones is shown to choose from. This behavior is suppressed after second key gen.
 #
-# ◇ Valt Key Use
+# ◇ Valt Key Usage
 #
 #   - Encrypt/sign requires valt.key for PRIVATE signing key and PUBLIC Age key
 #   - Decryption requires valt.key for PRIVATE Age key
 #   - Verify requires valt.pub, for PUBLIC signing key
 #   - Full verify requires valt.key for PUBLIC signing key(s) and PRIVATE Age key
-#   - Extract requires valt.key. Warns if sig not verified and asks if should proceed.
+#   - Extract requires valt.key.
 #
 # ◇ Key Storage
 #
@@ -62,9 +71,6 @@
 #
 # ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-
-# Encryption (Age) and signing (minisign) key generation and usage.
-# Use via: require 'valt/keys'
 
 # Create new valt keys, encrypting the private key with a passphrase. May show passphrase advice and offer to generate passphrase.
 # Produces keys that combine minisign keys (as comments) and Age keys:
