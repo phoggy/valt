@@ -10,7 +10,7 @@
 #
 #   pass - plain-text password to check
 hasNotBeenPwned() {
-    local pass="${1}"
+    local pass="$1"
     local hash="${ echo -n "${pass}" | shasum | cut -d' ' -f1 | tr '[:lower:]' '[:upper:]'; }"
     local prefix=${hash:0:5}
     local suffix=${hash:5}
@@ -33,8 +33,6 @@ hasNotBeenPwned() {
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/pwned' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_pwned() {
-    require 'rayvn/core'
-
     declare -grx _pwnedPasswordsApiUrl='https://api.pwnedpasswords.com'
 }
 

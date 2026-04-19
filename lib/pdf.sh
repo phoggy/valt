@@ -10,8 +10,8 @@
 #   outputFile     - path where the generated PDF will be written
 #   footerTemplate - optional HTML string used as the PDF footer template
 generatePdf() {
-    local htmlFile="${1}"
-    local outputFile="${2}"
+    local htmlFile="$1"
+    local outputFile="$2"
     local footerTemplate="${3:-}"
 
     if [ -z "${htmlFile}" ] || [ -z "${outputFile}" ]; then
@@ -28,7 +28,7 @@ generatePdf() {
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/pdf' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_pdf() {
-    require 'rayvn/core' 'rayvn/node'
+    require 'valt/node'
 
     requireNodeModules valt VALT_PDF_DEPS_HOME
 

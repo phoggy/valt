@@ -31,8 +31,6 @@ usage() {
     echo "    --no-verify              Do not verify keys."
     echo "    --no-advice              Do not show passphrase advice."
     echo "    --no-pdf                 Do not generate PDF file."
-    echo "    --no-passphrase          Do not include the passphrase on the PDF file."
-    echo "    --no-passphrase          Do not include the passphrase on the PDF file."
     echo "    -t, --template TEMPLATE  Use the TEMPLATE html file instead of the default for PDF generation."
     echo "    -c, --css CSS            Apply style overrides from the CSS file for PDF generation."
     commonOptions 29 false
@@ -86,7 +84,7 @@ init() {
     declare -g force=0
     declare -g verifyKeys=1
     declare -g generatePdf=1
-    declare -g includePassphrase=1
+    declare -g includePassphrase=1  # TODO: Remove! This should never be done to guard against network snooping.
     declare -g printPdf=1
     declare -g deletePdfAfterPrint=1
     declare -gx skipKeyPassphraseAdvice=0
@@ -132,15 +130,15 @@ prepareForPdf() {
 
         if (( printPdf )); then
             local printers status prompt answer
-            local printers="${ system_profiler SPPrintersDataType -json; }"
+            printers="${ system_profiler SPPrintersDataType -json; }"
             defaultPrinter="${ echo "${printers}" | jq -r '.SPPrintersDataType[] | select(.default == "yes") | ._name'; }"
             status="${ echo "${printers}" | jq -r --arg name "${defaultPrinter}" '.SPPrintersDataType[] | select(._name == $name) | .status'; }"
             echo
             if [[ ${status} == offline ]]; then
-                show "Your default printer '${defaultPrinter}' is" bold red "offline" "."
+                show "Your default printer '${defaultPrinter}' is" error "offline" "."
                 echo "If you just powered on, it may take up to a minute before it appears online."
-                prompt "Continue without printing key documentation" y n answer
-                [[ ${answer} == y ]] || exit 0
+                confirm "Continue without printing key documentation?" yes no answer
+                (( answer == 0 )) || exit 0
                 printPdf=0
                 includePassphrase=0
             else
@@ -405,8 +403,9 @@ generateHtml() {
     if (( includePassphrase )); then
         _PASSPHRASE_LOCATION="The last page includes the passphrase."
     else
-        _PASSPHRASE_LOCATION="The last page contains notes that should provide some information to help find the passphrase.\
-                                 If you <em>don't have or can't get the passphrase</em>, stop here. Yes, really (sorry!)."
+        _PASSPHRASE_LOCATION="The last page has a space for the passphrase to be hand written. If not there, the notes below \
+        should provide some information to help find the passphrase. If you <em>don't have or can't get the passphrase</em>, \
+        stop here. Yes, really (so sorry!)."
     fi
 
     # Transform contacts into list items
@@ -415,6 +414,9 @@ generateHtml() {
     for contact in "${contacts[@]}"; do
         _CONTACTS_LIST+="<li>${contact}</li>"
     done
+
+    # TODO: make character boxes or at least | separators
+    _PHRASE=" | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | |"
 
     # Transform notes into paragraphs
 
@@ -428,7 +430,7 @@ generateHtml() {
     local tempHtml="${html}"
     local requiredSubstitutionKeys=()
 
-    while [[ ${tempHtml} =~ ([^{]*)\}(.*) ]]; do
+    while [[ ${tempHtml} =~ \$\{([A-Za-z_][A-Za-z0-9_]*)\}(.*) ]]; do
         requiredSubstitutionKeys+=("${BASH_REMATCH[1]}")
         tempHtml="${BASH_REMATCH[2]}"
     done
