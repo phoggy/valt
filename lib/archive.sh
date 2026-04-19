@@ -33,7 +33,7 @@
 # tampered with. The clear files are present for single-file convenience. The readme is from a template that includes generic
 # description, metadata and instructions along with user supplied content.
 #
-# Only tar, minisign and rage (or similar) are required for access, valt automates for convenience.
+# Only tar, age and minisign are required for access, valt automates for convenience.
 #
 # While .valt files should be safe to distribute publicly, users will likely prefer to distribute privately. To support this
 # case and to ensure availability of the clear files, a copy is created without the encrypted tar. This can (and should) be made
@@ -118,16 +118,16 @@ newSecureArchive() {
 
 # TODO:
 #
-#    Implementation gap vs. design: The current _createEncryptedArchive pipes tar | rage directly, but signing requires the tar on disk first. The actual flow needs to be:
+#    Implementation gap vs. design: The current _createEncryptedArchive pipes tar | age directly, but signing requires the tar on disk first. The actual flow needs to be:
 #    1. Create payload.tar to temp
 #    2. Minisign payload.tar → .minisig
 #    3. Bundle payload + sig + keys + readme into inner tar
-#    4. Encrypt inner tar with rage → encrypted.tar.xz.age
+#    4. Encrypt inner tar with age → encrypted.tar.xz.age
 #    5. Minisign the .age file → outer .minisig
 #    6. Bundle everything into the outer .valt tar
 #
 #    Signing key extraction: To sign, valt needs the minisign private key out of the passphrase-encrypted valt.key. That means decrypting it first, extracting the embedded key, using it,
-#    then clearing it. This is where the FIFO passphrase flow we discussed becomes relevant — you'll need the passphrase after rage finishes decrypting.
+#    then clearing it. This is where the FIFO passphrase flow we discussed becomes relevant — you'll need the passphrase after age finishes decrypting.
 #
 #
 #  minisign dependency: Not yet in flake.nix / rayvn.pkg.
@@ -201,8 +201,8 @@ _removeExistingArchiveFile() {
     if [[ -e "${archiveFile}" ]]; then
         if (( ! force )); then
             local answer
-            show primary "${archiveFile}" "already exists."
-            prompt "${ show -n primary "${archiveFile}" "already exists. Replace it?" ;}" yes no answer
+            show primary "${ tildePath "${archiveFile}"; }" "already exists."
+            prompt "${ show -n primary "${ tildePath "${archiveFile}"; }" "already exists. Replace it?" ;}" yes no answer
             [[ ${answer} == "yes" ]] || exit 0
         fi
         rm "${archiveFile}" || fail
@@ -212,7 +212,7 @@ _removeExistingArchiveFile() {
 _createEncryptedArchive() {
 debugVar tarArgs recipients encryptedTarFile
     # TODO: the -H pax arg for extended headers is gnu-tar. Worth it for new dependency?
-    tar cJ "${tarArgs[@]}" | rage "${recipients[@]}" > ${encryptedTarFile} || fail
+    tar cJ "${tarArgs[@]}" | age "${recipients[@]}" > ${encryptedTarFile} || fail
 }
 
 

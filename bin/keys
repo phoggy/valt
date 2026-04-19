@@ -414,9 +414,9 @@ generateHtml() {
     for contact in "${contacts[@]}"; do
         _CONTACTS_LIST+="<li>${contact}</li>"
     done
-
-    # TODO: make character boxes or at least | separators
-    _PHRASE=" | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | |"
+#
+#    # TODO: make character boxes or at least | separators
+#    _PHRASE=" | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | |"
 
     # Transform notes into paragraphs
 
