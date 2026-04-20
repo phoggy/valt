@@ -116,9 +116,11 @@ newSecureArchive() {
         shift
     done
 
-# TODO:
+# TODO:  use makeSecureTempDir for temp storage!
+
+# TODO:  Implementation gap vs. design
 #
-#    Implementation gap vs. design: The current _createEncryptedArchive pipes tar | age directly, but signing requires the tar on disk first. The actual flow needs to be:
+#    The current _createEncryptedArchive pipes tar | age directly, but signing requires the tar on disk first. The actual flow needs to be:
 #    1. Create payload.tar to temp
 #    2. Minisign payload.tar → .minisig
 #    3. Bundle payload + sig + keys + readme into inner tar

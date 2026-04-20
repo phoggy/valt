@@ -178,7 +178,7 @@ createValtKeys() {
     plainPrivate+=('#')
     plainPrivate+=("${agePrivateKey[@]}")
 
-    # Encrypt the private components directly to the key file, optionally capturing the passphrase for testing
+    # Encrypt the private key directly to the key file, optionally capturing the passphrase for testing
 
     _encryptKeyToFile plainPrivate "${_keyFile}" "${_testPassResultVar}"
     chmod 600 "${_keyFile}" 2> /dev/null
