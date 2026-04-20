@@ -240,7 +240,9 @@ createKeyDocument() {
 }
 
 createPdf() {
-    local workDir; workDir=${ makeTempDir; }
+    local workDir isRamBacked
+    makeSecureTempDir workDir isRamBacked
+    (( isRamBacked )) || show warning "Secure temp storage unavailable; passphrase will be written to disk temporarily."
     local footerTemplate
 
     # Set armoredKey var
@@ -382,26 +384,26 @@ generateFooterTemplate() {
 }
 
 _passphraseGridHtml() {
-    cat <<'EOF'
-<passphrase-grid length="140"></passphrase-grid>
-        <script>
-            class PassphraseGrid extends HTMLElement {
-                connectedCallback() {
-                    const length = this.getAttribute('length') || 16;
-                    this.render(length);
-                }
-                render(length) {
-                    let html = '<div class="grid-container">';
-                    for (let i = 0; i < length; i++) {
-                        html += '<div class="char-box"></div>';
-                    }
-                    html += '</div>';
-                    this.innerHTML = html;
-                }
-            }
-            customElements.define('passphrase-grid', PassphraseGrid);
-        </script>
-EOF
+    cat <<- EOF
+		<passphrase-grid length="140"></passphrase-grid>
+		<script>
+		    class PassphraseGrid extends HTMLElement {
+		        connectedCallback() {
+		            const length = this.getAttribute('length') || 80;
+		            this.render(length);
+		        }
+		        render(length) {
+		            let html = '<div class="grid-container">';
+		            for (let i = 0; i < length; i++) {
+		                html += '<div class="char-box"></div>';
+		            }
+		            html += '</div>';
+		            this.innerHTML = html;
+		        }
+		    }
+		    customElements.define('passphrase-grid', PassphraseGrid);
+		</script>
+	EOF
 }
 
 generateHtml() {
@@ -439,6 +441,7 @@ generateHtml() {
     done
 
     # Passphrase section: box showing the actual passphrase, or grid for handwriting it
+
     local _PASSPHRASE_INTRO _PASSPHRASE_SECTION
     if (( includePassphrase )); then
         _PASSPHRASE_INTRO='Here is the passphrase used to encrypt the private key:'
