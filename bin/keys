@@ -381,6 +381,29 @@ generateFooterTemplate() {
 	EOF
 }
 
+_passphraseGridHtml() {
+    cat <<'EOF'
+<passphrase-grid length="140"></passphrase-grid>
+        <script>
+            class PassphraseGrid extends HTMLElement {
+                connectedCallback() {
+                    const length = this.getAttribute('length') || 16;
+                    this.render(length);
+                }
+                render(length) {
+                    let html = '<div class="grid-container">';
+                    for (let i = 0; i < length; i++) {
+                        html += '<div class="char-box"></div>';
+                    }
+                    html += '</div>';
+                    this.innerHTML = html;
+                }
+            }
+            customElements.define('passphrase-grid', PassphraseGrid);
+        </script>
+EOF
+}
+
 generateHtml() {
     local outputFile="${1}"
     local html contact note value
@@ -414,9 +437,16 @@ generateHtml() {
     for contact in "${contacts[@]}"; do
         _CONTACTS_LIST+="<li>${contact}</li>"
     done
-#
-#    # TODO: make character boxes or at least | separators
-#    _PHRASE=" | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | |"
+
+    # Passphrase section: box showing the actual passphrase, or grid for handwriting it
+    local _PASSPHRASE_INTRO _PASSPHRASE_SECTION
+    if (( includePassphrase )); then
+        _PASSPHRASE_INTRO='Here is the passphrase used to encrypt the private key:'
+        _PASSPHRASE_SECTION="<div class=\"passphrase-box\">${_PHRASE}</div>"
+    else
+        _PASSPHRASE_INTRO='Write the passphrase in the boxes below, one character per box:'
+        _PASSPHRASE_SECTION=${ _passphraseGridHtml; }
+    fi
 
     # Transform notes into paragraphs
 

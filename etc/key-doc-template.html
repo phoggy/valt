@@ -215,7 +215,8 @@
 
         <p>Scan the PEM text and send/save it as a file. If you don't know how, search the web for "scanning text on phone".
             Verify that the result matches the checksum to guard against scanning errors:
-            <code>sha256sum KEY-FILE | head -c 16</code>. It should match <pre><code>${_CHECKSUM}</code></pre></p>
+        <pre><code>sha256sum KEY-FILE | head -c 16</code></pre>
+        It should match <pre><code>${_CHECKSUM}</code></pre>
 
         <h3>Manual PEM Text Entry</h3>
 
@@ -223,34 +224,13 @@
             but it <em>can</em> be done. Be sure to include the leading and trailing lines, each of which begins and ends with
             5 dashes. Use the checksum test from the previous method to ensure it was entered correctly!</p>
 
+        <div class="page-break"></div>
+
         <h2>Passphrase</h2>
 
-        <p>Here is the passphrase used when creating the key pair:</p>
+        <p>${_PASSPHRASE_INTRO}</p>
 
-        <passphrase-grid length="125"></passphrase-grid>
-        <script>
-            class PassphraseGrid extends HTMLElement {
-                connectedCallback() {
-                    const length = this.getAttribute('length') || 16;
-                    this.render(length);
-                }
-
-                render(length) {
-                    let html = '<div class="grid-container">';
-                    for (let i = 0; i < length; i++) {
-                        html += '<div class="char-box"></div>';
-                    }
-                    html += '</div>';
-                    this.innerHTML = html;
-                }
-            }
-
-            customElements.define('passphrase-grid', PassphraseGrid);
-        </script>
-
-<!--        <div class="passphrase-box">-->
-<!--            ${_PHRASE}-->
-<!--        </div>-->
+        ${_PASSPHRASE_SECTION}
 
         <h2>Notes</h2>
 
