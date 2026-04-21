@@ -2,7 +2,7 @@
 layout: default
 title: "valt/pdf"
 parent: API Reference
-nav_order: 5
+nav_order: 4
 ---
 
 # valt/pdf
@@ -13,8 +13,8 @@ nav_order: 5
 
 **Library:** `valt/pdf`
 
-Library to generate PDF files from HTML.
-Intended for use via: require 'valt/pdf'
+Generate PDF files from HTML.
+Use via: require 'valt/pdf'
 Generate a PDF file from an HTML file using Puppeteer (Node.js).
 Args: htmlFile outputFile [footerTemplate]
   htmlFile       - path to the input HTML file
@@ -22,6 +22,6 @@ Args: htmlFile outputFile [footerTemplate]
   footerTemplate - optional HTML string used as the PDF footer template
 
 ```bash
-generatePdf() {
+generatePdf()
 ```
 

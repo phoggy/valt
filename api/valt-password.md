@@ -2,7 +2,7 @@
 layout: default
 title: "valt/password"
 parent: API Reference
-nav_order: 2
+nav_order: 3
 ---
 
 # valt/password
@@ -13,8 +13,8 @@ nav_order: 2
 
 **Library:** `valt/password`
 
-Library supporting password/phrase generation
-Intended for use via: require 'valt/passwords'
+Password/phrase generation.
+Use via: require 'valt/passwords'
 TODO: don't display strength (via mrld) as it is inaccurate. Just pick a threshold and warn is week if below.
 Generate a random password of random length within the given range.
 Prints the generated password.
@@ -23,7 +23,7 @@ Args: [minLength] [maxLength]
   maxLength - maximum password length (default: 32)
 
 ```bash
-generatePassword() {
+generatePassword()
 ```
 
 ### generatePassphrase
@@ -37,7 +37,7 @@ Args: [wordCount] [separator]
   separator - string placed between words (default: space)
 
 ```bash
-generatePassphrase() {
+generatePassphrase()
 ```
 
 ### readVerifiedPassword
@@ -46,12 +46,14 @@ generatePassphrase() {
 
 Interactively prompt for a password twice and verify both entries match.
 Stores the verified password in a nameref variable. Fails if entries do not match.
-Args: resultVar [timeout]
-  resultVar - nameref variable to receive the verified password
-  timeout   - seconds to wait for each entry before timing out (default: 30)
+Args: resultVar [checkResult] [retryCount] [timeout]
+  resultVar   - nameref variable to receive the verified password
+  checkResult - if 'true', check strength and breach status (default: 'true')
+  retryCount  - number of times to retry the verification step (default: 3)
+  timeout     - seconds to wait for each entry before timing out (default: 30)
 
 ```bash
-readVerifiedPassword() {
+readVerifiedPassword()
 ```
 
 ### readPassword
@@ -67,6 +69,6 @@ Args: prompt resultVar [timeout] [checkResult]
   checkResult - if 'true', check strength and breach status (default: 'true')
 
 ```bash
-readPassword() {
+readPassword()
 ```
 
