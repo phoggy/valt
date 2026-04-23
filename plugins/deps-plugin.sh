@@ -21,7 +21,7 @@ findProjectDeps() {
     local -a packages=()
     local pkg
     while IFS= read -r pkg; do
-        [[ ${pkg} ]] && packages+=("${pkg}")
+        [[ -n ${pkg} ]] && packages+=("${pkg}")
     done < <( _valtNpmExtractPackages "${jsFiles[@]}" )
 
     show primary "Found npm package(s): ${packages[*]:-none}"
@@ -34,7 +34,7 @@ findProjectDeps() {
     if [[ -f "${packageJsonFile}" ]]; then
         local existingPkg ver
         while IFS='=' read -r existingPkg ver; do
-            [[ ${existingPkg} ]] && existingDeps["${existingPkg}"]="${ver}"
+            [[ -n ${existingPkg} ]] && existingDeps["${existingPkg}"]="${ver}"
         done < <( node -e "
             const p = require('${packageJsonFile}');
             Object.entries(p.dependencies||{}).forEach(([k,v])=>console.log(k+'='+v)); # lint-ok

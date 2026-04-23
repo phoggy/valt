@@ -38,7 +38,7 @@ init() {
     declare -gi unpack=1
     declare -gi quiet=0
 
-    while (( ${#} > 0 )); do
+    while (( $# > 0 )); do
         case "${1}" in
             --) ;;
             -i|--identity) shift; assertFile "${1}"; identities+=(-i "${1}") ;;
@@ -55,13 +55,13 @@ init() {
         shift
     done
 
-    [[ ${#identities[@]} ]] || fail "no identities specified"
-    [[ ${file} ]] || fail "no file provided"
-    [[ ${decryptedFile} ]] || decryptedFile="${ basename -- "${file}" .${ageFileExtension}; }"
+    [[ -n ${#identities[@]} ]] || fail "no identities specified"
+    [[ -n ${file} ]] || fail "no file provided"
+    [[ -n ${decryptedFile} ]] || decryptedFile="${ basename -- "${file}" .${ageFileExtension}; }"
 }
 
 setFile() {
-    [[ ${file} ]] && usage "PATH can only be specified once"
+    [[ -n ${file} ]] && usage "PATH can only be specified once"
     file="${1}"
     [[ -e ${file} ]] || fail "${file} not found"
     [[ -f ${file} ]] || fail "${file} is not a file"
@@ -89,7 +89,7 @@ unpackFile() {
 }
 
 setUnpackDir() {
-    if [[ ! ${unpackDir} ]]; then
+    if [[ -z ${unpackDir} ]]; then
         unpackDir="${ echo "${decryptedFile}" | cut -d'.' -f1; }-content"
     fi
     [[ -e ${unpackDir} ]] && replaceOutputFile "${unpackDir}"

@@ -51,7 +51,7 @@ init() {
     outputFile=    # the generated output file path.
     isArchive=     # if output file is an archive
 
-    while (( ${#} > 0 )); do
+    while (( $# > 0 )); do
         case "${1}" in
             --) ;;
             -r|--recipient) shift; assertRecipient "${1}"; recipients+=(-r "${1}") ;;
@@ -70,8 +70,8 @@ init() {
         shift
     done
 
-    [[ ${#recipients[@]} ]] || fail "no recipients specified"
-    [[ ${verifyKeyFile} ]] || deleteOriginal=0
+    [[ -n ${#recipients[@]} ]] || fail "no recipients specified"
+    [[ -n ${verifyKeyFile} ]] || deleteOriginal=0
     initializeFiles
 }
 
@@ -93,12 +93,12 @@ initializeFiles() {
     (( ${inputCount} == 0 )) && usage "no files provided"
     if (( ${#files[@]} == 1 )) && [[ -f ${files[0]} ]]; then
         inputFile="${files[0]}"
-        [[ ${name} ]] || name="${ basename ${inputFile}; }"
+        [[ -n ${name} ]] || name="${ basename ${inputFile}; }"
         description="${name} file"
         extension="${ageFileExtension}"
         unset isArchive
     else
-        [[ ${name} ]] || name="vault"
+        [[ -n ${name} ]] || name="vault"
         description="${name}"
         inputFile="${ tempDirPath ${name}.${tarFileExtension}; }"
         extension="${tarFileExtension}.${ageFileExtension}"
@@ -106,7 +106,7 @@ initializeFiles() {
         tar -Jcf "${inputFile}" "${files[@]}" || fail
         isArchive='yes'
     fi
-    if [[ ${name} ]]; then
+    if [[ -n ${name} ]]; then
         baseName="${name}"
     else
         baseName="${ basename "${inputFile}" | cut -d. -f1; }"
@@ -131,13 +131,13 @@ encryptFile() {
 }
 
 verifyEncryptedFile() {
-    if [[ ${verifyKeyFile} ]]; then
-        local decryptedFile="${ tempDirPath file; }"
-        local verifyDir="${ tempDirPath file-content; }"
+    if [[ -n ${verifyKeyFile} ]]; then
+        local decryptedFile; decryptedFile=${ tempDirPath file; }
+        local verifyDir; verifyDir=${ tempDirPath file-content; }
         show "Verifying" cyan "${outputFile}"
         valt ../bin/decrypt -i "${verifyKeyFile}" ${outputFile} -o "${decryptedFile}" -u "${verifyDir}" -f -q || fail
 
-        if [[ ${isArchive} ]]; then
+        if [[ -n ${isArchive} ]]; then
             local file i
             for (( i=0; i < ${inputCount}; i++ )); do
                 file="${files[${i}]}"

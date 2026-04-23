@@ -66,7 +66,7 @@ init() {
         for pinEntry in ${proxyPinEntry}; do
             log "Checking for ${pinEntry}"
             proxyPath="${ command -v "${pinEntry}"; }"
-            if [[ ${proxyPath} ]]; then
+            if [[ -n ${proxyPath} ]]; then
                 log "Reverse-proxy to '${pinEntry}' at ${proxyPath}"
                 break
             fi
@@ -124,7 +124,7 @@ log() {
 }
 
 onGetPin() {
-    if [[ ${proxyPath} ]]; then
+    if [[ -n ${proxyPath} ]]; then
         getProxyPin
     else
         getPin
@@ -138,7 +138,7 @@ getProxyPin() {
     local response
     response=${ echo "${cmd}" | ${proxyPath} | grep -v OK | while read -r line; do echo "${line}"; done; }
 
-    if [[ ${response} ]]; then
+    if [[ -n ${response} ]]; then
         respond "${response}"
         if [[ ! ${response} =~ ^ERR* ]]; then
             respond ${noError}
@@ -160,7 +160,7 @@ getPin() {
             respond "${emptyPinError}"
             return
         fi
-        if [[ ${confirm} ]]; then
+        if [[ -n ${confirm} ]]; then
             local retries=3
             while (( retries > 0 )); do
                 log "calling readPassword ${confirmPrompt}"
@@ -237,7 +237,7 @@ describe() {
 
 mismatchError() {
     local error="${1}"
-    local remaining=${2}
+    local remaining=$2
     local retries='retries'
     (( remaining == 1 )) && retries='retry'
     show red "${error}" "(${remaining} ${retries} remain)" > ${terminal}

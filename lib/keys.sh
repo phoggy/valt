@@ -229,7 +229,7 @@ verifyValtKeys() {
 
     # Decrypt and compare
 
-    local decrypted="${ age -d -i "${valtKeyFile}" "${encryptedFile}" 2> /dev/null; }"
+    local decrypted; decrypted=${ age -d -i "${valtKeyFile}" "${encryptedFile}" 2> /dev/null; }
     diff -u <(echo -n "${sampleText}") <(echo "${decrypted}") > /dev/null || fail "not verified (wrong passphrase?)"
 }
 
@@ -370,10 +370,10 @@ _assertKeyFileDoesNotExist() {
 }
 
 _assignResultIfVarName() {
-    local _resultVarName=$1
-    if [[ -n ${_resultVarName} && ${_resultVarName} != ? ]]; then
-        local -n _resultVarRef=${_resultVarName}
-        _resultVarRef="$2"
+    local _resultVarRefName=$1
+    if [[ -n ${_resultVarRefName} && ${_resultVarRefName} != ? ]]; then
+        local -n _resultVarRefRef=${_resultVarRefName}
+        _resultVarRefRef="$2"
     fi
 }
 
@@ -524,9 +524,9 @@ _writeAdviceCount() {
 }
 
 _setSampleText() {
-    local -n resultVar="$1"
-    if [[ ! ${resultVar} ]]; then
-        IFS='' read -d '' -r resultVar <<- EOF
+    local -n resultVarRef="$1"
+    if [[ -z ${resultVarRef} ]]; then
+        IFS='' read -d '' -r resultVarRef <<- EOF
 
             But the Raven, sitting lonely on the placid bust, spoke only
         That one word, as if his soul in that one word he did outpour.

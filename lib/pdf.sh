@@ -14,7 +14,7 @@ generatePdf() {
     local outputFile="$2"
     local footerTemplate="${3:-}"
 
-    if [ -z "${htmlFile}" ] || [ -z "${outputFile}" ]; then
+    if [[ -z ${htmlFile} ]] || [[ -z ${outputFile} ]]; then
         fail "Usage: generatePdf <html-file> <output-file> [<footerTemplate>]"
     fi
 

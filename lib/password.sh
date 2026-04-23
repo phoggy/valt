@@ -44,33 +44,33 @@ generatePassphrase() {
 
 # Interactively prompt for a password twice and verify both entries match.
 # Stores the verified password in a nameref variable. Fails if entries do not match.
-# Args: resultVar [timeout]
+# Args: resultVarRef [timeout]
 #
-#   resultVar - nameref variable to receive the verified password
+#   resultVarRef - nameref variable to receive the verified password
 #   timeout   - seconds to wait for each entry before timing out (default: 30)
 readVerifiedPassword() {
     local p1 p2
-    local -n resultVar="$1"
+    local -n resultVarRef="$1"
     local timeout="${2:-30}"
     readPassword "Password" p1 "${timeout}" true || fail
     [[ ${p1} == '' ]] && fail "cancelled"  > ${terminal}
     readPassword "  Verify" p2 "${timeout}" false || fail
     [[ ${p1} == "${p2}" ]] || fail "entries do not match" > ${terminal}
-    resultVar="${p1}"
+    resultVarRef="${p1}"
 }
 
 # Interactively prompt for a password with optional strength checking and breach detection.
 # Stores the entered password in a nameref variable. Visibility controlled by passwordVisibility.
-# Args: prompt resultVar [timeout] [checkResult]
+# Args: prompt resultVarRef [timeout] [checkResult]
 #
 #   prompt      - label displayed before the input field
-#   resultVar   - nameref variable to receive the entered password
+#   resultVarRef   - nameref variable to receive the entered password
 #   timeout     - seconds to wait for input before timing out (default: 30)
 #   checkResult - if 'true', check strength and breach status (default: 'true')
 readPassword() {
     local result count=0 mask key
     local prompt; prompt="${ show bold "$1: "; }"
-    local -n resultVar="$2"
+    local -n resultVarRef="$2"
     local timeout="${3:-30}"
     local checkResult="${4:-true}"
     local -i cancelled=0
@@ -78,7 +78,7 @@ readPassword() {
     local -i show=1
     local -i pwned=
     local score=
-    resultVar=''
+    resultVarRef=''
     (( skipReadPasswordCheck )) && checkResult=false
     [[ -v passwordVisibility ]] || declare -gx passwordVisibility='none'
 
@@ -91,7 +91,7 @@ readPassword() {
 
     if (( ! visible )); then
         secureRequest "${prompt}" result true < "${terminal}" || return $?
-        cursorUpToColumn 1 $(( ${#prompt} + 12))  # re-position back for check
+        cursorUpToColumn 1 $(( ${#prompt} + 12 ))  # re-position back for check
     else
         _readPassword
     fi
@@ -114,13 +114,13 @@ readPassword() {
     if (( ! cancelled )); then
         if (( pwned == 1 )); then
             warn "Could not check if this password/phrase has been breached!" > ${terminal}
-            if [[ ${expertMode} ]]; then
-                resultVar="${result}"
+            if [[ -n ${expertMode} ]]; then
+                resultVarRef="${result}"
             fi
         elif (( pwned == 2 )); then
             error "This password/phrase is present in a large set of breached passwords so is not safe to use!" > ${terminal}
         else
-            resultVar="${result}"
+            resultVarRef="${result}"
         fi
     fi
 }
@@ -141,12 +141,12 @@ _readPassword() {
             cancelled=true
             break
         elif [[ ${key} =~ [[:print:]] ]]; then   # valid character
-            count=$((count+1))
+            count=$(( count+1 ))
             (( show )) && mask=${key} || mask='*'
             result+=${key}
         elif [[ ${key} == $'\177' ]]; then       # backspace
             if (( ${count} > 0 )); then
-                count=$((count-1))
+                count=$(( count-1 ))
                 mask=$'\b \b'
                 result="${result%?}"
             else

@@ -89,7 +89,7 @@ init() {
     declare -g deletePdfAfterPrint=1
     declare -gx skipKeyPassphraseAdvice=0
 
-    while (( ${#} > 0 )); do
+    while (( $# > 0 )); do
         case "${1}" in
             --) ;;
             -n | --name) shift; name="${1}"; namePrefix="${name}-";;
@@ -183,7 +183,7 @@ ensureKeyInfo() {
 }
 
 assertKeyInfoVar() {
-    while (( ${#} > 0 )); do
+    while (( $# > 0 )); do
         local varName="${1}"
         [[ -v ${varName} ]] || bye "The '${varName}' variable is missing in ${keyInfoFile}."
         [[ -n ${!varName} ]] || bye "The '${varName}' variable cannot be empty in ${keyInfoFile}."
@@ -255,7 +255,7 @@ createPdf() {
         cp "${valtHome}/etc/${assetFile}" "${workDir}/${assetFile}" || fail
     done
 
-    if [[ ${cssOverrideFile} ]]; then
+    if [[ -n ${cssOverrideFile} ]]; then
         cp "${cssOverrideFile}" "${workDir}/${cssOverrideFileName}" || fail
     fi
 
@@ -352,7 +352,7 @@ generateFooterTemplate() {
         /^[[:space:]]*\.footer[[:space:]]*\{/ {
             print
             brace_count = 1
-            while ((getline line) > 0) {
+            while (( getline line) > 0) {
                 print line
                 # Count opening and closing braces
                 temp1 = line
@@ -420,7 +420,7 @@ generateHtml() {
     local _QR_CODE_PATH="${qrCodeFileName}"
     local _ARMORED_KEY="${armoredKey}"
     local _CSS_OVERRIDE='<!-- placeholder -->'
-    if [[ ${cssOverrideFile} ]]; then
+    if [[ -n ${cssOverrideFile} ]]; then
         _CSS_OVERRIDE="<link rel="stylesheet" href="${cssOverrideFileName}">"
     fi
 
