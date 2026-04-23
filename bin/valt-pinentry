@@ -136,7 +136,7 @@ getProxyPin() {
     local cmd="${proxyCommand}GETPIN$'\n'BYE$'\n'"
     log "proxy cmd: ${cmd}"
     local response
-    response=${ echo "${cmd}" | ${proxyPath} | grep -v OK | while read -r line; do echo "${line}"; done; }
+    response=${ echo "${cmd}" | ${proxyPath} | grep -v OK; }
 
     if [[ -n ${response} ]]; then
         respond "${response}"

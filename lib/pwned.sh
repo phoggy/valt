@@ -11,17 +11,17 @@
 #   pass - plain-text password to check
 hasNotBeenPwned() {
     local pass="$1"
-    local hash="${ echo -n "${pass}" | shasum | cut -d' ' -f1 | tr '[:lower:]' '[:upper:]'; }"
+    local hash; hash=${ echo -n "${pass}" | shasum | cut -d' ' -f1 | tr '[:lower:]' '[:upper:]'; }
     local prefix=${hash:0:5}
     local suffix=${hash:5}
-    local results="${ curl -m 10 -s -H 'Add-Padding: true' "${_pwnedPasswordsApiUrl}/range/${prefix}"; }"
-    if [[ ! ${results} ]]; then
+    local results; results=${ curl -m 10 -s -H 'Add-Padding: true' "${_pwnedPasswordsApiUrl}/range/${prefix}"; }
+    if [[ -z ${results} ]]; then
         return 1  # Unable to check
     fi
 
-    local match="${ echo "${results}" | grep ${suffix}; }"
-    if [[ ${match} ]]; then
-        local count="${ echo "${match}" | cut -d':' -f2; }"
+    local match; match=${ echo "${results}" | grep ${suffix}; }
+    if [[ -n ${match} ]]; then
+        local count; count=${ echo "${match}" | cut -d':' -f2; }
         if [[ ${count} != 0 ]]; then
             return 2  # has been pwned
         fi

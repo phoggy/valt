@@ -137,7 +137,7 @@ newSecureArchive() {
 
     # Make sure we have one or more recipients
 
-    [[ ${#recipients[@]} ]] || fail "no recipients specified"
+    [[ -n ${#recipients[@]} ]] || fail "no recipients specified"
 
     # Make sure we have one or more files to add
 
