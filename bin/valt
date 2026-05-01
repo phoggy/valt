@@ -5,7 +5,7 @@ usage() {
     echo
     show bold "Public key encryption of files and directories, using" cyan "rage" "(see" blue "${rageProjectUrl}" ")."
     echo
-    show "Usage:" bold blue "${projectName}" "[OPTIONS]" italic "COMMAND"
+    show "Usage:" bold blue "${scriptName}" "[OPTIONS]" italic "COMMAND"
     echo
     echo "Commands"
     echo
