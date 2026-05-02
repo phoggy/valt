@@ -38,7 +38,7 @@ findProjectDeps() {
         done < <( node -e "
             const p = require('${packageJsonFile}');
             Object.entries(p.dependencies||{}).forEach(([k,v])=>console.log(k+'='+v)); # lint-ok
-        " 2>/dev/null )
+        " 2> /dev/null )
     fi
 
     # Query npm for versions of new packages
@@ -46,7 +46,7 @@ findProjectDeps() {
     local versionOut
     for pkg in "${packages[@]}"; do
         [[ ${existingDeps[${pkg}]+defined} ]] && continue
-        versionOut=${ npm view "${pkg}" version 2>/dev/null; }
+        versionOut=${ npm view "${pkg}" version 2> /dev/null; }
         if [[ -z "${versionOut}" ]]; then
             warn "Could not find npm version for '${pkg}', skipping"
             continue
