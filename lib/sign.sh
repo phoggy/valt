@@ -6,23 +6,17 @@
 signFile() {
     assertFile "$1"
     assertFile "$2"
-    local privateKeyFile="$1"
-    local fileToSign="$2"
-    local signatureFile="$3"  # optional
-
-    if [[ ! -n "${signatureFile}" ]]; then
-        signatureFile="${fileToSign}.${defaultSignatureSuffix}"
-debugVar signatureFile
-    fi
+    local targetFile="$1"
+    local keySourceFile="$2"
+    local signatureFile; _setSignatureFile "${targetFile}" signatureFile "$3"
 
     # Extract the private key
 
-    local signingKeyFile
-    signingKeyToTempFile "${privateKeyFile}" signingKeyFile
+    local signingKeyFile; signingKeyToTempFile "${keySourceFile}" signingKeyFile
 
     # Sign
-debugVar signingKeyFile fileToSign signatureFile
-    minisign -S -s "${signingKeyFile}" -c "valt signature" -m "${fileToSign}" -x "${signatureFile}" || fail
+debugVar targetFile keySourceFile signatureFile signingKeyFile
+    minisign -S -s "${signingKeyFile}" -c "valt signature" -m "${targetFile}" -x "${signatureFile}" || fail
 debug "signed"
     # Remove the extracted signing key file
 
@@ -32,14 +26,22 @@ debug "signed"
 verifyFileSignature() {
     assertFile "$1"
     assertFile "$2"
-    assertFile "$3"
-    local publicKeyFile="$1"
-    local signedFile="$2"
-    local signatureFile="$3"
+    local targetFile="$1"
+    local keySourceFile="$2"
+    local signatureFile; _setSignatureFile "${targetFile}" signatureFile "$3"
+
+    # Extract the public key
+
+    local signingPublicKeyFile; publicSigningKeyToTempFile "${keySourceFile}" signingPublicKeyFile
 
     # Verify signature
 
-    minisign -V -p "${publicKeyFile}" -x "${signatureFile}" -m "${signedFile}" -q || fail
+    debugVar targetFile keySourceFile signatureFile signingPublicKeyFile
+    minisign -V -p "${signingPublicKeyFile}" -x "${signatureFile}" -m "${targetFile}" -q || fail
+
+    # Remove the extracted signing key file
+
+    rm "${signingPublicKeyFile}" &> /dev/null
 }
 
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/sign' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
@@ -48,4 +50,18 @@ _init_valt_sign() {
     require 'valt/keys'
     declare -grx defaultSignatureSuffix="signature"
 }
+
+_setSignatureFile() {
+    local _targetFile="$1"
+    local -n resultRef="$2"
+    local _signatureFile
+    if [[ -n "$3" ]]; then
+        _signatureFile="$3"
+    else
+        _signatureFile="${_targetFile}.${defaultSignatureSuffix}"
+    fi
+    assertFile "${_signatureFile}"
+    resultRef="${_signatureFile}"
+}
+
 
