@@ -149,7 +149,7 @@ newSecureArchive() {
 
     # Ok we're good to go, so create file names, temp tar dir and result file
 
-    local encryptedTarName="${name}.${tarFileExtension}.${ageFileExtension}" # tar.xz.age
+    local encryptedTarName="${name}.${_tarFileExtension}.${_ageFileExtension}" # tar.xz.age
     local envelopeTarName="${name}.valt"
     local encryptedTarFile; encryptedTarFile="${ tempDirPath ${encryptedTarName}; }"
     local archiveFile="${destDir}/${envelopeTarName}"

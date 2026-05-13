@@ -57,7 +57,7 @@ init() {
 
     [[ -n ${#identities[@]} ]] || fail "no identities specified"
     [[ -n ${file} ]] || fail "no file provided"
-    [[ -n ${decryptedFile} ]] || decryptedFile="${ basename -- "${file}" .${ageFileExtension}; }"
+    [[ -n ${decryptedFile} ]] || decryptedFile="${ basename -- "${file}" .${_ageFileExtension}; }"
 }
 
 setFile() {
@@ -65,7 +65,7 @@ setFile() {
     file="${1}"
     [[ -e ${file} ]] || fail "${file} not found"
     [[ -f ${file} ]] || fail "${file} is not a file"
-    [[ ${file} == *.${ageFileExtension} ]] || fail "expected file with '.${ageFileExtension}' extension, got ${file}"
+    [[ ${file} == *.${_ageFileExtension} ]] || fail "expected file with '.${_ageFileExtension}' extension, got ${file}"
 }
 
 progress() {

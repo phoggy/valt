@@ -95,13 +95,13 @@ initializeFiles() {
         inputFile="${files[0]}"
         [[ -n ${name} ]] || name="${ basename ${inputFile}; }"
         description="${name} file"
-        extension="${ageFileExtension}"
+        extension="${_ageFileExtension}"
         unset isArchive
     else
         [[ -n ${name} ]] || name="vault"
         description="${name}"
-        inputFile="${ tempDirPath ${name}.${tarFileExtension}; }"
-        extension="${tarFileExtension}.${ageFileExtension}"
+        inputFile="${ tempDirPath ${name}.${_tarFileExtension}; }"
+        extension="${_tarFileExtension}.${_ageFileExtension}"
         echo "Building ${description}"
         tar -Jcf "${inputFile}" "${files[@]}" || fail
         isArchive='yes'

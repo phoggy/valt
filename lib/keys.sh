@@ -135,12 +135,12 @@ createValtKeys() {
 
     # Extract the created line and public key (hopefully future proof)
 
-    indexOf -p "${ageCreatedPrefix}" agePrivateKey index
+    indexOf -p "${_ageCreatedPrefix}" agePrivateKey index
     ageCreated="${agePrivateKey[index]}"
     agePrivateKey=("${agePrivateKey[@]:0:index}" "${agePrivateKey[@]:index+1}")
-    indexOf -p "${agePublicKeyPrefix}" agePrivateKey index
+    indexOf -p "${_agePublicKeyPrefix}" agePrivateKey index
     line="${agePrivateKey[index]}"
-    agePublicKey="${line:${#agePublicKeyPrefix}}"
+    agePublicKey="${line:${#_agePublicKeyPrefix}}"
 
     # Generate unencrypted signing keys and load into our signingPrivateKey array
 
@@ -159,7 +159,7 @@ createValtKeys() {
     commonKey=("${ageCreated}")
     commonKey+=('#')
     for line in "${signingPublicKey[@]}"; do
-        commonKey+=("${signingPublicKeyPrefix}${line}")
+        commonKey+=("${_signingPublicKeyPrefix}${line}")
     done
     commonKey+=("#")
 
@@ -173,7 +173,7 @@ createValtKeys() {
     local plainPrivate
     plainPrivate=("${commonKey[@]}")
     for line in "${signingPrivateKey[@]}"; do
-        plainPrivate+=("${signingPrivateKeyPrefix}${line}")
+        plainPrivate+=("${_signingPrivateKeyPrefix}${line}")
     done
     plainPrivate+=('#')
     plainPrivate+=("${agePrivateKey[@]}")
@@ -194,7 +194,8 @@ createValtKeys() {
 }
 
 # ◇ Verifies a valt key pair by encrypting sample text with the public key, then decrypting
-#   with the private key and comparing results. Fails if they do not match.
+#   with the private key and comparing results. Fails if they do not match. Also signs encrypted
+#   file and verifies the signature.
 #
 # · ARGS
 #
@@ -202,38 +203,50 @@ createValtKeys() {
 #   valtKeyFile (string)  Path to the valt.key file.
 
 verifyValtKeys() {
+    require 'valt/sign'
     local valtPubFile="$1"
     local valtKeyFile="$2"
 
     assertFile "${valtPubFile}"
     assertFile "${valtKeyFile}"
 
-    local encryptedFile; encryptedFile="${ tempDirPath sample.age; }"
-    local signatureFle; signatureFile="${ tempDirPath sample.minisign; }"
+    # Extract public encryption key from valt.key and ensure it matches valt.pub and ensure both start with 'age'
+
+    local publicEncrypt; publicEncrypt="${ gawk '!/^#/ && NF { print; exit }' "${valtPubFile}"; }"
+    local extractedPublicEncrypt; extractedPublicEncrypt="${ publicEncryptionKey "${valtKeyFile}"; }"
+    [[ "${publicEncrypt:0:3}" == 'age' ]] || fail "${valtPubFile} public encryption key doest not begin with 'age'"
+    [[ "${extractedPublicEncrypt:0:3}" == 'age' ]] || fail "${valtKeyFile} public encryption key doest not begin with 'age'"
+    [[ "${extractedPublicEncrypt}" == "${publicEncrypt}" ]] || fail "extracted public encryption key does not match"
+
+    # Extract public signing key from valt.key and ensure it matches valt.pub
+
+    local publicSign; mapfile -t publicSign < <( grep -m 2 '^# \[minisign\.pub\] ' "${valtPubFile}" )
+    local extractedPublicSignFile; publicSigningKeyToTempFile "${valtKeyFile}" extractedPublicSignFile
+    local extractedPublicSign; mapfile -t extractedPublicSign < <( cat "${extractedPublicSignFile}" )
+    (( ${#publicSign[@]} == 2 )) || fail "public signing key must be 2 lines"
+    (( ${#extractedPublicSign[@]} == 2 )) || fail "extracted public signing key must be 2 lines"
+    local i line
+    for (( i=0; i < 2; i++ )); do
+        line="${publicSign[i]:17}"
+        [[ "${line}" == "${extractedPublicSign[i]}" ]] || fail "extracted public signing key does not match"
+    done
+
+    # Encrypt, decrypt and verify
+
     local sampleText; _setSampleText sampleText
-
-    # TODO:
-    #   - extract public keys from both valt.key and valt.pub and ensure equal
-    #   - encrypt sample text file using valt.key
-    #   - sign encrypted sample file and verify signature
-    #   - decrypt using valt.key and ensure equal to sample text
-    fail TODO
-
-    # Encrypt
-
+    local encryptedFile; encryptedFile="${ tempDirPath; }"
+debugFile -l "${valtKeyFile}"
     echo -n "${sampleText}" | age -R "${valtKeyFile}" -o "${encryptedFile}" || fail
-
-    # Sign
-
-    # Verify signature
-
-    # Decrypt and compare
-
     local decrypted; decrypted=${ age -d -i "${valtKeyFile}" "${encryptedFile}" 2> /dev/null; }
     diff -u <(echo -n "${sampleText}") <(echo "${decrypted}") > /dev/null || fail "not verified (wrong passphrase?)"
+
+    # Sign and verify signature
+
+    signFile "${valtKeyFile}" "${encryptedFile}"
+    verifyFileSignature "${valtKeyFile}" "${encryptedFile}"
 }
 
-# ◇ Outputs the key type suffix for a valt key file, either valtPublicKeySuffix or valtPrivateKeySuffix.
+# ◇ Outputs the key type suffix for a valt key file, either "pub" or "key".
 #
 # · ARGS
 #
@@ -241,11 +254,12 @@ verifyValtKeys() {
 
 keyType() {
     local keyFile="$1"
+    assertFile "$1"
     while read line; do
         if (( "${#line}" )); then # Ignore blank lines
-            if [[ ${line} == "${ageEncryptedBegin}" || ${line} == "${agePemBegin}" ]]; then
+            if [[ ${line} == "${_ageEncryptedBegin}" || ${line} == "${_agePemBegin}" ]]; then
                 echo "${valtPrivateKeySuffix}"
-            elif [[ ${line} == "${ageCreatedPrefix}"* ]]; then
+            elif [[ ${line} == "${_ageCreatedPrefix}"* ]]; then
                 echo "${valtPublicKeySuffix}"
             else
                 fail "not a valt key file"
@@ -263,7 +277,7 @@ keyType() {
 
 publicEncryptionKey() {
     local keyFile="$1"
-    _extractKey "${keyFile}" true "${agePublicKeyPrefix}" 1
+    _extractKey "${keyFile}" true "${_agePublicKeyPrefix}" 1
 }
 
 # ◇ Extracts the public signing key from a valt private key file into a temp file.
@@ -277,7 +291,7 @@ publicSigningKeyToTempFile() {
     local keyFile="$1"
     local -n resultFileRef="$2"
     local tempFile; tempFile="${ makeTempFile; }"
-    _extractKey "${keyFile}" true "${signingPublicKeyPrefix}" 2 "${tempFile}"
+    _extractKey "${keyFile}" true "${_signingPublicKeyPrefix}" 2 "${tempFile}"
     resultFileRef="${tempFile}"
 }
 
@@ -292,7 +306,7 @@ signingKeyToTempFile() {
     local keyFile="$1"
     local -n resultFileRef="$2"
     local tempFile; tempFile="${ makeTempFile; }"
-    _extractKey "${keyFile}" false "${signingPrivateKeyPrefix}" 2 "${tempFile}"
+    _extractKey "${keyFile}" false "${_signingPrivateKeyPrefix}" 2 "${tempFile}"
     resultFileRef="${tempFile}"
 }
 
@@ -304,32 +318,35 @@ signingKeyToTempFile() {
 
 armorKeyFile() {
     local keyFile=$1
-    printf '%s\n' "${agePemBegin}"
+    printf '%s\n' "${_agePemBegin}"
     base64 < "${keyFile}" | fold -w 64
-    printf '%s\n' "${agePemEnd}"
+    printf '%s\n' "${_agePemEnd}"
 }
 
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/keys' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_keys() {
     require 'valt/password' 'rayvn/prompt'
-    declare -grx xkcdPasswordsUrl="https://xkcd.com/936/"
+
     declare -grx valtPublicKeySuffix='pub'
     declare -grx valtPrivateKeySuffix='key'
-    declare -grx valtPublicKeyType='valt.pub'
-    declare -grx valtPrivateKeyType='valt.key'
-    declare -grx ageFileExtension='age'
-    declare -grx tarFileExtension='tar.xz'
-    declare -grx ageCreatedPrefix='# created: '
-    declare -grx agePublicKeyPrefix='# public key: '
-    declare -grx signingPublicKeyPrefix='# [minisign.pub] '
-    declare -grx signingPrivateKeyPrefix='# [minisign.key] '
-    declare -grx valtSigningPublicKeyPrefix='untrusted comment: minisign public key'
-    declare -grx ageEncryptedBegin='age-encryption.org/v1'
-    declare -grx agePemBegin='-----BEGIN AGE ENCRYPTED FILE-----'
-    declare -grx agePemEnd='-----END AGE ENCRYPTED FILE-----'
+
+    declare -grx _xkcdPasswordsUrl="https://xkcd.com/936/"
+    declare -grx _valtPublicKeyType='valt.pub'
+    declare -grx _valtPrivateKeyType='valt.key'
+    declare -grx _ageFileExtension='age'
+    declare -grx _tarFileExtension='tar.xz'
+    declare -grx _ageCreatedPrefix='# created: '
+    declare -grx _agePublicKeyPrefix='# public key: '
+    declare -grx _signingPublicKeyPrefix='# [minisign.pub] '
+    declare -grx _signingPrivateKeyPrefix='# [minisign.key] '
+    declare -grx _valtSigningPublicKeyPrefix='untrusted comment: minisign public key'
+    declare -grx _ageEncryptedBegin='age-encryption.org/v1'
+    declare -grx _agePemBegin='-----BEGIN AGE ENCRYPTED FILE-----'
+    declare -grx _agePemEnd='-----END AGE ENCRYPTED FILE-----'
+
     local counterFile; counterFile="${ configDirPath 'advice.count'; }"
-    declare -grx adviceCounterFile="${counterFile}"
+    declare -grx _adviceCounterFile="${counterFile}"
     declare -g _adviceCount=0
 }
 
@@ -385,10 +402,11 @@ _extractKey() {
     local resultFile="${5:-}" # echo if none else write to file.
     local firstLine=1 lines=()
     local line phraze passFd plain=()
+    assertFile "${keyFile}"
     while read line; do
         if (( "${#line}" )); then # Ignore blank lines
             if (( firstLine )); then
-                if [[ ${line} == "${ageEncryptedBegin}" || ${line} == "${agePemBegin}" ]]; then
+                if [[ ${line} == "${_ageEncryptedBegin}" || ${line} == "${_agePemBegin}" ]]; then
 
                     # valt.key so decrypt and switch to reading that
 
@@ -418,7 +436,7 @@ _extractKey() {
                     # If we're looking for the age public key we need to
                     # switch the key prefix
 
-                    [[ ${keyPrefix} == "${agePublicKeyPrefix}" ]] && keyPrefix='age1'
+                    [[ ${keyPrefix} == "${_agePublicKeyPrefix}" ]] && keyPrefix='age1'
 
                     if [[ ${line} == "${keyPrefix}"* ]]; then
                         lines+=( "${line}" )
@@ -497,7 +515,7 @@ _showPrivateKeyPassphraseAdvice() {
     show "  " bold cyan "repossess thursday flaky lazy" "   ⮕ " bold "fair" "to remember random passphrase:   centuries to crack"
     echo
     show "A good passphrase requires randomness, and we humans are very bad at that. There's a famous" magenta "xkcd" "comic on"
-    show "this subject" blue "${xkcdPasswordsUrl}" "that ends with this gem:"
+    show "this subject" blue "${_xkcdPasswordsUrl}" "that ends with this gem:"
     echo
     echo "     Through 20 years of effort, we've successfully trained everyone to use passwords that"
     echo "     are hard for humans to remember, but easy for computers to guess."
@@ -509,8 +527,8 @@ _showPrivateKeyPassphraseAdvice() {
 }
 
 _readAdviceCount() {
-    if [[ -e ${adviceCounterFile} ]]; then
-        _adviceCount="${ cat "${adviceCounterFile}"; }"
+    if [[ -e ${_adviceCounterFile} ]]; then
+        _adviceCount="${ cat "${_adviceCounterFile}"; }"
     fi
 }
 
@@ -520,7 +538,7 @@ _setAdviceCount() {
 }
 
 _writeAdviceCount() {
-    echo "${_adviceCount}" > "${adviceCounterFile}"
+    echo "${_adviceCount}" > "${_adviceCounterFile}"
 }
 
 _setSampleText() {
@@ -528,13 +546,13 @@ _setSampleText() {
     if [[ -z ${resultVarRef} ]]; then
         IFS='' read -d '' -r resultVarRef <<- EOF
 
-            But the Raven, sitting lonely on the placid bust, spoke only
-        That one word, as if his soul in that one word he did outpour.
-            Nothing farther then he uttered—not a feather then he fluttered—
-            Till I scarcely more than muttered “Other friends have flown before—
-        On the morrow he will leave me, as my Hopes have flown before.”
-                         Then the bird said “Nevermore.”
+	        But the Raven, sitting lonely on the placid bust, spoke only
+	    That one word, as if his soul in that one word he did outpour.
+	        Nothing farther then he uttered—not a feather then he fluttered—
+	        Till I scarcely more than muttered “Other friends have flown before—
+	    On the morrow he will leave me, as my Hopes have flown before.”
+	                     Then the bird said “Nevermore.”
 
-EOF
+	EOF
     fi
 }
