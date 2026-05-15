@@ -7,53 +7,53 @@
 #
 # · USAGE
 #
-#   encryptStringToFile [-r] content outputFile recipient...
+#   encryptStringToFile [-r] content outputFile recipientKey...
 #
-#   -r                     Replace output file if it exists.
-#   content (string)       The string content.
-#   outputFile (string)    Path to the encrypted output file.
-#   recipient (string...)  Path to a recipient valt key file. May be repeated for multiple recipients, any of which can decrypt
-#                          with their valt private key. Private keys may be passed but require decryption so a passphrase will be
-#                          requested for each.
+#   -r                        Replace output file if it exists.
+#   content (string)          The string content.
+#   outputFile (string)       Path to the encrypted output file.
+#   recipientKey (string...)  Path to a recipient valt key file. May be repeated for multiple recipients, any of which can decrypt
+#                             with their valt private key. Private keys may be passed but require decryption so a passphrase will
+#                             be requested for each.
 
-encryptStringToFile() {
+encryptString() {
     _parseFullEncryptArgs "$@"
-    echo "${_encryptSource}" | _encryptStdInToFile
+    echo "${_encryptSource}" | _encryptStdIn
 }
 
 # ◇ Encrypts a file to a file.
 #
 # · USAGE
 #
-#   encryptFileToFile [-r] inputFile outputFile recipient...
+#   encryptFileToFile [-r] inputFile outputFile recipientKey...
 #
-#   -r                     Replace output file if it exists.
-#   inputFile (string)     Path to the input file to encrypt.
-#   outputFile (string)    Path to the encrypted output file.
-#   recipient (string...)  Path to a recipient valt key file. May be repeated for multiple recipients, any of which can decrypt
-#                          with their valt private key. Private keys may be passed but require decryption so a passphrase will be
-#                          requested for each.
+#   -r                        Replace output file if it exists.
+#   inputFile (string)        Path to the input file to encrypt.
+#   outputFile (string)       Path to the encrypted output file.
+#   recipientKey (string...)  Path to a recipient valt key file. May be repeated for multiple recipients, any of which can decrypt
+#                             with their valt private key. Private keys may be passed but require decryption so a passphrase will
+#                             be requested for each.
 
-encryptFileToFile() {
+encryptFile() {
     _parseFullEncryptArgs "$@"
     assertFile "${_encryptSource}"
-    cat "${_encryptSource}" | _encryptStdInToFile
+    cat "${_encryptSource}" | _encryptStdIn
 }
 
 # ◇ Encrypts a variable to a file.
 #
 # · USAGE
 #
-#   encryptVarToFile [-r] varName outputFile recipient...
+#   encryptVarToFile [-r] varName outputFile recipientKey...
 #
 #   -r                                    Replace output file if it exists.
 #   varName (stringRef|arrayRef|fileRef)  Name of a variable containing a string, array or file path.
 #   outputFile (string)                   Path to the encrypted output file.
-#   recipient (string...)                 Path to a recipient valt key file. May be repeated for multiple recipients, any of
+#   recipientKey (string...)              Path to a recipient valt key file. May be repeated for multiple recipients, any of
 #                                         which can decrypt with their valt private key. Private keys may be passed but require
 #                                         decryption so a passphrase will be requested for each.
 
-encryptVarToFile() {
+encryptVar() {
     _parseFullEncryptArgs "$@"
     [[ -v "${_encryptSource}" ]] || fail "'${_encryptSource}' is not a variable"
 
@@ -63,11 +63,11 @@ encryptVarToFile() {
     if [[ "${type}" == -A* ]]; then
         invalidArgs "map '${_encryptSource}' must be serialized to an array or string"
     elif [[ "${type}" == -a* ]]; then
-        printf '%s\n' "${sourceRef}" | _encryptStdInToFile
+        printf '%s\n' "${sourceRef}" | _encryptStdIn
     elif [[ -e "${sourceRef}" ]]; then
-        cat "${sourceRef}" | _encryptStdInToFile
+        cat "${sourceRef}" | _encryptStdIn
     else
-        echo "${sourceRef}" | _encryptStdInToFile
+        echo "${sourceRef}" | _encryptStdIn
     fi
 }
 
@@ -75,20 +75,20 @@ encryptVarToFile() {
 #
 # · USAGE
 #
-#   encryptToFile [-r] outputFile recipient...
+#   encryptToFile [-r] outputFile recipientKey...
 #
-#   -r                     Replace output file if it exists.
-#   outputFile (string)    Path to the encrypted output file.
-#   recipient (string...)  Path to a recipient valt key file. May be repeated for multiple recipients, any of which can decrypt
-#                          with their valt private key. Private keys may be passed but require decryption so a passphrase will be
-#                          requested for each.
+#   -r                        Replace output file if it exists.
+#   outputFile (string)       Path to the encrypted output file.
+#   recipientKey (string...)  Path to a recipient valt key file. May be repeated for multiple recipients, any of which can decrypt
+#                             with their valt private key. Private keys may be passed but require decryption so a passphrase will be
+#                             requested for each.
 
-encryptToFile() {
+encrypt() {
     [[ -t 0 ]] && fail "content must be piped to this function"
     read -t 0 || fail "no data in pipe"
     parseOptionalArg '-r' "$1" _encryptReplaceTargetFile 1 0 && shift
     _parseEncryptArgs - "${@}"
-    _encryptStdInToFile
+    _encryptStdIn
 }
 
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/encrypt' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
@@ -124,7 +124,7 @@ _parseEncryptArgs() {
 
     (( ${#recipientFiles[@]} )) || fail "one or more recipient key files required"
 
-    # Convert all recipients keys
+    # Convert all recipient keys
 
     for keyFile in "${recipientFiles[@]}"; do
         recipient="${ publicEncryptionKey "${keyFile}"; }"
@@ -135,40 +135,6 @@ _parseEncryptArgs() {
     debug
 }
 
-_encryptStdInToFile() {
-
-    # Do we need a passphrase to decrypt the key?
-
-    if [[ "${_encryptKeyFileType}" == "${valtPrivateKeySuffix}" ]]; then
-
-        # Yes, get it
-
-        local phraze passFd
-        if [[ -n ${rayvnTest_ValtKeyPassphrase} ]]; then
-            phraze="${rayvnTest_ValtKeyPassphrase}"
-        else
-            readVerifiedPassword phraze || fail
-        fi
-
-        # Feed the passphrase via a dynamically allocated fd using process substitution: printf exits after
-        # writing, closing the write end of the pipe, so the batchpass plugin's io.ReadAll receives EOF
-        # immediately and will not hang waiting for it. See plugin source at
-        # https://github.com/FiloSottile/age/blob/main/cmd/age-plugin-batchpass/plugin-batchpass.go
-
-        exec {passFd}< <(printf '%s' "${phraze}")
-        debugVar passFd phraze
-
-        # Encrypt stdin
-
-        AGE_PASSPHRASE_FD="${passFd}" age "${_encryptRecipients[@]}" -e -j batchpass > "${_encryptOutputFile}" || bye
-
-        # Close the fd
-
-        exec {passFd}<&-
-    else
-
-        # Encrypt stdin
-
-        AGE_PASSPHRASE_FD="${passFd}" age "${_encryptRecipients[@]}" -e > "${_encryptOutputFile}" || bye
-    fi
+_encryptStdIn() {
+    _age --encrypt false "${_encryptRecipients[@]}" > "${_encryptOutputFile}"
 }

@@ -80,7 +80,7 @@
 #
 # · USAGE
 #
-#   createValtKeys [keyName] [keyDir] [valtPubFileResultVar] [valtKeyFileResultVar] [testPassResultVar]
+#   createValtKeys [keyName] [keyDir] [valtPubFileResultVar] [valtKeyFileResultVar]
 #
 #   A '?' may be passed for any arg to enable passing a subsequent value.
 #
@@ -88,7 +88,6 @@
 #   keyDir (string)                   Optional directory path where key files will be written, default: ~/.config/valt.
 #   valtPubFileResultVar (stringRef)  Optional var name to assign the valt.pub file.
 #   valtKeyFileResultVar (stringRef)  Optional var name to assign the valt.key file.
-#   testPassResultVar (stringRef)     Optional var name to assign the password to for tests.
 #
 # · EXAMPLE
 #
@@ -101,7 +100,6 @@ createValtKeys() {
     local keyDir="${2:-?}"
     local _valtPubFileResultVar="${3:-?}"
     local _valtKeyFileResultVar="${4:-?}"
-    local _testPassResultVar="${5:-}"
 
     if [[ ${keyDir} == '?' ]]; then
         # Force use of valt config dir
@@ -112,7 +110,6 @@ createValtKeys() {
     local _keyFile="${keyDir}/${keyName}.${valtPrivateKeySuffix}"
     local _publicKeyFile="${keyDir}/${keyName}.${valtPublicKeySuffix}"
     local _publicSigningKeyFile="${keyDir}/${keyName}.${valtPublicKeySuffix}"
-    local capture=0
     local ageCreated
     local agePublicKey
     local agePrivateKey=()
@@ -121,9 +118,6 @@ createValtKeys() {
     _assertKeyFileDoesNotExist "${_keyFile}"
     _assertKeyFileDoesNotExist "${_publicKeyFile}"
     _assertKeyFileDoesNotExist "${_publicSigningKeyFile}"
-    if [[ -n "${_testPassResultVar}" ]]; then
-        [[ "${_testPassResultVar}" == '?' ]] && unset _testPassResultVar || capture=1
-    fi
 
     # Maybe offer passphrase advice and/or generate passphrase if desired
 
@@ -180,7 +174,7 @@ createValtKeys() {
 
     # Encrypt the private key directly to the key file, optionally capturing the passphrase for testing
 
-    _encryptKeyToFile plainPrivate "${_keyFile}" "${_testPassResultVar}"
+    printf "%s\n" "${plainPrivate[@]}" | _age --encrypt true > "${_keyFile}" || bye
     chmod 600 "${_keyFile}" 2> /dev/null
 
     # Write public key
@@ -235,7 +229,6 @@ verifyValtKeys() {
 
     local sampleText; _setSampleText sampleText
     local encryptedFile; encryptedFile="${ tempDirPath; }"
-debugFile -l "${valtKeyFile}"
     echo -n "${sampleText}" | age -R "${valtKeyFile}" -o "${encryptedFile}" || fail
     local decrypted; decrypted=${ age -d -i "${valtKeyFile}" "${encryptedFile}" 2> /dev/null; }
     diff -u <(echo -n "${sampleText}") <(echo "${decrypted}") > /dev/null || fail "not verified (wrong passphrase?)"
@@ -326,7 +319,7 @@ armorKeyFile() {
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/keys' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_keys() {
-    require 'valt/password' 'rayvn/prompt'
+    require 'valt/decrypt'
 
     declare -grx valtPublicKeySuffix='pub'
     declare -grx valtPrivateKeySuffix='key'
@@ -350,38 +343,6 @@ _init_valt_keys() {
     declare -g _adviceCount=0
 }
 
-_encryptKeyToFile() {
-    local -n keyRef=$1
-    local destFile=$2
-    local captureVar="${3:-}"
-    local phraze passFd
-
-    # Get the user's passphrase
-
-    if [[ -n ${rayvnTest_ValtKeyPassphrase} ]]; then
-        phraze="${rayvnTest_ValtKeyPassphrase}"
-    else
-        readVerifiedPassword phraze || fail
-    fi
-
-    # Capture if requested by caller
-
-    [[ -n "${captureVar}" ]] && printf -v "${captureVar}" '%s' "${phraze}"
-
-    # Feed the passphrase via a dynamically allocated fd using process substitution: printf exits after
-    # writing, closing the write end of the pipe, so the batchpass plugin's io.ReadAll receives EOF
-    # immediately and will not hang waiting for it. See plugin source at
-    # https://github.com/FiloSottile/age/blob/main/cmd/age-plugin-batchpass/plugin-batchpass.go
-
-    # We can no longer use -a (ASCII armor) with post-quantum keys since it hits QR code size limits.
-    # Binary data can't be read into a bash array since it is treated as a string and will be mangled,
-    # so we must write it directly to the file.
-
-    exec {passFd}< <(printf '%s' "${phraze}")
-    printf "%s\n" "${keyRef[@]}" | AGE_PASSPHRASE_FD="${passFd}" age -e -j batchpass > "${destFile}" || bye
-    exec {passFd}<&-
-}
-
 _assertKeyFileDoesNotExist() {
     [[ $1 != '?' && -f $1 ]] && invalidArgs "$1 already exists"
 }
@@ -395,14 +356,14 @@ _assignResultIfVarName() {
 }
 
 _extractKey() {
+    assertFile "$1"
     local keyFile="$1"
     local allowPublic=$2
     local keyPrefix="$3"
     local keyLineCount=$4
     local resultFile="${5:-}" # echo if none else write to file.
     local firstLine=1 lines=()
-    local line phraze passFd plain=()
-    assertFile "${keyFile}"
+    local line plain=()
     while read line; do
         if (( "${#line}" )); then # Ignore blank lines
             if (( firstLine )); then
@@ -410,17 +371,7 @@ _extractKey() {
 
                     # valt.key so decrypt and switch to reading that
 
-                    if [[ -n ${rayvnTest_ValtKeyPassphrase} ]]; then
-                        phraze="${rayvnTest_ValtKeyPassphrase}"
-                    else
-                        readPassword "Password" phraze 30 false || fail
-                    fi
-                    local plainFile; plainFile="${ makeTempFile; }"
-                    exec {passFd}< <(printf '%s' "${phraze}")
-                    cat "${keyFile}" | AGE_PASSPHRASE_FD="${passFd}" age -d -j batchpass > "${plainFile}" 2> >(errorStream) || fail
-                    exec {passFd}<&-
-                    mapfile -t plain < "${plainFile}"
-                    rm "${plainFile}" 2> /dev/null
+                    mapfile -t plain < <( cat "${keyFile}" | _age --decrypt true )
 
                     for line in "${plain[@]}"; do
                         if [[ ${line} == "${keyPrefix}"* ]]; then
@@ -463,6 +414,8 @@ _extractKey() {
         printf '%s\n' "${lines[@]}"
     fi
 }
+
+
 
 _maybeOfferPassphraseAdvice() {
     if (( ! skipKeyPassphraseAdvice )); then
@@ -556,3 +509,4 @@ _setSampleText() {
 	EOF
     fi
 }
+
