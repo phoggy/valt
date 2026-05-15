@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Password/phrase generation.
-# Use via: require 'valt/passwords'
+# Use via: require 'valt/password'
 
 # TODO: don't display strength (via mrld) as it is inaccurate. Just pick a threshold and warn is week if below.
 
