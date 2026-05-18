@@ -6,18 +6,18 @@
 signFile() {
     assertFile "$1"
     assertFile "$2"
-    local targetFile="$1"
-    local keySourceFile="$2"
+    local keyFile="$1"
+    local targetFile="$2"
     local signatureFile; _setSignatureFile "${targetFile}" signatureFile "$3"
 
     # Extract the private key
 
-    local signingKeyFile; signingKeyToTempFile "${keySourceFile}" signingKeyFile
+    local signingKeyFile; signingKeyToTempFile "${keyFile}" signingKeyFile
 
     # Sign
-debugVar targetFile keySourceFile signatureFile signingKeyFile
+
     minisign -S -s "${signingKeyFile}" -c "valt signature" -m "${targetFile}" -x "${signatureFile}" || fail
-debug "signed"
+
     # Remove the extracted signing key file
 
     rm "${signingKeyFile}" &> /dev/null
@@ -26,17 +26,17 @@ debug "signed"
 verifyFileSignature() {
     assertFile "$1"
     assertFile "$2"
-    local targetFile="$1"
-    local keySourceFile="$2"
+    local keyFile="$1"
+    local targetFile="$2"
     local signatureFile; _setSignatureFile "${targetFile}" signatureFile "$3"
+    assertFile "${signatureFile}"
 
     # Extract the public key
 
-    local signingPublicKeyFile; publicSigningKeyToTempFile "${keySourceFile}" signingPublicKeyFile
+    local signingPublicKeyFile; publicSigningKeyToTempFile "${keyFile}" signingPublicKeyFile
 
     # Verify signature
 
-    debugVar targetFile keySourceFile signatureFile signingPublicKeyFile
     minisign -V -p "${signingPublicKeyFile}" -x "${signatureFile}" -m "${targetFile}" -q || fail
 
     # Remove the extracted signing key file
@@ -60,7 +60,6 @@ _setSignatureFile() {
     else
         _signatureFile="${_targetFile}.${defaultSignatureSuffix}"
     fi
-    assertFile "${_signatureFile}"
     resultRef="${_signatureFile}"
 }
 
