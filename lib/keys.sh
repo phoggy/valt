@@ -203,7 +203,7 @@ verifyValtKeys() {
 
     assertFile "${valtPubFile}"
     assertFile "${valtKeyFile}"
- debugVar valtPubFile valtKeyFile
+
     # Extract public encryption key from valt.key and ensure it matches valt.pub and ensure both start with 'age'
 
     local publicEncrypt; publicEncrypt="${ gawk '!/^#/ && NF { print; exit }' "${valtPubFile}"; }"
