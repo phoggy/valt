@@ -46,15 +46,18 @@ generatePassphrase() {
 # Stores the verified password in a nameref variable. Fails if entries do not match.
 # Args: resultVarRef [timeout]
 #
+#   prompt - prompt string, e.g. "Password"
 #   resultVarRef - nameref variable to receive the verified password
 #   timeout   - seconds to wait for each entry before timing out (default: 30)
-readVerifiedPassword() {
+readConfirmedPassword() {
     local p1 p2
-    local -n resultVarRef="$1"
-    local timeout="${2:-30}"
-    readPassword "Password" p1 "${timeout}" true || fail
+    local prompt="$1"
+    local -n resultVarRef="$2"
+    local timeout="${3:-30}"
+    local confirmPrompt; confirmPrompt="${ padString "Confirm" ${#prompt} before; }"
+    readPassword "${prompt}" p1 "${timeout}" true || fail
     [[ ${p1} == '' ]] && fail "cancelled"  > ${terminal}
-    readPassword "  Verify" p2 "${timeout}" false || fail
+    readPassword "${confirmPrompt}" p2 "${timeout}" false || fail
     [[ ${p1} == "${p2}" ]] || fail "entries do not match" > ${terminal}
     resultVarRef="${p1}"
 }
