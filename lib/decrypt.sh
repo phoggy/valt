@@ -20,9 +20,9 @@ decrypt() {
     assertFile "${valtKeyFile}"
     assertFile "${inputFile}"
     if [[ -n "${outputFile}" ]]; then
-        cat "${inputFile}" | _age --decrypt true "${valtKeyFile}" > "${outputFile}" || fail
+        cat "${inputFile}" | _age --decrypt --key "${valtKeyFile}" > "${outputFile}" || fail
     else
-        cat "${inputFile}" | _age --decrypt true "${valtKeyFile}" || fail
+        cat "${inputFile}" | _age --decrypt --key "${valtKeyFile}" || fail
     fi
 }
 
@@ -34,12 +34,23 @@ _init_valt_decrypt() {
 
 _age() {
     local operation=$1
-    local decryptKey=$2
-    local ageArgs=("${@:3}")
+    local ageArgs=()
+    local requiresPassphrase=0
+    local keyFile
 
-    # Do we need a passphrase to decrypt the key?
+    while (( $# )); do
+        case "$1" in
+            --key) shift; assertFile "$1"; keyFile="$1"; requiresPassphrase=1 ;;
+            --pass) requiresPassphrase=1 ;;
+            *) ageArgs+=("$1") ;;
+        esac
+        shift
+    done
 
-    if [[ "${decryptKey}" == "true" ]]; then
+
+    # Do we need a passphrase to decrypt?
+
+    if (( requiresPassphrase )); then
 
         # Yes, get it.
 
@@ -47,20 +58,41 @@ _age() {
         if [[ -n ${rayvnTest_ValtKeyPassphrase} ]]; then
             phraze="${rayvnTest_ValtKeyPassphrase}"
         else
-            readVerifiedPassword phraze || fail
+            readConfirmedPassword "Enter key passphrase" phraze || fail
         fi
 
-        # Feed the passphrase via a dynamically allocated fd using process substitution: printf exits after
-        # writing, closing the write end of the pipe, so the batchpass plugin's io.ReadAll receives EOF
-        # immediately and will not hang waiting for it. See plugin source at
-        # https://github.com/FiloSottile/age/blob/main/cmd/age-plugin-batchpass/plugin-batchpass.go
+        # Feed passphrase via a pipe fd: printf exits immediately after writing, closing the write end,
+        # so batchpass's io.ReadAll receives EOF without hanging.
 
         local passFd
         exec {passFd}< <(printf '%s' "${phraze}")
-        AGE_PASSPHRASE_FD="${passFd}" age ${operation} "${ageArgs[@]}" -j batchpass 2> >(errorStream) || fail
-        exec {passFd}<&-
+
+        if [[ -n "${keyFile}" ]]; then
+
+            # First decrypt the passphrase-protected key file using batchpass,
+            # then pipe its plain-text output as a -i identity to decrypt the cipher on stdin.
+            # The -i <(...) path bypasses EncryptedIdentity (age's interactive-only handler) entirely.
+
+            assertCommand --transform _ageError age "${operation}" -i <(_decryptKey) "${ageArgs[@]}"
+
+        else
+            AGE_PASSPHRASE_FD="${passFd}" assertCommand --transform _ageError age ${operation} "${ageArgs[@]}" -j batchpass
+        fi
+
+        exec {passFd}<&- # close the fd
 
     else
-        AGE_PASSPHRASE_FD="${passFd}" age ${operation} "${ageArgs[@]}" 2> >(errorStream) || fail
+        assertCommand --transform _ageError age ${operation} "${ageArgs[@]}"
     fi
+}
+
+
+_decryptKey() {
+    AGE_PASSPHRASE_FD="${passFd}" assertCommand --transform _ageError age --decrypt -j batchpass < "${keyFile}"
+}
+
+_ageError() {
+    local error; error="${ echo "$*" | head -n 1; }"
+    [[ ${error} == *"no identity matched any of the recipients" ]] && fail "${operation} key does not match recipient: ${keyFile}"
+    fail "${error}"
 }

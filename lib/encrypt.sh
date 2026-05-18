@@ -86,7 +86,7 @@ encryptVar() {
 encrypt() {
     [[ -t 0 ]] && fail "content must be piped to this function"
     read -t 0 || fail "no data in pipe"
-    parseOptionalArg '-r' "$1" _encryptReplaceTargetFile 1 0 && shift
+    parseOptionalArg '-r' "$1" _encryptReplaceTargetFile 0 1 && shift
     _parseEncryptArgs - "${@}"
     _encryptStdIn
 }
@@ -103,7 +103,7 @@ _init_valt_encrypt() {
 }
 
 _parseFullEncryptArgs() {
-    parseOptionalArg '-r' "$1" _encryptReplaceTargetFile 1 0 && shift
+    parseOptionalArg '-r' "$1" _encryptReplaceTargetFile 0 1 && shift
     _parseEncryptArgs "$@"
 }
 
@@ -130,11 +130,8 @@ _parseEncryptArgs() {
         recipient="${ publicEncryptionKey "${keyFile}"; }"
         _encryptRecipients+=( '-r' "${recipient}" )
     done
-
-    debugVar _encryptSource _encryptOutputFile _encryptRecipients
-    debug
 }
 
 _encryptStdIn() {
-    _age --encrypt false "${_encryptRecipients[@]}" > "${_encryptOutputFile}"
+    _age --encrypt "${_encryptRecipients[@]}" > "${_encryptOutputFile}"
 }
