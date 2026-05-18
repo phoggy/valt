@@ -85,7 +85,6 @@ encryptVar() {
 
 encrypt() {
     [[ -t 0 ]] && fail "content must be piped to this function"
-    read -t 0 || fail "no data in pipe"
     parseOptionalArg '-r' "$1" _encryptReplaceTargetFile 0 1 && shift
     _parseEncryptArgs - "${@}"
     _encryptStdIn

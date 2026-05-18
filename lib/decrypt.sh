@@ -20,9 +20,9 @@ decrypt() {
     assertFile "${valtKeyFile}"
     assertFile "${inputFile}"
     if [[ -n "${outputFile}" ]]; then
-        cat "${inputFile}" | _age --decrypt --key "${valtKeyFile}" > "${outputFile}" || fail
+        cat "${inputFile}" | _age --decrypt --key "${valtKeyFile}" > "${outputFile}"
     else
-        cat "${inputFile}" | _age --decrypt --key "${valtKeyFile}" || fail
+        cat "${inputFile}" | _age --decrypt --key "${valtKeyFile}"
     fi
 }
 

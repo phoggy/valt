@@ -172,9 +172,9 @@ createValtKeys() {
     plainPrivate+=('#')
     plainPrivate+=("${agePrivateKey[@]}")
 
-    # Encrypt the private key directly to the key file, optionally capturing the passphrase for testing
+    # Encrypt the private key directly to the key file
 
-    printf "%s\n" "${plainPrivate[@]}" | _age --encrypt true > "${_keyFile}" || bye
+    printf "%s\n" "${plainPrivate[@]}" | _age --encrypt --pass > "${_keyFile}" || fail
     chmod 600 "${_keyFile}" 2> /dev/null
 
     # Write public key
@@ -203,12 +203,12 @@ verifyValtKeys() {
 
     assertFile "${valtPubFile}"
     assertFile "${valtKeyFile}"
-
+ debugVar valtPubFile valtKeyFile
     # Extract public encryption key from valt.key and ensure it matches valt.pub and ensure both start with 'age'
 
     local publicEncrypt; publicEncrypt="${ gawk '!/^#/ && NF { print; exit }' "${valtPubFile}"; }"
     local extractedPublicEncrypt; extractedPublicEncrypt="${ publicEncryptionKey "${valtKeyFile}"; }"
-    [[ "${publicEncrypt:0:3}" == 'age' ]] || fail "${valtPubFile} public encryption key doest not begin with 'age'"
+    [[ "${publicEncrypt:0:3}" == 'age' ]] || fail "${valtPubFile} public encryption key does not begin with 'age'"
     [[ "${extractedPublicEncrypt:0:3}" == 'age' ]] || fail "${valtKeyFile} public encryption key doest not begin with 'age'"
     [[ "${extractedPublicEncrypt}" == "${publicEncrypt}" ]] || fail "extracted public encryption key does not match"
 
@@ -228,10 +228,14 @@ verifyValtKeys() {
     # Encrypt, decrypt and verify
 
     local sampleText; _setSampleText sampleText
-    local encryptedFile; encryptedFile="${ tempDirPath; }"
-    echo -n "${sampleText}" | age -R "${valtKeyFile}" -o "${encryptedFile}" || fail
-    local decrypted; decrypted=${ age -d -i "${valtKeyFile}" "${encryptedFile}" 2> /dev/null; }
-    diff -u <(echo -n "${sampleText}") <(echo "${decrypted}") > /dev/null || fail "not verified (wrong passphrase?)"
+    local sampleTextFile; sampleTextFile="${ makeTempFile; }"
+    local encryptedFile; encryptedFile="${ makeTempFile; }"
+    local plainTextFile; plainTextFile="${ makeTempFile; }"
+    echo "${sampleText}" > "${sampleTextFile}"
+
+    cat "${sampleTextFile}" | encrypt -r "${encryptedFile}" "${valtPubFile}"
+    decrypt "${valtKeyFile}" "${encryptedFile}" "${plainTextFile}"
+    diff -u "${sampleTextFile}" "${plainTextFile}" > /dev/null || fail "round-trip encryption failed"
 
     # Sign and verify signature
 
@@ -319,7 +323,7 @@ armorKeyFile() {
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/keys' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_keys() {
-    require 'valt/decrypt'
+    require 'valt/encrypt' 'valt/decrypt'
 
     declare -grx valtPublicKeySuffix='pub'
     declare -grx valtPrivateKeySuffix='key'
@@ -371,7 +375,7 @@ _extractKey() {
 
                     # valt.key so decrypt and switch to reading that
 
-                    mapfile -t plain < <( cat "${keyFile}" | _age --decrypt true )
+                    mapfile -t plain < <( cat "${keyFile}" | _age --decrypt --pass )
 
                     for line in "${plain[@]}"; do
                         if [[ ${line} == "${keyPrefix}"* ]]; then
