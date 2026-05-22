@@ -29,7 +29,7 @@
 #   # [minisign.pub] untrusted comment: minisign public key EE5CD48146AE435D
 #   # [minisign.pub] RWRdQ65GgdRc7jF1xg1QozGtd1gWfi7I4RJ58i8ElDvV4qCuzE+zENKo
 #   #
-#   # age1pq1m43p0m52f544e868gyh09rx0wrr6jg8thvcr5cekpdkhzapwa7jjdgh54zlnjp0wny04tcae7h3k5x0s25l3znxpvvq  [ ... ]
+#   age1pq1m43p0m52f544e868gyh09rx0wrr6jg8thvcr5cekpdkhzapwa7jjdgh54zlnjp0wny04tcae7h3k5x0s25l3znxpvvq  [ ... ]
 #
 # ◇ Example valt.key prior to encryption (not stored)
 #
@@ -73,10 +73,10 @@
 
 
 # ◇ Create new valt keys, encrypting the private key with a passphrase. May show passphrase advice and offer to generate
-#   passphrases. Produces keys that combine minisign keys (as comments) and age keys:
+#   passphrases. Produces keys that combine minisign keys and age keys:
 #
-#   valt.pub:  minisign public key comment + age public key
-#   valt.key:  minisign public key comment + age public key + minisign secret key + age secret key
+#   valt.pub:  minisign public key + age public key
+#   valt.key:  minisign public key + age public key + minisign secret key + age secret key
 #
 # · USAGE
 #
@@ -114,7 +114,7 @@ createValtKeys() {
     local agePublicKey
     local agePrivateKey=()
     local valtPubKey=()
-    local index line
+    local index _decl
     _assertKeyFileDoesNotExist "${_keyFile}"
     _assertKeyFileDoesNotExist "${_publicKeyFile}"
     _assertKeyFileDoesNotExist "${_publicSigningKeyFile}"
@@ -174,7 +174,7 @@ createValtKeys() {
 
     # Encrypt the private key directly to the key file
 
-    printf "%s\n" "${plainPrivate[@]}" | _age --encrypt --pass > "${_keyFile}" || fail
+    printf "%s\n" "${plainPrivate[@]}" | _age --encrypt --passphrase --confirm > "${_keyFile}" || fail
     chmod 600 "${_keyFile}" 2> /dev/null
 
     # Write public key
@@ -191,7 +191,7 @@ createValtKeys() {
 #   with the private key and comparing results. Fails if they do not match. Also signs encrypted
 #   file and verifies the signature.
 #
-# · ARGS
+# · ARGS  TODO: USAGE
 #
 #   valtPubFile (string)  Path to the valt.pub file.
 #   valtKeyFile (string)  Path to the valt.key file.
@@ -207,7 +207,7 @@ verifyValtKeys() {
     # Extract public encryption key from valt.key and ensure it matches valt.pub and ensure both start with 'age'
 
     local publicEncrypt; publicEncrypt="${ gawk '!/^#/ && NF { print; exit }' "${valtPubFile}"; }"
-    local extractedPublicEncrypt; extractedPublicEncrypt="${ publicEncryptionKey "${valtKeyFile}"; }"
+    local extractedPublicEncrypt; extractedPublicEncrypt="${ recipient "${valtKeyFile}"; }"
     [[ "${publicEncrypt:0:3}" == 'age' ]] || fail "${valtPubFile} public encryption key does not begin with 'age'"
     [[ "${extractedPublicEncrypt:0:3}" == 'age' ]] || fail "${valtKeyFile} public encryption key doest not begin with 'age'"
     [[ "${extractedPublicEncrypt}" == "${publicEncrypt}" ]] || fail "extracted public encryption key does not match"
@@ -219,7 +219,7 @@ verifyValtKeys() {
     local extractedPublicSign; mapfile -t extractedPublicSign < <( cat "${extractedPublicSignFile}" )
     (( ${#publicSign[@]} == 2 )) || fail "public signing key must be 2 lines"
     (( ${#extractedPublicSign[@]} == 2 )) || fail "extracted public signing key must be 2 lines"
-    local i line
+    local i _decl
     for (( i=0; i < 2; i++ )); do
         line="${publicSign[i]:17}"
         [[ "${line}" == "${extractedPublicSign[i]}" ]] || fail "extracted public signing key does not match"
@@ -228,13 +228,13 @@ verifyValtKeys() {
     # Encrypt, decrypt and verify
 
     local sampleText; _setSampleText sampleText
-    local sampleTextFile; sampleTextFile="${ makeTempFile; }"
-    local encryptedFile; encryptedFile="${ makeTempFile; }"
-    local plainTextFile; plainTextFile="${ makeTempFile; }"
+    local sampleTextFile; sampleTextFile="${ makeTempFile sample.txt; }"
+    local encryptedFile; encryptedFile="${ makeTempFile sample.encrypted; }"
+    local plainTextFile; plainTextFile="${ makeTempFile sample.plain; }"
     echo "${sampleText}" > "${sampleTextFile}"
 
-    cat "${sampleTextFile}" | encrypt -r "${encryptedFile}" "${valtPubFile}"
-    decrypt "${valtKeyFile}" "${encryptedFile}" "${plainTextFile}"
+    encrypt -R "${valtPubFile}" "${sampleTextFile}" -o "${encryptedFile}"
+    decrypt -i "${valtKeyFile}" "${encryptedFile}" -o "${plainTextFile}"
     diff -u "${sampleTextFile}" "${plainTextFile}" > /dev/null || fail "round-trip encryption failed"
 
     # Sign and verify signature
@@ -245,41 +245,71 @@ verifyValtKeys() {
 
 # ◇ Outputs the key type suffix for a valt key file, either "pub" or "key".
 #
-# · ARGS
+# ·  ARGS  TODO: USAGE
 #
 #   keyFile (string)  Path to a valt .pub or .key file.
 
 keyType() {
-    local keyFile="$1"
+    local keyFile="$1" _decl mayBeKey=0
     assertFile "$1"
     while read line; do
-        if (( "${#line}" )); then # Ignore blank lines
+        if (( ${#line} )); then # Ignore blank lines
             if [[ ${line} == "${_ageEncryptedBegin}" || ${line} == "${_agePemBegin}" ]]; then
-                echo "${valtPrivateKeySuffix}"
+                mayBeKey=1 # This could be any encrypted file, so at least check the next line
+            elif (( mayBeKey )); then
+                if [[ ${line} =~ ${_ageScriptRegex} ]]; then
+                    echo "${valtPrivateKeySuffix}"
+                    break
+                else
+                    fail "not a valt key file: ${keyFile}"
+                fi
             elif [[ ${line} == "${_ageCreatedPrefix}"* ]]; then
                 echo "${valtPublicKeySuffix}"
+                break;
             else
-                fail "not a valt key file"
+                fail "not a valt key file: ${keyFile}"
             fi
-            break;
         fi
     done < <( cat ${keyFile} )
 }
 
-# ◇ Outputs the public encryption key from a valt public or private key file.
+# ◇ Extracts the public encryption key from a valt key file and writes it to standard output.
+#   Will accept a private key that will require passphrase input to decrypt.
 #
-# · ARGS
+# ·  ARGS  TODO: USAGE
 #
 #   keyFile (string)  Path to the key file.
 
-publicEncryptionKey() {
+recipient() {
     local keyFile="$1"
     _extractKey "${keyFile}" true "${_agePublicKeyPrefix}" 1
 }
 
+# ◇ Convert one or more valt key files into a recipients file. Will accept private keys; each will require passphrase input to
+#   decrypt.
+#
+# ·  ARGS  TODO: USAGE
+#
+#   keyFile (string)  Path to the key file.
+
+createRecipientsFile() {
+    local recipientsFile="$1"; shift
+    local recipient
+    (( $# )) || invalidArgs "one or more valt key files required"
+
+    printf "%s\n\n" "# recipients" > "${recipientsFile}"
+    while (( $# )); do
+        [[ -n "${recipient}" ]] && echo >> "${recipientsFile}"
+        recipient="${ _extractKey "$1" true "${_agePublicKeyPrefix}" 1; }"
+        echo "${recipient}" >> "${recipientsFile}"
+        shift
+    done
+}
+
+
 # ◇ Extracts the public signing key from a valt private key file into a temp file.
 #
-# · ARGS
+# ·  ARGS  TODO: USAGE
 #
 #   keyFile (string)           Path to the valt private key file.
 #   resultFileRef (stringRef)  Name of the variable to receive the path to the temp public signing key file.
@@ -294,7 +324,7 @@ publicSigningKeyToTempFile() {
 
 # ◇ Extracts the signing key from a valt private key file into a temp file.
 #
-# · ARGS
+# ·  ARGS  TODO: USAGE
 #
 #   keyFile (string)        Path to the valt private key file.
 #   resultFileRef (string)  Name of the variable to receive the path to the temp private signing key file.
@@ -309,7 +339,7 @@ signingKeyToTempFile() {
 
 # ◇ Outputs an ASCII-armored PEM-style encoding of a key file to stdout.
 #
-# · ARGS
+# ·  ARGS  TODO: USAGE
 #
 #   keyFile (string)  Path to the key file to armor.
 
@@ -339,6 +369,7 @@ _init_valt_keys() {
     declare -grx _signingPrivateKeyPrefix='# [minisign.key] '
     declare -grx _valtSigningPublicKeyPrefix='untrusted comment: minisign public key'
     declare -grx _ageEncryptedBegin='age-encryption.org/v1'
+    declare -grx _ageScriptRegex='^-\>[[:space:]]+scrypt[[:space:]]+[A-Za-z0-9+/]+=*[[:space:]]+[0-9]+$'
     declare -grx _agePemBegin='-----BEGIN AGE ENCRYPTED FILE-----'
     declare -grx _agePemEnd='-----END AGE ENCRYPTED FILE-----'
 
@@ -367,7 +398,7 @@ _extractKey() {
     local keyLineCount=$4
     local resultFile="${5:-}" # echo if none else write to file.
     local firstLine=1 lines=()
-    local line plain=()
+    local _decl plain=()
     while read line; do
         if (( "${#line}" )); then # Ignore blank lines
             if (( firstLine )); then
@@ -375,7 +406,9 @@ _extractKey() {
 
                     # valt.key so decrypt and switch to reading that
 
-                    mapfile -t plain < <( cat "${keyFile}" | _age --decrypt --pass )
+                    local plainRaw; plainRaw=${ cat "${keyFile}" | _age --decrypt --passphrase-for "${keyFile}"; } || fail
+                    mapfile -t plain <<< "${plainRaw}"
+                    eraseVars plainRaw
 
                     for line in "${plain[@]}"; do
                         if [[ ${line} == "${keyPrefix}"* ]]; then
@@ -383,6 +416,7 @@ _extractKey() {
                             (( --keyLineCount )) || break
                         fi
                     done
+                    eraseVars plain
                     break;
 
                 elif [[ ${allowPublic} == true ]]; then

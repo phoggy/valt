@@ -3,58 +3,57 @@
 # Encryption using age.
 # Use via: require 'valt/encrypt'
 
-# ◇ Encrypts a string to a file.
+# ◇ Encrypt input.
 #
 # · USAGE
 #
-#   encryptStringToFile [-r] content outputFile recipientKey...
+#   encrypt (-r RECIPIENT | -R PATH)... [--armor] [-o PATH] [INPUT]
+#   encrypt --passphrase [--armor] [-o PATH] [INPUT]
 #
-#   -r                        Replace output file if it exists.
-#   content (string)          The string content.
-#   outputFile (string)       Path to the encrypted output file.
-#   recipientKey (string...)  Path to a recipient valt key file. May be repeated for multiple recipients, any of which can decrypt
-#                             with their valt private key. Private keys may be passed but require decryption so a passphrase will
-#                             be requested for each.
+#   -r, --recipient RECIPIENT  Encrypt to the specified RECIPIENT. See the recipient() function in 'valt/keys'.
+#   -R, --recipient-file PATH  Encrypt to one or more recipients. PATH can be a valt key or contain a list of recipients (see the
+#                              createRecipientsFile() function in 'valt/keys'). Valt private key files require passphrase input
+#                              for decryption. Can be repeated.
+#   -a, --armor                Encrypt to a PEM encoded format.
+#   -p, --passphrase           Encrypt with a passphrase which will be requested via prompt. Cannot be combined with recipients.
+#   -o, --output PATH          Write the result to the file at PATH. Any existing file will be overwritten. Defaults to standard
+#                              output.
+#   [INPUT]                    Defaults to standard input. If INPUT is a directory, it will be converted to a tar file before
+#                              encryption.
+#
+# · EXAMPLE
+#
+#   echo "test" | encrypt -R "${keyDir}/valt.pub" -o "test.enc"  # Encrypt content of stdin using public key to test.enc file.
+#   encrypt "test.txt" -R "${keyDir}/valt.pub" -o "test.enc"     # Encrypt test.txt file to test.enc file.
+#   encrypt "foo" -R "${keyDir}/valt.pub"  -o "foo.tar.xz"       # Encrypt tar file created from foo directory.
 
-encryptString() {
-    _parseFullEncryptArgs "$@"
-    echo "${_encryptSource}" | _encryptStdIn
+encrypt() {
+    _parseEncryptArgs "$@"
+    _encryptSource
 }
 
-# ◇ Encrypts a file to a file.
+# ◇ Encrypts the content of a string, array or file variable.
 #
 # · USAGE
 #
-#   encryptFileToFile [-r] inputFile outputFile recipientKey...
+#   encryptVar varName (-r RECIPIENT | -R PATH)... [--armor] [-o PATH]
 #
-#   -r                        Replace output file if it exists.
-#   inputFile (string)        Path to the input file to encrypt.
-#   outputFile (string)       Path to the encrypted output file.
-#   recipientKey (string...)  Path to a recipient valt key file. May be repeated for multiple recipients, any of which can decrypt
-#                             with their valt private key. Private keys may be passed but require decryption so a passphrase will
-#                             be requested for each.
-
-encryptFile() {
-    _parseFullEncryptArgs "$@"
-    assertFile "${_encryptSource}"
-    cat "${_encryptSource}" | _encryptStdIn
-}
-
-# ◇ Encrypts a variable to a file.
+#   -r, --recipient RECIPIENT  Encrypt to the specified RECIPIENT. See the recipient() function in 'valt/keys'.
+#   -R, --recipient-file PATH  Encrypt to one or more recipients. PATH can be a valt key or contain a list of recipients (see the
+#                              createRecipientsFile() function in 'valt/keys'). Valt private key files require passphrase input
+#                              for decryption. Can be repeated.
+#   -a, --armor                Encrypt to a PEM encoded format.
+#   -p, --passphrase           Encrypt with a passphrase which will be requested via prompt. Cannot be combined with recipients.
+#   -o, --output PATH          Write the result to the file at PATH. Any existing file will be overwritten. Defaults to standard
+#                              output.
+#   varName                    Name of a variable containing a string, array or file path. If a directory, it will be converted
+#                              tar file. Maps (associative arrays) are not supported.
 #
-# · USAGE
+# · EXAMPLE TODO
 #
-#   encryptVarToFile [-r] varName outputFile recipientKey...
-#
-#   -r                                    Replace output file if it exists.
-#   varName (stringRef|arrayRef|fileRef)  Name of a variable containing a string, array or file path.
-#   outputFile (string)                   Path to the encrypted output file.
-#   recipientKey (string...)              Path to a recipient valt key file. May be repeated for multiple recipients, any of
-#                                         which can decrypt with their valt private key. Private keys may be passed but require
-#                                         decryption so a passphrase will be requested for each.
 
 encryptVar() {
-    _parseFullEncryptArgs "$@"
+    _parseEncryptArgs "$@"
     [[ -v "${_encryptSource}" ]] || fail "'${_encryptSource}' is not a variable"
 
     local -n sourceRef="${_encryptSource}"
@@ -65,72 +64,100 @@ encryptVar() {
     elif [[ "${type}" == -a* ]]; then
         printf '%s\n' "${sourceRef}" | _encryptStdIn
     elif [[ -e "${sourceRef}" ]]; then
-        cat "${sourceRef}" | _encryptStdIn
+        _encryptSource="${sourceRef}"
+        _encryptSource
     else
         echo "${sourceRef}" | _encryptStdIn
     fi
 }
 
-# ◇ Encrypts stdin to a file.
-#
-# · USAGE
-#
-#   encryptToFile [-r] outputFile recipientKey...
-#
-#   -r                        Replace output file if it exists.
-#   outputFile (string)       Path to the encrypted output file.
-#   recipientKey (string...)  Path to a recipient valt key file. May be repeated for multiple recipients, any of which can decrypt
-#                             with their valt private key. Private keys may be passed but require decryption so a passphrase will be
-#                             requested for each.
-
-encrypt() {
-    [[ -t 0 ]] && fail "content must be piped to this function"
-    parseOptionalArg '-r' "$1" _encryptReplaceTargetFile 0 1 && shift
-    _parseEncryptArgs - "${@}"
-    _encryptStdIn
-}
-
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/encrypt' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
-_init_valt_encrypt() {
+_init_valt_encrypt() {     # TODO: _valt_encrypt_init  reads properly
     require 'valt/keys'
 
     declare -g _encryptSource
+    declare -g _encryptSourceIsFile
+    declare -g _encryptPassphrase
+    declare -g _encryptArmor
+    declare -g _encryptHasRecipient
+    declare -ga _encryptRecipientArgs
     declare -g _encryptOutputFile
-    declare -g _encryptReplaceTargetFile
-    declare -ga _encryptRecipients
-}
-
-_parseFullEncryptArgs() {
-    parseOptionalArg '-r' "$1" _encryptReplaceTargetFile 0 1 && shift
-    _parseEncryptArgs "$@"
 }
 
 _parseEncryptArgs() {
-    _encryptRecipients=()
-    _encryptSource="$1"
-    _encryptOutputFile="$2"
-    local recipientFiles=("${@:3}")
-    local keyFile recipient
+    _encryptSource=
+    _encryptSourceIsFile=0
+    _encryptPassphrase=0
+    _encryptArmor=0
+    _encryptHasRecipient=0
+    _encryptRecipientArgs=()
+    _encryptOutputFile=
 
-    # Fail if output file exists and -r is not set
-
-    if (( _encryptReplaceTargetFile == 0 )) && [[ -e "${_encryptOutputFile}" ]]; then
-        fail "${_encryptOutputFile} is an existing file, pass -r to replace"
-    fi
-
-    # Fail if no recipients
-
-    (( ${#recipientFiles[@]} )) || fail "one or more recipient key files required"
-
-    # Convert all recipient keys
-
-    for keyFile in "${recipientFiles[@]}"; do
-        recipient="${ publicEncryptionKey "${keyFile}"; }"
-        _encryptRecipients+=( '-r' "${recipient}" )
+    while (( $# )); do
+        case "$1" in
+            -R | --recipient-file) shift; _addRecipientFile "$1" ;;
+            -r | --recipient) shift; _addRecipient "$1" ;;
+            -p | --passphrase) _encryptPassphrase=1 ;;
+            -a | --armor) _encryptArmor=1 ;;
+            -o | --output) shift; _encryptOutputFile="$1" ;;
+            -*) invalidArgs "unknown arg: $1";;
+            *) [[ -n "${_encryptSource}" ]] && invalidArgs "only one input is supported"; _encryptSource="$1" ;;
+        esac
+        shift
     done
+
+    if (( _encryptPassphrase )); then
+        (( _encryptHasRecipient )) && invalidArgs "-p / --password cannot be combined with recipients."
+    else
+        (( _encryptHasRecipient )) || invalidArgs "one or more recipients required"
+    fi
+}
+
+_checkFileSource() {
+    if [[ -n "${_encryptSource}" ]] && [[ -e "${_encryptSource}" ]]; then
+        if [[ -d "${_encryptSource}" ]]; then
+            _encryptSource="${ realpath "${_encryptSource}"; }" || fail "could not resolve real path of '${_encryptSource}'"
+            local name; name="${ baseName "${_encryptSource}"; }"
+            local dir; dir="${ dirName "${_encryptSource}"; }"
+            local tarFile; tarFile="${ makeTempFile "${dir}.tar.xz"; }"
+            tar cJf "${tarFile}" "${_encryptSource}" || fail
+            _encryptSource="${tarFile}"
+        fi
+        _encryptSourceIsFile=1
+    fi
+}
+
+_addRecipientFile() {
+    assertFile "$1"
+    local keyFile="$1" recipient
+    recipient="${ recipient "${keyFile}"; }"
+    _encryptRecipientArgs+=( '-r' "${recipient}" )
+    _encryptHasRecipient=1
+}
+
+_addRecipient() {
+    [[ ${1:0:3} == 'age' ]] || fail "not a recipient: $1"
+    local recipient; recipient="$1"
+    _encryptRecipientArgs+=( '-r' "${recipient}" )
+    _encryptHasRecipient=1
+}
+
+_encryptSource() {
+    _checkFileSource
+    if (( _encryptSourceIsFile )); then
+        cat "${_encryptSource}" | _encryptStdIn
+    else
+        _encryptStdIn
+    fi
 }
 
 _encryptStdIn() {
-    _age --encrypt "${_encryptRecipients[@]}" > "${_encryptOutputFile}"
+    local args=()
+    (( _encryptPassphrase )) && args=('--passphrase')
+    if [[ -n "${_encryptOutputFile}" ]]; then
+        _age --encrypt "${_encryptRecipientArgs[@]}" "${args[@]}" > "${_encryptOutputFile}"
+    else
+        _age --encrypt "${_encryptRecipientArgs[@]}" "${args[@]}"
+    fi
 }
