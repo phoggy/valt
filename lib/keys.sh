@@ -398,7 +398,7 @@ _extractKey() {
     local keyLineCount=$4
     local resultFile="${5:-}" # echo if none else write to file.
     local firstLine=1 lines=()
-    local _decl plain=()
+    local plain=()
     while read line; do
         if (( "${#line}" )); then # Ignore blank lines
             if (( firstLine )); then
@@ -428,7 +428,11 @@ _extractKey() {
                     [[ ${keyPrefix} == "${_agePublicKeyPrefix}" ]] && keyPrefix='age1'
 
                     if [[ ${line} == "${keyPrefix}"* ]]; then
-                        lines+=( "${line}" )
+                        if [[ "${keyPrefix}" == '#'* ]]; then
+                            lines+=( "${line:${#keyPrefix}}" )
+                        else
+                            lines+=( "${line}" )
+                        fi
                         (( --keyLineCount )) || break
                     fi
                     firstLine=0
@@ -437,7 +441,11 @@ _extractKey() {
                 fi
             else
                 if [[ ${line} == "${keyPrefix}"* ]]; then
-                    lines+=( "${line}" )
+                    if [[ "${keyPrefix}" == '#'* ]]; then
+                        lines+=( "${line:${#keyPrefix}}" )
+                    else
+                        lines+=( "${line}" )
+                    fi
                     (( --keyLineCount )) || break
                 fi
             fi
