@@ -4,6 +4,7 @@ main() {
     init "$@"
 
     testCreateValtKeys
+    testVerifyValtKeys
     testKeyType
     testRecipientFromPub
     testRecipientFromKey
@@ -35,6 +36,10 @@ testCreateValtKeys() {
     assertFile "${keyFile}"
     assertEqual "${testKeyDir}/test.pub" "${pubFile}"
     assertEqual "${testKeyDir}/test.key" "${keyFile}"
+}
+
+testVerifyValtKeys() {
+    assertTrue "key pair verification must succeed" verifyValtKeys "${pubFile}" "${keyFile}"
 }
 
 testKeyType() {
