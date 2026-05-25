@@ -11,17 +11,12 @@ usage() {
     echo
     echo "A PDF file will be created containing your keys, also in encrypted form, to serve as a backup for you and/or your"
     echo "successors. Detailed usage instructions are included. Keys are represented as a QR code and again in a text format"
-    show "(often called \"paper keys\"). Content will be personalized: you will be prompted to edit a" blue "key.info" "file."
+    show "(often called \"paper keys\"). Content is personalized so you will be prompted to edit a" blue "key.info" "file."
     echo
-    echo "By default, the passphrase you enter when creating the keys will be included in the generated PDF and you will be"
-    echo "prompted to select a printer and choose a copy count. After printing, the PDF will be deleted to keep your passphrase"
-    echo "secure."
+    show "Please ensure that you print at least one copy of the PDF file" bold "and" italic "write your passphrase" "on the last page (or"
+    echo "leave the passphrase blank and add instructions on where to find in the Notes section)."
     echo
-    show "  " bold "store the documents in secure locations, e.g. safe deposit box/fire safe and/or with trusted people!"
-    echo
-    show "If you specify the --no-passphrase option, you will not be prompted to the print the PDF. However, you" bold "must" "still"
-    echo "make the passphrase available to whomever has access to the document! To ensure this, the 'notes' property in the"
-    show blue "key.info" "will be required and should be used to help guide the reader to access the passphrase."
+    show "  " bold "store the document in secure locations, e.g. safe deposit box/fire safe and/or with trusted people!"
     echo
     echo "Options"
     echo
@@ -76,41 +71,36 @@ init() {
     htmlTemplateFile="${valtHome}/etc/key-doc-template.html"
     cssOverrideFile=
     htmlFile=
-    name=
-    namePrefix=
+    keyName='-' # use default
     htmlFile=
 
     # Flags
     declare -g force=0
     declare -g verifyKeys=1
     declare -g generatePdf=1
-    declare -g includePassphrase=1  # TODO: Remove! This should never be done to guard against network snooping.
-    declare -g printPdf=1
-    declare -g deletePdfAfterPrint=1
     declare -gx skipKeyPassphraseAdvice=0
 
     while (( $# > 0 )); do
-        case "${1}" in
+        case "$1" in
             --) ;;
-            -n | --name) shift; name="${1}"; namePrefix="${name}-";;
-            -o | --output-dir) shift; setDirVar outputDir "${1}" "output directory";;
-            -t | --template) shift; setFileVar htmlTemplateFile "${1}" "html template file path" ;;
-            -c | --css) shift; setFileVar cssOverrideFile "${1}" "CSS" ;;
+            -n | --name) shift; setKeyName "$1" ;;
+            -o | --output-dir) shift; setDirVar outputDir "$1" "output directory";;
+            -t | --template) shift; setFileVar htmlTemplateFile "$1" "html template file path" ;;
+            -c | --css) shift; setFileVar cssOverrideFile "$1" "CSS" ;;
             --no-verify) verifyKeys=0 ;;
             --no-advice) skipKeyPassphraseAdvice=1 ;;
-            --no-pdf) generatePdf=0; includePassphrase=0; printPdf=0; deletePdfAfterPrint=0 ;;
-            --no-passphrase) includePassphrase=0; printPdf=0; deletePdfAfterPrint=0 ;;
+            --no-pdf) generatePdf=0 ;;
             -q | --quick) skipKeyPassphraseAdvice=1; verifyKeys=0 ;;
             -f | --force) force=1 ;;
             -h | --help | help) usage ;;
             --debug*) setDebug "$@"; shift $? ;;
-            -*) usage "Unknown option: ${1}" ;;
+            -*) usage "Unknown option: $1" ;;
         esac
         shift
     done
 
-    declare -g privateKeyFile="${outputDir}/${namePrefix}valt.key"
-    declare -g publicKeyFile="${outputDir}/${namePrefix}valt.pub"
+    declare -g privateKeyFile="${outputDir}/${keyName}.key"
+    declare -g publicKeyFile="${outputDir}/${keyName}.pub"
 
     if (( force )); then
         rm "${publicKeyFile}" "${privateKeyFile}" 2> /dev/null
@@ -126,37 +116,13 @@ prepareForPdf() {
     if (( generatePdf )); then
         ensureKeyInfo
         require 'valt/pdf'
-        documentsFile="${outputDir}/${namePrefix}key.pdf"
-
-        if (( printPdf )); then
-            local printers status prompt answer
-            printers="${ system_profiler SPPrintersDataType -json; }"
-            defaultPrinter="${ echo "${printers}" | jq -r '.SPPrintersDataType[] | select(.default == "yes") | ._name'; }"
-            status="${ echo "${printers}" | jq -r --arg name "${defaultPrinter}" '.SPPrintersDataType[] | select(._name == $name) | .status'; }"
-            echo
-            if [[ ${status} == offline ]]; then
-                show "Your default printer '${defaultPrinter}' is" error "offline" "."
-                echo "If you just powered on, it may take up to a minute before it appears online."
-                confirm "Continue without printing key documentation?" yes no answer
-                (( answer == 0 )) || exit 0
-                printPdf=0
-                includePassphrase=0
-            else
-                echo "Key documentation will be printed to your default printer '${defaultPrinter}'."
-                if (( includePassphrase )); then
-                    echo "The passphrase that you enter below will be included in the document."
-                    if (( deletePdfAfterPrint )); then
-                        echo "After printing, the document will be deleted for your security."
-                    fi
-                fi
-            fi
-        fi
+        documentsFile="${outputDir}/${keyName}-key.pdf"
     fi
 }
 
-setPrefix() {
-    assertValidFileName "${1}"
-    name="${1}"
+setKeyName() {
+    assertValidFileName "$1"
+    keyName="$1"
 }
 
 ensureKeyInfo() {
@@ -169,7 +135,6 @@ ensureKeyInfo() {
         sourceConfigFile "${keyInfoFile}"
         assertKeyInfoVar closing author completed
         assertKeyInfoArrayVar contacts
-        (( includePassphrase )) || assertKeyInfoArrayVar notes # required if passphrase omitted
 
         if [[ ${completed} == yes ]]; then
             return 0
@@ -184,7 +149,7 @@ ensureKeyInfo() {
 
 assertKeyInfoVar() {
     while (( $# > 0 )); do
-        local varName="${1}"
+        local varName="$1"
         [[ -v ${varName} ]] || bye "The '${varName}' variable is missing in ${keyInfoFile}."
         [[ -n ${!varName} ]] || bye "The '${varName}' variable cannot be empty in ${keyInfoFile}."
         shift
@@ -192,7 +157,7 @@ assertKeyInfoVar() {
 }
 
 assertKeyInfoArrayVar() {
-    local name="${1}"
+    local name="$1"
 
     declare -p "${name}" &> /dev/null || bye "The '${name}' array variable is missing in ${keyInfoFile}."
 
@@ -206,36 +171,32 @@ assertKeyInfoArrayVar() {
 
 createKeys() {
     echo
-    header 2 "Generating Keys"
-    local keyName='?'
-    [[ -n "${name}" ]] && keyName="${name}"
-    if (( includePassphrase )); then
-        createValtKeys "${name}" "${outputDir}" ? ? _PHRASE || fail
-    else
-        createValtKeys "${name}" "${outputDir}" || fail
-        _PHRASE="(see Notes)"
-    fi
+    header -u "Generating Keys"
+
+    createValtKeys "${keyName}" "${outputDir}" || fail
+    local pubKeyFile; pubKeyFile="${ tildePath "${publicKeyFile}"; }"
+    local keyFile; keyFile="${ tildePath "${privateKeyFile}"; }"
     echo
-    show "Public key (aka 'recipient') file:" cyan "${publicKeyFile}"  "(includes public signing key)"
-    show "Private key (aka 'identity') file:" cyan "${privateKeyFile}" "(includes public key and both signing keys)"
+    show "Public key (aka 'recipient') file:" cyan "${pubKeyFile}"  "(includes public signing key)"
+    show "Private key (aka 'identity') file:" cyan "${keyFile}" "(includes public key and both signing keys)"
 
     if (( verifyKeys )); then
+        header 2 "Verifying keys"
+        verifyValtKeys "${publicKeyFile}" "${privateKeyFile}"
         echo
-        show bold "Verifying keys"
+        show bold "Verified" glue ":"
         echo
-        verifyValtKeys "${privateKeyFile}" "${publicKeyFile}"
-        echo
-        show bold green "Verified" "that a file encrypted with" cyan "${publicKeyFile}" "decrypts with passphrase and the" cyan "${privateKeyFile}" "private key."
+        show "  · A file encrypted with" cyan "${keyName}.pub" "decrypts with passphrase and the" cyan "${keyName}.key" "private key. ${successCheckMark}"
+        show "  · A signature created with" cyan "${keyName}.key" "for the encrypted file matches. ${successCheckMark} "
     fi
 }
 
 createKeyDocument() {
     local options=
-    echo
     header 2 "Generating Key Documentation"
     createPdf
     echo
-    show "Keys documented in" cyan "${documentsFile}"
+    show "Keys documented in" cyan "${ tildePath "${documentsFile}"; }"
     open "${documentsFile}" &> /dev/null
 }
 
@@ -277,8 +238,7 @@ createPdf() {
     assertFileExists "${htmlFile}"
     footerTemplate="${ generateFooterTemplate; }"
 
-    # Move to work dir so that relative paths in html work correctly and
-    # generate the pdf
+    # Move to work dir so that relative paths in html work correctly and generate the pdf
 
     cd ${workDir} || fail
     generatePdf "${htmlFile}" "${documentsFile}" "${footerTemplate}" > /dev/null || fail
@@ -407,7 +367,7 @@ _passphraseGridHtml() {
 }
 
 generateHtml() {
-    local outputFile="${1}"
+    local outputFile="$1"
     local html contact note value
     readFile "${htmlTemplateFile}" html || fail
 
@@ -424,14 +384,9 @@ generateHtml() {
         _CSS_OVERRIDE="<link rel="stylesheet" href="${cssOverrideFileName}">"
     fi
 
-    local _PASSPHRASE_LOCATION
-    if (( includePassphrase )); then
-        _PASSPHRASE_LOCATION="The last page includes the passphrase."
-    else
-        _PASSPHRASE_LOCATION="The last page has a space for the passphrase to be hand written. If not there, the notes below \
+    local _PASSPHRASE_LOCATION="The last page has a space for the passphrase to be hand written. If not there, the notes below \
         should provide some information to help find the passphrase. If you <em>don't have or can't get the passphrase</em>, \
         stop here. Yes, really (so sorry!)."
-    fi
 
     # Transform contacts into list items
 
@@ -440,16 +395,10 @@ generateHtml() {
         _CONTACTS_LIST+="<li>${contact}</li>"
     done
 
-    # Passphrase section: box showing the actual passphrase, or grid for handwriting it
+    # Passphrase section: rid for handwriting it
 
-    local _PASSPHRASE_INTRO _PASSPHRASE_SECTION
-    if (( includePassphrase )); then
-        _PASSPHRASE_INTRO='Here is the passphrase used to encrypt the private key:'
-        _PASSPHRASE_SECTION="<div class=\"passphrase-box\">${_PHRASE}</div>"
-    else
-        _PASSPHRASE_INTRO='Write the passphrase in the boxes below, one character per box:'
-        _PASSPHRASE_SECTION=${ _passphraseGridHtml; }
-    fi
+    local _PASSPHRASE_INTRO='Write the passphrase in the boxes below, one character per box:'
+    local _PASSPHRASE_SECTION; _PASSPHRASE_SECTION="${ _passphraseGridHtml; }"
 
     # Transform notes into paragraphs
 
@@ -479,6 +428,6 @@ generateHtml() {
     echo "${html}" > "${outputFile}"
 }
 
-source rayvn.up 'rayvn/prompt' 'rayvn/config' 'valt/keys' 'valt/pinentry'
+source rayvn.up 'rayvn/prompt' 'rayvn/config' 'valt/keys'
 
 main "${@}"

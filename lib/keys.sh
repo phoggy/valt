@@ -82,7 +82,7 @@
 #
 #   createValtKeys [keyName] [keyDir] [valtPubFileResultVar] [valtKeyFileResultVar]
 #
-#   A '?' may be passed for any arg to enable passing a subsequent value.
+#   A '-' may be passed for any arg to enable passing a subsequent value.
 #
 #   keyName (string)                  Optional name to use instead of 'valt', e.g. 'test' -> test.key & test.pub.
 #   keyDir (string)                   Optional directory path where key files will be written, default: ~/.config/valt.
@@ -91,9 +91,9 @@
 #
 # · EXAMPLE
 #
-#   createValtKeys                          # creates valt.pub and valt.key files in the ~/.config/valt/ directory.
-#   createValtKeys '?' '?' pubFile keyFile  # same as above but assigns key paths to pubFile keyFile vars.
-#   createValtKeys diane                    # creates diane.pub and diane.key in the ~/.config/valt/ directory.
+#   createValtKeys                      # creates valt.pub and valt.key files in the ~/.config/valt/ directory.
+#   createValtKeys - - pubFile keyFile  # same as above but assigns key paths to pubFile keyFile vars.
+#   createValtKeys diane                # creates diane.pub and diane.key in the ~/.config/valt/ directory.
 
 createValtKeys() {
     local keyName="${1:-valt}"
@@ -101,7 +101,7 @@ createValtKeys() {
     local _valtPubFileResultVar="${3:-?}"
     local _valtKeyFileResultVar="${4:-?}"
 
-    if [[ ${keyDir} == '?' ]]; then
+    if [[ ${keyDir} == '-' ]]; then
         # Force use of valt config dir
         keyDir="${ configDirPath -p 'valt'; }"
     else
@@ -191,7 +191,9 @@ createValtKeys() {
 #   with the private key and comparing results. Fails if they do not match. Also signs encrypted
 #   file and verifies the signature.
 #
-# · ARGS  TODO: USAGE
+# · USAGE
+#
+#   verifyValtKeys valtPubFile valtKeyFile
 #
 #   valtPubFile (string)  Path to the valt.pub file.
 #   valtKeyFile (string)  Path to the valt.key file.
@@ -245,7 +247,9 @@ verifyValtKeys() {
 
 # ◇ Outputs the key type suffix for a valt key file, either "pub" or "key".
 #
-# ·  ARGS  TODO: USAGE
+# · USAGE
+#
+#   keyType keyFile
 #
 #   keyFile (string)  Path to a valt .pub or .key file.
 
@@ -276,7 +280,9 @@ keyType() {
 # ◇ Extracts the public encryption key from a valt key file and writes it to standard output.
 #   Will accept a private key that will require passphrase input to decrypt.
 #
-# ·  ARGS  TODO: USAGE
+# · USAGE
+#
+#   recipient keyFile
 #
 #   keyFile (string)  Path to the key file.
 
@@ -288,7 +294,9 @@ recipient() {
 # ◇ Convert one or more valt key files into a recipients file. Will accept private keys; each will require passphrase input to
 #   decrypt.
 #
-# ·  ARGS  TODO: USAGE
+# · USAGE
+#
+#   createRecipientsFile recipientsFile keyFile...
 #
 #   keyFile (string)  Path to the key file.
 
@@ -309,37 +317,43 @@ createRecipientsFile() {
 
 # ◇ Extracts the public signing key from a valt private key file into a temp file.
 #
-# ·  ARGS  TODO: USAGE
+# · USAGE
 #
-#   keyFile (string)           Path to the valt private key file.
+#   publicSigningKeyToTempFile valtKeyFile resulFileRef
+#
+#   valtKeyFile (string)       Path to the valt private key file.
 #   resultFileRef (stringRef)  Name of the variable to receive the path to the temp public signing key file.
 
 publicSigningKeyToTempFile() {
-    local keyFile="$1"
+    local valtKeyFile="$1"
     local -n resultFileRef="$2"
     local tempFile; tempFile="${ makeTempFile; }"
-    _extractKey "${keyFile}" true "${_signingPublicKeyPrefix}" 2 "${tempFile}"
+    _extractKey "${valtKeyFile}" true "${_signingPublicKeyPrefix}" 2 "${tempFile}"
     resultFileRef="${tempFile}"
 }
 
 # ◇ Extracts the signing key from a valt private key file into a temp file.
 #
-# ·  ARGS  TODO: USAGE
+# · USAGE
 #
-#   keyFile (string)        Path to the valt private key file.
+#   signingKeyToTempFile valtKeyFile resulFileRef
+#
+#   valtKeyFile (string)    Path to the valt private key file.
 #   resultFileRef (string)  Name of the variable to receive the path to the temp private signing key file.
 
 signingKeyToTempFile() {
-    local keyFile="$1"
+    local valtKeyFile="$1"
     local -n resultFileRef="$2"
     local tempFile; tempFile="${ makeTempFile; }"
-    _extractKey "${keyFile}" false "${_signingPrivateKeyPrefix}" 2 "${tempFile}"
+    _extractKey "${valtKeyFile}" false "${_signingPrivateKeyPrefix}" 2 "${tempFile}"
     resultFileRef="${tempFile}"
 }
 
 # ◇ Outputs an ASCII-armored PEM-style encoding of a key file to stdout.
 #
-# ·  ARGS  TODO: USAGE
+# · USAGE
+#
+#   armorKeyFile keyFile
 #
 #   keyFile (string)  Path to the key file to armor.
 
@@ -379,7 +393,7 @@ _init_valt_keys() {
 }
 
 _assertKeyFileDoesNotExist() {
-    [[ $1 != '?' && -f $1 ]] && invalidArgs "$1 already exists"
+    [[ $1 != '-' && -f $1 ]] && invalidArgs "$1 already exists"
 }
 
 _assignResultIfVarName() {
