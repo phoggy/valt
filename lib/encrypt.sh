@@ -16,11 +16,11 @@
 #                              for decryption. Can be repeated.
 #   -a, --armor                Encrypt to a PEM encoded format.
 #   -p, --passphrase           Encrypt with a passphrase which will be requested via prompt. Cannot be combined with recipients.
-#   -v, --var NAME             Encrypt the value of scalar shell variable NAME. Cannot be combined with [INPUT].
-#   -o, --output PATH          Write the result to the file at PATH. Any existing file will be overwritten. Defaults to standard
-#                              output.
-#   [INPUT]                    Defaults to standard input. If INPUT is a directory, it will be converted to a tar file before
-#                              encryption. Cannot be combined with -v / --var.
+#   -v, --var NAME             Encrypt the value of scalar shell variable NAME. Cannot be combined with INPUT path.
+#   -o, --output PATH          Write the result to the file at PATH (default: standard output). Any existing file will be
+#                              overwritten.
+#   [INPUT]                    Optional file path (default: standard input). If INPUT is a directory, it will be converted to a
+#                              tar file before encryption. Path cannot be combined with -v / --var.
 #
 # · EXAMPLE
 #

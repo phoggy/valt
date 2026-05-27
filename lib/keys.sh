@@ -73,10 +73,10 @@
 
 
 # ◇ Create new valt keys, encrypting the private key with a passphrase. May show passphrase advice and offer to generate
-#   passphrases. Produces keys that combine minisign keys and age keys:
+#   passphrases. Produces keys that combine age and minisign keys:
 #
-#   valt.pub:  minisign public key + age public key
-#   valt.key:  minisign public key + age public key + minisign secret key + age secret key
+#   valt.pub: age public key + minisign public key
+#   valt.key: age public key + minisign public key + age secret key + minisign secret key
 #
 # · USAGE
 #
@@ -85,7 +85,7 @@
 #   A '-' may be passed for any arg to enable passing a subsequent value.
 #
 #   keyName (string)                  Optional name to use instead of 'valt', e.g. 'test' -> test.key & test.pub.
-#   keyDir (string)                   Optional directory path where key files will be written, default: ~/.config/valt.
+#   keyDir (string)                   Optional directory path where key files will be written (default: ~/.config/valt).
 #   valtPubFileResultVar (stringRef)  Optional var name to assign the valt.pub file.
 #   valtKeyFileResultVar (stringRef)  Optional var name to assign the valt.key file.
 #
@@ -93,7 +93,7 @@
 #
 #   createValtKeys                      # creates valt.pub and valt.key files in the ~/.config/valt/ directory.
 #   createValtKeys - - pubFile keyFile  # same as above but assigns key paths to pubFile keyFile vars.
-#   createValtKeys diane                # creates diane.pub and diane.key in the ~/.config/valt/ directory.
+#   createValtKeys frodo                # creates frodo.pub and frodo.key in the ~/.config/valt/ directory.
 
 createValtKeys() {
     local keyName="${1:-valt}"
@@ -298,7 +298,8 @@ recipient() {
 #
 #   createRecipientsFile recipientsFile keyFile...
 #
-#   keyFile (string)  Path to the key file.
+#   recipientsFile (string)      Path to the recipients file to create.
+#   keyFile        (string)...   One or more valt .pub or .key file paths.
 
 createRecipientsFile() {
     local recipientsFile="$1"; shift
@@ -319,7 +320,7 @@ createRecipientsFile() {
 #
 # · USAGE
 #
-#   publicSigningKeyToTempFile valtKeyFile resulFileRef
+#   publicSigningKeyToTempFile valtKeyFile resultFileRef
 #
 #   valtKeyFile (string)       Path to the valt private key file.
 #   resultFileRef (stringRef)  Name of the variable to receive the path to the temp public signing key file.
@@ -336,10 +337,10 @@ publicSigningKeyToTempFile() {
 #
 # · USAGE
 #
-#   signingKeyToTempFile valtKeyFile resulFileRef
+#   signingKeyToTempFile valtKeyFile resultFileRef
 #
-#   valtKeyFile (string)    Path to the valt private key file.
-#   resultFileRef (string)  Name of the variable to receive the path to the temp private signing key file.
+#   valtKeyFile   (string)     Path to the valt private key file.
+#   resultFileRef (stringRef)  Name of the variable to receive the path to the temp private signing key file.
 
 signingKeyToTempFile() {
     local valtKeyFile="$1"

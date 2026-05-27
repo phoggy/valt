@@ -3,6 +3,16 @@
 # Sign files using valt keys.
 # Use via: require 'valt/sign'
 
+# ◇ Sign a file using a valt private key, creating a detached signature file.
+#
+# · USAGE
+#
+#   signFile keyFile targetFile [signatureFile]
+#
+#   keyFile        (string)  Path to the valt private key file.
+#   targetFile     (string)  Path to the file to sign.
+#   signatureFile  (string)  Optional path for the signature output file (default: targetFile.signature).
+
 signFile() {
     assertFile "$1"
     assertFile "$2"
@@ -22,6 +32,16 @@ signFile() {
 
     rm "${signingKeyFile}" &> /dev/null
 }
+
+# ◇ Verify the signature of a file using a valt key. Accepts either a public or private key.
+#
+# · USAGE
+#
+#   verifyFileSignature keyFile targetFile [signatureFile]
+#
+#   keyFile        (string)  Path to a valt .pub or .key file.
+#   targetFile     (string)  Path to the file to verify.
+#   signatureFile  (string)  Optional path to the signature file (default: targetFile.signature).
 
 verifyFileSignature() {
     assertFile "$1"

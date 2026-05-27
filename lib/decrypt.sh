@@ -12,9 +12,8 @@
 #
 #   -i, --identity PATH  Use the valt private key file (identity) at PATH; requires passphrase input to decrypt. Can be repeated.
 #   -p, --passphrase     Decrypt with a passphrase which will be requested via prompt. Cannot be combined with an identity.
-#   -o, --output PATH    Write the result to PATH. Any existing file will be overwritten. Defaults to writing to standard output.
-#   [INPUT]              Encrypted file path. Defaults to reading standard input.
-#
+#   -o, --output PATH    Write the result to PATH. Any existing file will be overwritten (default: standard output).
+#   [INPUT]              Optional path to encrypted file (default: standard input).
 
 decrypt() {
     local hasKey=0
