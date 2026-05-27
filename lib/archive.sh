@@ -55,37 +55,40 @@
 
 
 
-# Create an encrypted, signed archive from one or more files, directories and archives. Uses the tar file
-# specification model.
+# ◇ Create an encrypted, signed archive from one or more files, directories and archives.
 #
-# Usage: newSecureArchive [OPTIONS] <recipients> [ -C <dir> | <file> | <dir> | @<archive> ]...
+# · USAGE
 #
-# The -C change directory pattern enables full control over the resulting paths in the archive, e.g.
+#   newSecureArchive ([-C DIR] INPUT...) (-r RECIPIENT | -R PATH)... [-f] [-n NAME] [--timestamp [--zone ZONE]] [-u TEXT] [-o DIR]
+#   newSecureArchive ([-C DIR] INPUT...) --passphrase [-f] [-n NAME] [--timestamp [--zone ZONE]] [-u TEXT] [-o DIR]
 #
-#    -C ${HOME}/my/very/long/path/to/dev/ projectX foo.txt misc/file.txt
+#   -r, --recipient RECIPIENT  Encrypt to the specified RECIPIENT. See the recipient() function in 'valt/keys'.
+#   -R, --recipient-file PATH  Encrypt to one or more recipients. PATH can be a valt key or contain a list of recipients (see the
+#                              createRecipientsFile() function in 'valt/keys'). Valt private key files require passphrase input
+#                              for decryption. Can be repeated.
+#   -p, --passphrase           Encrypt with a passphrase which will be requested via prompt. Cannot be combined with recipients.
+#   -f, --force                Overwrite any existing output file (default: fail).
+#   -n, --name NAME            Specify the archive file name prefix (default: ${USER}).
+#   -t, --timestamp            Add a timestamp to the archive file name.
+#   -z, --zone ZONE            Specify the timezone to use for timestamps, e.g. 'America/Los_Angeles' (default: UTC).
+#   -u, --user-text TEXT       User text to include in readme. Can contain '\n'.
+#   -o, --output-dir DIR       Specify the archive destination directory path (default: ${PWD}).
+#   -C DIR                     Change to the specified directory before processing the remaining relative INPUT paths.
+#   INPUT...                   File, directory or @<archive> paths to add. An '@' prefixed file path is treated as a tar archive
+#                              whose contents should be extracted and added.
 #
-# cds into the dev directory and adds projectX/**, foo.txt and misc/file.txt at the archive root.
+# · EXAMPLE
 #
-# Note that the @<archive> syntax extracts the contents and adds them.
-#
-# One or more of the following recipients is required, in any combination:
-#
-#     -R, --recipients-file  PATH       Encrypt to the recipients listed in file at PATH.
-#     -v, --valt-recipient   PATH       Encrypt to the recipient in the valt.pub or valt.key file at PATH.
-#     -r, --recipient        RECIPIENT  Encrypt to the specified Age public key string.
-#
-# Options:
-#
-#     -d, --dest-dir       Specify the archive destination directory (default: ${PWD}).
-#     -n, --name NAME      Specify the archive file name prefix (default: ${USER}).
-#     -t, --timestamp      Add a timestamp to the archive file name.
-#     -z, --timezone NAME  Specify the timezone to use for timestamps, e.g. 'America/Los_Angeles'.
-#     -u, --user-text      User text to include in readme. Can contain '\n'.
-#     -f, --force          Replace any existing archive file without asking.
+#   newSecureArchive project/ -R valt.pub                                 # archive project/ dir to ${USER}.valt in ${PWD}
+#   newSecureArchive project/ -R valt.pub -n backup -t -o ~/backups       # timestamped name, written to ~/backups
+#   newSecureArchive -C ~/dev/ projectX foo.txt -R valt.pub               # -C sets source root ~/dev/ and adds subsequent inputs
+#   newSecureArchive -C ~/dev/ projectX -C ~/docs/ notes.txt -R valt.pub  # each -C sets a new source root for subsequent inputs
 
 newSecureArchive() {
     local tarArgs=()
-    local recipients=()
+    local encryptArgs=()
+    local usePassphrase=0
+    local hasRecipient=0
     local fileCount=0
     local i path
 
@@ -95,77 +98,86 @@ newSecureArchive() {
     local timeZoneName='UTC'
     local addTimeStamp=0
     local force=0
-    local readmeText=
+    local readmeText
 
     # Parse options
 
     while (( $# > 0 )); do
         case "$1" in
-            -C ) shift; tarArgs+=(-C "$1") ;;
-            -d | --dest-dir) shift; assertDirectory "$1"; destDir="$1" ;;
-            -v | --valt-recipient) shift; recipients+=(-r "${ extractRecipient "$1"; }")  ;;
-            -r | --recipient) shift; _assertArchiveRecipient "$1"; recipients+=(-r "$1") ;;
-            -R | --recipients-file) shift; assertFile "$1" "recipients file"; recipients+=(-R "$1") ;;
+            -R | --recipient-file) shift; _addRecipientFromKey "$1" encryptArgs hasRecipient ;;
+            -r | --recipient) shift; _addRecipient "$1" encryptArgs hasRecipient ;;
+            -p | --passphrase) shift; usePassphrase=1 ;;
+            -f | --force) shift; force=1 ;;
             -n | --name) shift; name="$1" ;;
             -t | --timestamp) addTimeStamp=1 ;;
-            -z | --timezone) shift; timeZoneName="$1" ;;
-            -f | --force) force=1 ;;
+            -z | --zone) shift; timeZoneName="$1" ;;
             -u | --user-text) shift; readmeText="$1" ;;
+            -o | --output-dir) shift; assertDirectory "$1"; destDir="$1" ;;
+            -C ) shift; tarArgs+=(-C "$1"); (( fileCount++ )) ;;
             *) tarArgs+=("$1"); (( fileCount++ )) ;;
         esac
         shift
     done
 
-# TODO:  use makeSecureTempDir for temp storage!
+    if (( usePassphrase )); then
+        (( hasRecipient )) && invalidArgs "-p / --password cannot be combined with recipients."
+    else
+        (( hasRecipient )) || invalidArgs "one or more recipients required"
+    fi
 
-# TODO:  Implementation gap vs. design
-#
-#    The current _createEncryptedArchive pipes tar | age directly, but signing requires the tar on disk first. The actual flow needs to be:
-#    1. Create payload.tar to temp
-#    2. Minisign payload.tar → .minisig
-#    3. Bundle payload + sig + keys + readme into inner tar
-#    4. Encrypt inner tar with age → encrypted.tar.xz.age
-#    5. Minisign the .age file → outer .minisig
-#    6. Bundle everything into the outer .valt tar
-#
-#    Signing key extraction: To sign, valt needs the minisign private key out of the passphrase-encrypted valt.key. That means decrypting it first, extracting the embedded key, using it,
-#    then clearing it. This is where the FIFO passphrase flow we discussed becomes relevant — you'll need the passphrase after age finishes decrypting.
-#
-#
-#  minisign dependency: Not yet in flake.nix / rayvn.pkg.
-#
-
-    # Make sure we have one or more recipients
-
-    [[ -n ${#recipients[@]} ]] || fail "no recipients specified"
-
-    # Make sure we have one or more files to add
-
-    (( fileCount )) || fail "no files to add"
-
-    # Add timestamp to name if requested
+    (( fileCount )) || invalidArgs "one or more files required"
 
     (( addTimeStamp )) && name+="-${ TZ=${timeZoneName} date +%Y-%m-%d_%H.%M; }"
 
-    # Ok we're good to go, so create file names, temp tar dir and result file
+    # Ok we're probably good to go: create secure work dir, file names and result archive file
 
+    local workDir; workDir="${ makeSecureTempDir; }"
     local encryptedTarName="${name}.${_tarFileExtension}.${_ageFileExtension}" # tar.xz.age
     local envelopeTarName="${name}.valt"
-    local encryptedTarFile; encryptedTarFile="${ tempDirPath ${encryptedTarName}; }"
+    local encryptedTarFile; encryptedTarFile="${workDir}/${encryptedTarName}"
     local archiveFile="${destDir}/${envelopeTarName}"
 
-    # TODO: readme
+    # Deal with output file conflict
 
-    # If result file exists, delete it if force or user confirms
+    if [[ -e "${archiveFile}" ]]; then
+        if (( force )); then
+            rm "${archiveFile}" || fail
+        else
+            fail "${archiveFile} already exists, use --force to overwrite."
+        fi
+    fi
 
-    _removeExistingArchiveFile
+    # Create the temporary encrypted archive file
 
-    # Create the encrypted archive file
+debugVar tarArgs encryptArgs encryptedTarFile
+    # TODO: the -H pax arg for extended headers is gnu-tar. Worth it for new dependency?
+    tar cJ "${tarArgs[@]}" | encrypt "${encryptArgs[@]}" -o ${encryptedTarFile} || fail
 
-    _createEncryptedArchive
+
+    # TODO:  Implementation gap vs. design
+    #
+    #    The current _createEncryptedArchive pipes tar | age directly, but signing requires the tar on disk first. The actual flow needs to be:
+    #    1. Create payload.tar to temp
+    #    2. Minisign payload.tar → .minisig
+    #    3. Bundle payload + sig + keys + readme into inner tar
+    #    4. Encrypt inner tar with age → encrypted.tar.xz.age
+    #    5. Minisign the .age file → outer .minisig
+    #    6. Bundle everything into the outer .valt tar
+    #
+    #    Signing key extraction: To sign, valt needs the minisign private key out of the passphrase-encrypted valt.key. That means decrypting it first, extracting the embedded key, using it,
+    #    then clearing it. This is where the FIFO passphrase flow we discussed becomes relevant — you'll need the passphrase after age finishes decrypting.
+    #
+    #
+    #  minisign dependency: Not yet in flake.nix / rayvn.pkg.
+    #
+
+    # TODO: create readme, including any user text. Option for entire readme file?
+    # TODO: sign
+    # TODO: tar into outer ${archiveFile}
 
     mv "${encryptedTarFile}" .; ls -l ${encryptedTarName} # TODO remove
 }
+
 
 verifySecureArchive() {
     assertFile "$1"
@@ -199,22 +211,5 @@ _assertArchiveRecipient() {
     fi
 }
 
-_removeExistingArchiveFile() {
-    if [[ -e "${archiveFile}" ]]; then
-        if (( ! force )); then
-            local answer
-            show primary "${ tildePath "${archiveFile}"; }" "already exists."
-            prompt "${ show -n primary "${ tildePath "${archiveFile}"; }" "already exists. Replace it?" ;}" yes no answer
-            [[ ${answer} == "yes" ]] || exit 0
-        fi
-        rm "${archiveFile}" || fail
-    fi
-}
-
-_createEncryptedArchive() {
-debugVar tarArgs recipients encryptedTarFile
-    # TODO: the -H pax arg for extended headers is gnu-tar. Worth it for new dependency?
-    tar cJ "${tarArgs[@]}" | age "${recipients[@]}" > ${encryptedTarFile} || fail
-}
 
 
