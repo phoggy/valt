@@ -58,8 +58,8 @@ _parseEncryptArgs() {
 
     while (( $# )); do
         case "$1" in
-            -R | --recipient-file) shift; _addRecipientFromKey "$1" ;;
-            -r | --recipient) shift; _addRecipient "$1" ;;
+            -R | --recipient-file) shift; _addRecipientFromKey "$1" _encryptArgs hasRecipient ;;
+            -r | --recipient) shift; _addRecipient "$1" _encryptArgs hasRecipient ;;
             -v | --var) shift; _encryptVarName="$1" ;;
             -p | --passphrase) passphrase=1; _encryptArgs+=('--passphrase') ;;
             -a | --armor) _encryptArgs+=('--armor') ;;
@@ -78,21 +78,6 @@ _parseEncryptArgs() {
     else
         (( hasRecipient )) || invalidArgs "one or more recipients required"
     fi
-}
-
-_addRecipientFromKey() {
-    assertFile "$1"
-    local keyFile="$1" recipient
-    recipient="${ recipient "${keyFile}"; }"
-    _encryptArgs+=( '-r' "${recipient}" )
-    hasRecipient=1
-}
-
-_addRecipient() {
-    [[ ${1:0:3} == 'age' ]] || fail "not a recipient: $1"
-    local recipient; recipient="$1"
-    _encryptArgs+=( '-r' "${recipient}" )
-    hasRecipient=1
 }
 
 _encrypt() {

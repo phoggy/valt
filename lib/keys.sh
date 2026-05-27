@@ -477,6 +477,25 @@ _extractKey() {
 }
 
 
+_addRecipientFromKey() {
+    assertFile "$1"
+    local keyFile="$1"
+    local -n _argsArrayRef="$2"
+    local -n _hasRecipientRef="$3"
+    local recipient; recipient="${ recipient "${keyFile}"; }"
+    _argsArrayRef+=( '-r' "${recipient}" )
+    _hasRecipientRef=1
+}
+
+_addRecipient() {
+    [[ ${1:0:3} == 'age' ]] || fail "not a recipient: $1"
+    local recipient; recipient="$1"
+    local -n _argsArrayRef="$2"
+    local -n _hasRecipientRef="$3"
+    _argsArrayRef+=( '-r' "${recipient}" )
+    _hasRecipientRef=1
+}
+
 
 _maybeOfferPassphraseAdvice() {
     if (( ! skipKeyPassphraseAdvice )); then
