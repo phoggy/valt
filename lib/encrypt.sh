@@ -53,7 +53,7 @@ _parseEncryptArgs() {
     _encryptOutputFile=
     _encryptArgs=()
 
-    local passphrase=0
+    local usePassphrase=0
     local hasRecipient=0
 
     while (( $# )); do
@@ -61,7 +61,7 @@ _parseEncryptArgs() {
             -R | --recipient-file) shift; _addRecipientFromKey "$1" _encryptArgs hasRecipient ;;
             -r | --recipient) shift; _addRecipient "$1" _encryptArgs hasRecipient ;;
             -v | --var) shift; _encryptVarName="$1" ;;
-            -p | --passphrase) passphrase=1; _encryptArgs+=('--passphrase') ;;
+            -p | --passphrase) usePassphrase=1; _encryptArgs+=('--passphrase') ;;
             -a | --armor) _encryptArgs+=('--armor') ;;
             -o | --output) shift; _encryptOutputFile="$1" ;;
             -*) invalidArgs "unknown arg: $1";;
@@ -73,7 +73,7 @@ _parseEncryptArgs() {
 
     [[ -n "${_encryptVarName}" && -n "${_encryptInputFile}" ]] && invalidArgs "-v / --var cannot be combined with INPUT"
 
-    if (( passphrase )); then
+    if (( usePassphrase )); then
         (( hasRecipient )) && invalidArgs "-p / --password cannot be combined with recipients."
     else
         (( hasRecipient )) || invalidArgs "one or more recipients required"
