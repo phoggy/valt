@@ -55,7 +55,8 @@
 
 
 
-# ◇ Create an encrypted, signed archive from one or more files, directories and archives.
+# ◇ Create an encrypted, signed archive from one or more files, directories and archives. The archive file path is written to
+#   standard output.
 #
 # · USAGE
 #
@@ -90,6 +91,7 @@ newSecureArchive() {
     local usePassphrase=0
     local hasRecipient=0
     local fileCount=0
+    local timestamp=
     local i path
 
     # Options
@@ -106,8 +108,8 @@ newSecureArchive() {
         case "$1" in
             -R | --recipient-file) shift; _addRecipientFromKey "$1" encryptArgs hasRecipient ;;
             -r | --recipient) shift; _addRecipient "$1" encryptArgs hasRecipient ;;
-            -p | --passphrase) shift; usePassphrase=1 ;;
-            -f | --force) shift; force=1 ;;
+            -p | --passphrase) usePassphrase=1 ;;
+            -f | --force) force=1 ;;
             -n | --name) shift; name="$1" ;;
             -t | --timestamp) addTimeStamp=1 ;;
             -z | --zone) shift; timeZoneName="$1" ;;
@@ -119,6 +121,10 @@ newSecureArchive() {
         shift
     done
 
+    debugVar tarArgs encryptArgs usePassphrase hasRecipient fileCount addTimeStamp
+
+    # Validate args
+
     if (( usePassphrase )); then
         (( hasRecipient )) && invalidArgs "-p / --password cannot be combined with recipients."
     else
@@ -127,15 +133,25 @@ newSecureArchive() {
 
     (( fileCount )) || invalidArgs "one or more files required"
 
-    (( addTimeStamp )) && name+="-${ TZ=${timeZoneName} date +%Y-%m-%d_%H.%M; }"
+    if (( addTimeStamp )); then
+        timestamp="${ TZ=${timeZoneName} date +%Y-%m-%d_%H.%M; }"
+        name+="-${timestamp}"
+    fi
+
+    # Create secure work dir
+
+    local workDir isRamBacked
+    makeSecureTempDir workDir isRamBacked
+
+    # TODO: ram backed
 
     # Ok we're probably good to go: create secure work dir, file names and result archive file
 
-    local workDir; workDir="${ makeSecureTempDir; }"
     local encryptedTarName="${name}.${_tarFileExtension}.${_ageFileExtension}" # tar.xz.age
-    local envelopeTarName="${name}.valt"
     local encryptedTarFile; encryptedTarFile="${workDir}/${encryptedTarName}"
-    local archiveFile="${destDir}/${envelopeTarName}"
+    local archiveName="${name}.valt"
+    local archiveFile="${destDir}/${archiveName}"
+debugVar workDir isRamBacked encryptedTarName encryptedTarFile archiveName archiveFile
 
     # Deal with output file conflict
 
@@ -149,10 +165,8 @@ newSecureArchive() {
 
     # Create the temporary encrypted archive file
 
-debugVar tarArgs encryptArgs encryptedTarFile
     # TODO: the -H pax arg for extended headers is gnu-tar. Worth it for new dependency?
     tar cJ "${tarArgs[@]}" | encrypt "${encryptArgs[@]}" -o ${encryptedTarFile} || fail
-
 
     # TODO:  Implementation gap vs. design
     #
@@ -175,7 +189,14 @@ debugVar tarArgs encryptArgs encryptedTarFile
     # TODO: sign
     # TODO: tar into outer ${archiveFile}
 
-    mv "${encryptedTarFile}" .; ls -l ${encryptedTarName} # TODO remove
+    local readMeFileName="README.txt"
+    local readMeFile="${workDir}/${readMeFileName}"
+    echo "blah blah" > "${readMeFile}"
+    tar cJ -C "${workDir}" "${encryptedTarName}" "${readMeFileName}" > ${archiveFile} || fail
+
+    # Finally, return the archive file name via stdout
+
+    echo "${archiveFile}"
 }
 
 
