@@ -19,14 +19,13 @@
 #   │
 #   ├── encrypted.tar.xz.age
 #   │   ├── payload.tar
-#   │   ├── payload.tar.minisig
-#   │   ├── payload.minisign.pub
+#   │   ├── payload.tar.minisign
+#   │   ├── minisign.pub
 #   │   ├── age.pub
-#   │   └── README.txt
-#   ├── encrypted.tar.xz.age.minisig
+#   │   └── README.txt # include metadata: created date, archive/valt/rayvn versions, USER, machine info, etc.
+#   ├── encrypted.tar.xz.age.minisign
 #   ├── minisign.pub
 #   ├── age.pub
-#   ├── valt.meta   # archive version, created date, etc.
 #   └── README.txt
 #
 # The encrypted tar structure ensures there is always a valid payload signature to use even if the outer one is missing or
@@ -41,10 +40,9 @@
 #
 #   my-files.valt.pub
 #   │
-#   ├── encrypted.tar.age.minisig
+#   ├── encrypted.tar.age.minisign
 #   ├── minisign.pub
 #   ├── age.pub
-#   ├── valt.meta   # archive version, created date, etc.
 #   └── README.txt
 #
 # ◇ Valt Keys
@@ -60,17 +58,15 @@
 #
 # · USAGE
 #
-#   newSecureArchive ([-C DIR] INPUT...) (-r RECIPIENT | -R PATH)... [-f] [-n NAME] [--timestamp [--zone ZONE]] [-u TEXT] [-o DIR]
-#   newSecureArchive ([-C DIR] INPUT...) --passphrase [-f] [-n NAME] [--timestamp [--zone ZONE]] [-u TEXT] [-o DIR]
+#   newSecureArchive ([-C DIR] INPUT...) -i PATH (-r RECIPIENT | -R PATH)... [-f] [-n NAME] [--zone ZONE] [-u TEXT] [-o DIR]
 #
+#   -i, --identity PATH        The valt.key file used to sign the archive.
 #   -r, --recipient RECIPIENT  Encrypt to the specified RECIPIENT. See the recipient() function in 'valt/keys'.
 #   -R, --recipient-file PATH  Encrypt to one or more recipients. PATH can be a valt key or contain a list of recipients (see the
 #                              createRecipientsFile() function in 'valt/keys'). Valt private key files require passphrase input
 #                              for decryption. Can be repeated.
-#   -p, --passphrase           Encrypt with a passphrase which will be requested via prompt. Cannot be combined with recipients.
 #   -f, --force                Overwrite any existing output file (default: fail).
 #   -n, --name NAME            Specify the archive file name prefix (default: ${USER}).
-#   -t, --timestamp            Add a timestamp to the archive file name.
 #   -z, --zone ZONE            Specify the timezone to use for timestamps, e.g. 'America/Los_Angeles' (default: UTC).
 #   -u, --user-text TEXT       User text to include in readme. Can contain '\n'.
 #   -o, --output-dir DIR       Specify the archive destination directory path (default: ${PWD}).
@@ -86,9 +82,9 @@
 #   newSecureArchive -C ~/dev/ projectX -C ~/docs/ notes.txt -R valt.pub  # each -C sets a new source root for subsequent inputs
 
 newSecureArchive() {
+    local privateKey=
     local tarArgs=()
     local encryptArgs=()
-    local usePassphrase=0
     local hasRecipient=0
     local fileCount=0
     local timestamp=
@@ -98,7 +94,6 @@ newSecureArchive() {
     local destDir="${PWD}"
     local name="${USER}"
     local timeZoneName='UTC'
-    local addTimeStamp=0
     local force=0
     local readmeText
 
@@ -106,12 +101,11 @@ newSecureArchive() {
 
     while (( $# > 0 )); do
         case "$1" in
+            -i | --identity) shift; assertFile "$1"; privateKey="$1" ;;
             -R | --recipient-file) shift; _addRecipientFromKey "$1" encryptArgs hasRecipient ;;
             -r | --recipient) shift; _addRecipient "$1" encryptArgs hasRecipient ;;
-            -p | --passphrase) usePassphrase=1 ;;
             -f | --force) force=1 ;;
-            -n | --name) shift; name="$1" ;;
-            -t | --timestamp) addTimeStamp=1 ;;
+            -n | --name) shift; assertValidFileName "$1"; name="$1" ;;
             -z | --zone) shift; timeZoneName="$1" ;;
             -u | --user-text) shift; readmeText="$1" ;;
             -o | --output-dir) shift; assertDirectory "$1"; destDir="$1" ;;
@@ -120,23 +114,16 @@ newSecureArchive() {
         esac
         shift
     done
+    timestamp="${ TZ=${timeZoneName} date +%Y-%m-%d_%H.%M; }-${timeZoneName}"
+    name+="-${timestamp}"
 
-    debugVar tarArgs encryptArgs usePassphrase hasRecipient fileCount addTimeStamp
+    debugVar signingKey tarArgs encryptArgs hasRecipient fileCount name
 
-    # Validate args
+    # Make sure we have required args
 
-    if (( usePassphrase )); then
-        (( hasRecipient )) && invalidArgs "-p / --password cannot be combined with recipients."
-    else
-        (( hasRecipient )) || invalidArgs "one or more recipients required"
-    fi
-
+    [[ -n "${privateKey}" ]] || invalidArgs "signing identity file required"
+    (( hasRecipient )) || invalidArgs "one or more recipients required"
     (( fileCount )) || invalidArgs "one or more files required"
-
-    if (( addTimeStamp )); then
-        timestamp="${ TZ=${timeZoneName} date +%Y-%m-%d_%H.%M; }"
-        name+="-${timestamp}"
-    fi
 
     # Create secure work dir
 
@@ -145,28 +132,102 @@ newSecureArchive() {
 
     # TODO: ram backed
 
+    # Chack output file conflict
+
+    local archiveName="${name}.valt"
+    local archivePubName="${archiveName}.pub"
+    local archiveFile="${destDir}/${archiveName}"
+    local archivePubFile="${destDir}/${archivePubName}"
+
+    _checkOutputConflict ${force} "${archiveFile}" "${archivePubFile}"
+
     # Ok we're probably good to go: create secure work dir, file names and result archive file
 
-    local encryptedTarName="${name}.${_tarFileExtension}.${_ageFileExtension}" # tar.xz.age
-    local encryptedTarFile; encryptedTarFile="${workDir}/${encryptedTarName}"
-    local archiveName="${name}.valt"
-    local archiveFile="${destDir}/${archiveName}"
-debugVar workDir isRamBacked encryptedTarName encryptedTarFile archiveName archiveFile
+    # TWO OUTPUT FILES!
 
-    # Deal with output file conflict
+    #   my-files.valt                       archiveName
+    #   │
+    #   ├── encrypted.tar.xz.age            encryptedTarName
+    #   │   ├── payload.tar                 payloadTarName
+    #   │   ├── payload.tar.minisign        payloadTarSigName
+    #   │   ├── minisign.pub                sigPubName
+    #   │   ├── age.pub                     agePubName
+    #   │   └── README.txt                  readMeName # include metadata: created date, archive/valt/rayvn versions, USER, machine info, etc.
+    #   ├── encrypted.tar.xz.age.minisign   encryptedTarSigName
+    #   ├── minisign.pub                    sigPubName
+    #   ├── age.pub                         agePubName
+    #   └── README.txt                      readMeName
 
-    if [[ -e "${archiveFile}" ]]; then
-        if (( force )); then
-            rm "${archiveFile}" || fail
-        else
-            fail "${archiveFile} already exists, use --force to overwrite."
-        fi
-    fi
+    #   my-files.valt.pub                   archivePubName
+    #   │
+    #   ├── encrypted.tar.age.minisign      encryptedTarSigName
+    #   ├── minisign.pub                    sigPubName
+    #   ├── age.pub                         agePubName
+    #   └── README.txt                      readMeName
 
-    # Create the temporary encrypted archive file
+
+    # Common file names
+
+    local agePubName="age.pub"
+    local sigPubName="minisign.pub"
+    local readMeName="README.txt"
+
+    # Encrypted file names
+
+    local payloadTarName="payload.tar"
+    local payloadTarSigName="${payloadTarName}.${_signatureFileSuffix}"
+
+    # Envelope tar file names
+
+    local encryptedTarName="encrypted.${_tarFileExtension}.${_ageFileExtension}"
+    local encryptedTarSigName="${encryptedTarName}.${_signatureFileSuffix}"
+
+    # Content file names
+
+    local payloadFileNames=("${payloadTarName}" "${payloadTarSigName}" "${agePubName}" "${sigPubName}" "${readMeName}")
+    local archiveFileNames=("${encryptedTarName}" "${encryptedTarSigName}" "${agePubName}" "${sigPubName}" "${readMeName}")
+    local archivePubFileNames=("${encryptedTarSigName}" "${agePubName}" "${sigPubName}" "${readMeName}")
+
+    # Create the age.pub file
+
+    recipient "${privateKey}" > "${workDir}/${agePubName}" || fail
+
+    # Create the minisign.pub file
+
+    local tempFile
+    publicSigningKeyToTempFile "${privateKey}" tempFile || fail
+    assertFile "${tempFile}"
+    mv "${tempFile}" "${workDir}/${sigPubName}" || fail
+
+    # Create the README file TODO!!
+
+    local readMeFile="${workDir}/${readMeName}"
+    echo "blah blah" > "${readMeFile}"
+
+    # Create the payload file and sign it
+    echo "creating payload.tar" > ${terminal}
 
     # TODO: the -H pax arg for extended headers is gnu-tar. Worth it for new dependency?
-    tar cJ "${tarArgs[@]}" | encrypt "${encryptArgs[@]}" -o ${encryptedTarFile} || fail
+    tar cJ "${tarArgs[@]}" > "${workDir}/${payloadTarName}" || fail
+    signFile "${privateKey}" "${workDir}/${payloadTarName}" || fail
+
+    # Create the encrypted payload tar and sign it
+
+    echo "encrypting payload.tar" > ${terminal}
+    encrypt "${workDir}/${payloadTarName}" "${encryptArgs[@]}" -o "${workDir}/${encryptedTarName}" || fail
+    echo "signing encrypted payload.tar" > ${terminal}
+    signFile "${privateKey}" "${workDir}/${encryptedTarName}" || fail
+
+    # Remove the payload files so we only have the encrypted forms
+
+    rm "${workDir}/${payloadTarName}" "${workDir}/${payloadTarSigName}"|| fail
+
+
+echo "creating archives" > ${terminal}
+    # Create the archive files
+
+    tar cJ -C "${workDir}" "${archiveFileNames[@]}" > ${archiveFile} || fail
+    tar cJ -C "${workDir}" "${archivePubFileNames[@]}" > ${archivePubFile} || fail
 
     # TODO:  Implementation gap vs. design
     #
@@ -185,14 +246,12 @@ debugVar workDir isRamBacked encryptedTarName encryptedTarFile archiveName archi
     #  minisign dependency: Not yet in flake.nix / rayvn.pkg.
     #
 
-    # TODO: create readme, including any user text. Option for entire readme file?
-    # TODO: sign
-    # TODO: tar into outer ${archiveFile}
 
-    local readMeFileName="README.txt"
-    local readMeFile="${workDir}/${readMeFileName}"
-    echo "blah blah" > "${readMeFile}"
-    tar cJ -C "${workDir}" "${encryptedTarName}" "${readMeFileName}" > ${archiveFile} || fail
+
+
+
+
+
 
     # Finally, return the archive file name via stdout
 
@@ -219,6 +278,22 @@ PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/archive' PRIVA
 
 _init_valt_archive() {
     require 'valt/keys'
+    declare -gr _archiveVersion="1.0"
+}
+
+_checkOutputConflict() {
+    local _force="$1"; shift
+    while (( $# )); do
+        if [[ -e "$1" ]]; then
+            [[ -d "$1" ]] && fail "$1 already exists and is a directory"
+            if (( _force )); then
+                rm "$1" || fail
+            else
+                fail "$1 already exists, use --force to overwrite"
+            fi
+        fi
+        shift
+    done
 }
 
 _assertArchiveRecipient() {

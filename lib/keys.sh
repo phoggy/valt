@@ -315,7 +315,6 @@ createRecipientsFile() {
     done
 }
 
-
 # ◇ Extracts the public signing key from a valt private key file into a temp file.
 #
 # · USAGE
@@ -328,9 +327,9 @@ createRecipientsFile() {
 publicSigningKeyToTempFile() {
     local valtKeyFile="$1"
     local -n resultFileRef="$2"
-    local tempFile; tempFile="${ makeTempFile; }"
-    _extractKey "${valtKeyFile}" true "${_signingPublicKeyPrefix}" 2 "${tempFile}"
-    resultFileRef="${tempFile}"
+    local _tempFile; _tempFile="${ makeTempFile; }"
+    _extractKey "${valtKeyFile}" true "${_signingPublicKeyPrefix}" 2 "${_tempFile}"
+    resultFileRef="${_tempFile}"
 }
 
 # ◇ Extracts the signing key from a valt private key file into a temp file.
@@ -368,7 +367,7 @@ armorKeyFile() {
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/keys' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_keys() {
-    require 'valt/encrypt' 'valt/decrypt'
+    require 'valt/encrypt' 'valt/decrypt'  'valt/sign'
 
     declare -grx valtPublicKeySuffix='pub'
     declare -grx valtPrivateKeySuffix='key'
