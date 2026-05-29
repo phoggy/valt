@@ -32,8 +32,8 @@ init() {
 
 testSignFile() {
     signFile "${keyFile}" "${testFile}"
-    assertFile "${testFile}.${defaultSignatureSuffix}"
-    assertTrue "signature file must be non-empty" test -s "${testFile}.${defaultSignatureSuffix}"
+    assertFile "${testFile}.${_signatureFileSuffix}"
+    assertTrue "signature file must be non-empty" test -s "${testFile}.${_signatureFileSuffix}"
 }
 
 testVerifyFileSignature() {
