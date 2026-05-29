@@ -15,14 +15,14 @@
 #
 # ◇ Valt File Structure
 #
-#   my-files.valt
+#   backup-2026-05-28_23.14_PDT.valt
 #   │
 #   ├── encrypted.tar.xz.age
 #   │   ├── payload.tar
 #   │   ├── payload.tar.minisign
 #   │   ├── minisign.pub
 #   │   ├── age.pub
-#   │   └── README.txt # include metadata: created date, archive/valt/rayvn versions, USER, machine info, etc.
+#   │   └── README.txt # include : created date, archive/valt/rayvn versions, (USER, machine info?) etc.
 #   ├── encrypted.tar.xz.age.minisign
 #   ├── minisign.pub
 #   ├── age.pub
@@ -38,7 +38,7 @@
 # case and to ensure availability of the clear files, a copy is created without the encrypted tar. This can (and should) be made
 # publicly available:
 #
-#   my-files.valt.pub
+#   backup-2026-05-28_23.14_PDT.valt.pub
 #   │
 #   ├── encrypted.tar.age.minisign
 #   ├── minisign.pub
@@ -67,7 +67,7 @@
 #                              for decryption. Can be repeated.
 #   -f, --force                Overwrite any existing output file (default: fail).
 #   -n, --name NAME            Specify the archive file name prefix (default: ${USER}).
-#   -z, --zone ZONE            Specify the timezone to use for timestamps, e.g. 'America/Los_Angeles' (default: UTC).
+#   -z, --zone ZONE            Specify the timezone to use for timestamps, e.g. PDT (default: UTC).
 #   -u, --user-text TEXT       User text to include in readme. Can contain '\n'.
 #   -o, --output-dir DIR       Specify the archive destination directory path (default: ${PWD}).
 #   -C DIR                     Change to the specified directory before processing the remaining relative INPUT paths.
@@ -114,7 +114,7 @@ newSecureArchive() {
         esac
         shift
     done
-    timestamp="${ TZ=${timeZoneName} date +%Y-%m-%d_%H.%M; }-${timeZoneName}"
+    timestamp="${ timeStamp "${timeZoneName}"; }"
     name+="-${timestamp}"
 
     debugVar signingKey tarArgs encryptArgs hasRecipient fileCount name
@@ -145,25 +145,25 @@ newSecureArchive() {
 
     # TWO OUTPUT FILES!
 
-    #   my-files.valt                       archiveName
+    #   backup-2026-05-28_23.14_PDT.valt      archiveName
     #   │
-    #   ├── encrypted.tar.xz.age            encryptedTarName
-    #   │   ├── payload.tar                 payloadTarName
-    #   │   ├── payload.tar.minisign        payloadTarSigName
-    #   │   ├── minisign.pub                sigPubName
-    #   │   ├── age.pub                     agePubName
-    #   │   └── README.txt                  readMeName # include metadata: created date, archive/valt/rayvn versions, USER, machine info, etc.
-    #   ├── encrypted.tar.xz.age.minisign   encryptedTarSigName
-    #   ├── minisign.pub                    sigPubName
-    #   ├── age.pub                         agePubName
-    #   └── README.txt                      readMeName
+    #   ├── encrypted.tar.xz.age              encryptedTarName
+    #   │   ├── payload.tar                   payloadTarName
+    #   │   ├── payload.tar.minisign          payloadTarSigName
+    #   │   ├── minisign.pub                  sigPubName
+    #   │   ├── age.pub                       agePubName
+    #   │   └── README.txt                    readMeName # include: created date, archive/valt/rayvn versions (USER, machine?)
+    #   ├── encrypted.tar.xz.age.minisign     encryptedTarSigName
+    #   ├── minisign.pub                      sigPubName
+    #   ├── age.pub                           agePubName
+    #   └── README.txt                        readMeName
 
-    #   my-files.valt.pub                   archivePubName
+    #   backup-2026-05-28_23.14_PDT.valt.pub  archivePubName
     #   │
-    #   ├── encrypted.tar.age.minisign      encryptedTarSigName
-    #   ├── minisign.pub                    sigPubName
-    #   ├── age.pub                         agePubName
-    #   └── README.txt                      readMeName
+    #   ├── encrypted.tar.age.minisign        encryptedTarSigName
+    #   ├── minisign.pub                      sigPubName
+    #   ├── age.pub                           agePubName
+    #   └── README.txt                        readMeName
 
 
     # Common file names
@@ -184,7 +184,7 @@ newSecureArchive() {
 
     # Content file names
 
-    local payloadFileNames=("${payloadTarName}" "${payloadTarSigName}" "${agePubName}" "${sigPubName}" "${readMeName}")
+    local encryptedTarFileNames=("${payloadTarName}" "${payloadTarSigName}" "${agePubName}" "${sigPubName}" "${readMeName}")
     local archiveFileNames=("${encryptedTarName}" "${encryptedTarSigName}" "${agePubName}" "${sigPubName}" "${readMeName}")
     local archivePubFileNames=("${encryptedTarSigName}" "${agePubName}" "${sigPubName}" "${readMeName}")
 
@@ -206,15 +206,15 @@ newSecureArchive() {
 
     # Create the payload file and sign it
     echo "creating payload.tar" > ${terminal}
-
     # TODO: the -H pax arg for extended headers is gnu-tar. Worth it for new dependency?
     tar cJ "${tarArgs[@]}" > "${workDir}/${payloadTarName}" || fail
     signFile "${privateKey}" "${workDir}/${payloadTarName}" || fail
 
-    # Create the encrypted payload tar and sign it
+    # Create the encrypted tar and sign it
 
-    echo "encrypting payload.tar" > ${terminal}
-    encrypt "${workDir}/${payloadTarName}" "${encryptArgs[@]}" -o "${workDir}/${encryptedTarName}" || fail
+    echo "creating encrypted tar" > ${terminal}
+    tar cJ -C "${workDir}" "${encryptedTarFileNames[@]}" | encrypt "${encryptArgs[@]}" -o "${workDir}/${encryptedTarName}" || fail
+
     echo "signing encrypted payload.tar" > ${terminal}
     signFile "${privateKey}" "${workDir}/${encryptedTarName}" || fail
 
@@ -229,35 +229,16 @@ echo "creating archives" > ${terminal}
     tar cJ -C "${workDir}" "${archiveFileNames[@]}" > ${archiveFile} || fail
     tar cJ -C "${workDir}" "${archivePubFileNames[@]}" > ${archivePubFile} || fail
 
-    # TODO:  Implementation gap vs. design
-    #
-    #    The current _createEncryptedArchive pipes tar | age directly, but signing requires the tar on disk first. The actual flow needs to be:
-    #    1. Create payload.tar to temp
-    #    2. Minisign payload.tar → .minisig
-    #    3. Bundle payload + sig + keys + readme into inner tar
-    #    4. Encrypt inner tar with age → encrypted.tar.xz.age
-    #    5. Minisign the .age file → outer .minisig
-    #    6. Bundle everything into the outer .valt tar
-    #
-    #    Signing key extraction: To sign, valt needs the minisign private key out of the passphrase-encrypted valt.key. That means decrypting it first, extracting the embedded key, using it,
-    #    then clearing it. This is where the FIFO passphrase flow we discussed becomes relevant — you'll need the passphrase after age finishes decrypting.
-    #
-    #
-    #  minisign dependency: Not yet in flake.nix / rayvn.pkg.
-    #
-
-
-
-
-
-
-
-
     # Finally, return the archive file name via stdout
 
     echo "${archiveFile}"
 }
 
+extractPublicArchive() {
+    assertFile "$1"
+    local tempDir; tempDir="${ makeTempDir; }"
+    tar -xf
+}
 
 verifySecureArchive() {
     assertFile "$1"
