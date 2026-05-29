@@ -54,7 +54,7 @@
 
 
 # ◇ Create an encrypted, signed archive from one or more files, directories and archives. The archive file path is written to
-#   standard output.
+#   standard output. Also creates the public version of the archive (same path plus ".pub" suffix).
 #
 # · USAGE
 #
@@ -101,7 +101,7 @@ newSecureArchive() {
 
     while (( $# > 0 )); do
         case "$1" in
-            -i | --identity) shift; assertFile "$1"; privateKey="$1" ;;
+            -i | --identity) shift; _assertValtKey "$1"; privateKey="$1" ;;
             -R | --recipient-file) shift; _addRecipientFromKey "$1" encryptArgs hasRecipient ;;
             -r | --recipient) shift; _addRecipient "$1" encryptArgs hasRecipient ;;
             -f | --force) force=1 ;;
@@ -114,23 +114,15 @@ newSecureArchive() {
         esac
         shift
     done
+
     timestamp="${ timeStamp "${timeZoneName}"; }"
     name+="-${timestamp}"
-
-    debugVar signingKey tarArgs encryptArgs hasRecipient fileCount name
 
     # Make sure we have required args
 
     [[ -n "${privateKey}" ]] || invalidArgs "signing identity file required"
     (( hasRecipient )) || invalidArgs "one or more recipients required"
     (( fileCount )) || invalidArgs "one or more files required"
-
-    # Create secure work dir
-
-    local workDir isRamBacked
-    makeSecureTempDir workDir isRamBacked
-
-    # TODO: ram backed
 
     # Chack output file conflict
 
@@ -141,93 +133,70 @@ newSecureArchive() {
 
     _checkOutputConflict ${force} "${archiveFile}" "${archivePubFile}"
 
-    # Ok we're probably good to go: create secure work dir, file names and result archive file
+    # Create secure work dir
 
-    # TWO OUTPUT FILES!
+    local workDir isRamBacked
+    makeSecureTempDir workDir isRamBacked
+    if (( ! isRamBacked )); then
+        local choice
+        warn "Could not create secure RAM backed temp storage."
+        show "   On disk temporary files will be deleted on exit, but this is not quite as secure as RAM." nl >&${ttyFd}
+        confirm "Do you want to continue?" no yes choice || bye
+        (( choice == 0 )) && bye
+    fi
 
-    #   backup-2026-05-28_23.14_PDT.valt      archiveName
-    #   │
-    #   ├── encrypted.tar.xz.age              encryptedTarName
-    #   │   ├── payload.tar                   payloadTarName
-    #   │   ├── payload.tar.minisign          payloadTarSigName
-    #   │   ├── minisign.pub                  sigPubName
-    #   │   ├── age.pub                       agePubName
-    #   │   └── README.txt                    readMeName # include: created date, archive/valt/rayvn versions (USER, machine?)
-    #   ├── encrypted.tar.xz.age.minisign     encryptedTarSigName
-    #   ├── minisign.pub                      sigPubName
-    #   ├── age.pub                           agePubName
-    #   └── README.txt                        readMeName
+    # Since we will do three operations that require decrypting the private key, get it now.
+    # Store it in a local variable with the same as the text var so that it will go out of
+    # scope when we exit.
 
-    #   backup-2026-05-28_23.14_PDT.valt.pub  archivePubName
-    #   │
-    #   ├── encrypted.tar.age.minisign        encryptedTarSigName
-    #   ├── minisign.pub                      sigPubName
-    #   ├── age.pub                           agePubName
-    #   └── README.txt                        readMeName
-
-
-    # Common file names
-
-    local agePubName="age.pub"
-    local sigPubName="minisign.pub"
-    local readMeName="README.txt"
-
-    # Encrypted file names
-
-    local payloadTarName="payload.tar"
-    local payloadTarSigName="${payloadTarName}.${_signatureFileSuffix}"
-
-    # Envelope tar file names
-
-    local encryptedTarName="encrypted.${_tarFileExtension}.${_ageFileExtension}"
-    local encryptedTarSigName="${encryptedTarName}.${_signatureFileSuffix}"
-
-    # Content file names
-
-    local encryptedTarFileNames=("${payloadTarName}" "${payloadTarSigName}" "${agePubName}" "${sigPubName}" "${readMeName}")
-    local archiveFileNames=("${encryptedTarName}" "${encryptedTarSigName}" "${agePubName}" "${sigPubName}" "${readMeName}")
-    local archivePubFileNames=("${encryptedTarSigName}" "${agePubName}" "${sigPubName}" "${readMeName}")
+    local rayvnTest_ValtKeyPassphrase="${rayvnTest_ValtKeyPassphrase}"
+    if [[ ! -n ${rayvnTest_ValtKeyPassphrase} ]]; then
+        local path; path="${ tildePath "${privateKey}"; }"
+        local prompt; prompt="${ show "Enter passphrase for" blue "${path}"; }"
+        readPassword "${prompt}" rayvnTest_ValtKeyPassphrase 30 false || fail
+        cursorUpOneAndEraseLine
+    fi
 
     # Create the age.pub file
 
-    recipient "${privateKey}" > "${workDir}/${agePubName}" || fail
+    recipient "${privateKey}" > "${workDir}/${_archiveAgePubName}" || fail
 
     # Create the minisign.pub file
 
     local tempFile
     publicSigningKeyToTempFile "${privateKey}" tempFile || fail
     assertFile "${tempFile}"
-    mv "${tempFile}" "${workDir}/${sigPubName}" || fail
+    mv "${tempFile}" "${workDir}/${_archiveSigPubName}" || fail
 
-    # Create the README file TODO!!
+    # Create the README file TODO!! include: created date, archive/valt/rayvn versions (USER, machine?)
 
-    local readMeFile="${workDir}/${readMeName}"
+    local readMeFile="${workDir}/${_archiveReadMeName}"
     echo "blah blah" > "${readMeFile}"
 
     # Create the payload file and sign it
-    echo "creating payload.tar" > ${terminal}
+debug "creating payload.tar" > ${terminal}
     # TODO: the -H pax arg for extended headers is gnu-tar. Worth it for new dependency?
-    tar cJ "${tarArgs[@]}" > "${workDir}/${payloadTarName}" || fail
-    signFile "${privateKey}" "${workDir}/${payloadTarName}" || fail
+    tar cJ "${tarArgs[@]}" > "${workDir}/${_archivePayloadName}" || fail
+    signFile "${privateKey}" "${workDir}/${_archivePayloadName}" || fail
 
     # Create the encrypted tar and sign it
 
-    echo "creating encrypted tar" > ${terminal}
-    tar cJ -C "${workDir}" "${encryptedTarFileNames[@]}" | encrypt "${encryptArgs[@]}" -o "${workDir}/${encryptedTarName}" || fail
+debug "creating encrypted tar"
+    tar cJ -C "${workDir}" "${_archiveEncryptedFiles[@]}" | encrypt "${encryptArgs[@]}" -o "${workDir}/${_archiveEncryptedName}" || fail
 
-    echo "signing encrypted payload.tar" > ${terminal}
-    signFile "${privateKey}" "${workDir}/${encryptedTarName}" || fail
+debug "signing encrypted payload.tar"
+    signFile "${privateKey}" "${workDir}/${_archiveEncryptedName}" || fail
 
     # Remove the payload files so we only have the encrypted forms
 
-    rm "${workDir}/${payloadTarName}" "${workDir}/${payloadTarSigName}"|| fail
+    rm "${workDir}/${_archivePayloadName}" "${workDir}/${_archivePayloadSigName}"|| fail
 
 
-echo "creating archives" > ${terminal}
     # Create the archive files
 
-    tar cJ -C "${workDir}" "${archiveFileNames[@]}" > ${archiveFile} || fail
-    tar cJ -C "${workDir}" "${archivePubFileNames[@]}" > ${archivePubFile} || fail
+debug "creating archive files"
+    tar cJ -C "${workDir}" "${_archiveFiles[@]}" > ${archiveFile} || fail
+    tar cJ -C "${workDir}" "${_archivePubFiles[@]}" > ${archivePubFile} || fail
 
     # Finally, return the archive file name via stdout
 
@@ -243,8 +212,6 @@ extractPublicArchive() {
 verifySecureArchive() {
     assertFile "$1"
     local keyFile="$1"
-    local keyIsPrivate="${2:-false}" # True means full verification with decryption.
-    # rayvnTest_ValtKeyPassphrase var can be set for testing.
 
     echo ; # TODO!!
 }
@@ -258,7 +225,53 @@ PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/archive' PRIVA
 
 
 _init_valt_archive() {
-    require 'valt/keys'
+    require 'valt/keys' 'valt/password' 'rayvn/prompt'
+
+    #   backup-2026-05-28_23.14_PDT.valt
+    #   │
+    #   ├── encrypted.tar.xz.age              _archiveEncryptedName
+    #   │   ├── payload.tar                   _archivePayloadName
+    #   │   ├── payload.tar.minisign          _archivePayloadSigName
+    #   │   ├── minisign.pub                  _archiveSigPubName
+    #   │   ├── age.pub                       _archiveAgePubName
+    #   │   └── README.txt                    _archiveReadMeName
+    #   ├── encrypted.tar.xz.age.minisign     _archiveEncryptedSigName
+    #   ├── minisign.pub                      _archiveSigPubName
+    #   ├── age.pub                           _archiveAgePubName
+    #   └── README.txt                        _archiveReadMeName
+
+    #   backup-2026-05-28_23.14_PDT.valt.pub
+    #   │
+    #   ├── encrypted.tar.age.minisign        _archiveEncryptedSigName
+    #   ├── minisign.pub                      _archiveSigPubName
+    #   ├── age.pub                           _archiveAgePubName
+    #   └── README.txt                        _archiveReadMeName
+
+    # File names
+
+    declare -gr _archiveAgePubName="age.pub"
+    declare -gr _archiveSigPubName="minisign.pub"
+    declare -gr _archiveReadMeName="README.txt"
+
+    declare -gr _archivePayloadName="payload.tar"
+    declare -gr _archivePayloadSigName="${_archivePayloadName}.${_signatureFileSuffix}"
+
+    declare -gr _archiveEncryptedName="encrypted.${_tarFileExtension}.${_ageFileExtension}"
+    declare -gr _archiveEncryptedSigName="${_archiveEncryptedName}.${_signatureFileSuffix}"
+
+    # File name lists
+
+    declare -gr _archiveEncryptedFiles=("${_archivePayloadName}" "${_archivePayloadSigName}" "${_archiveAgePubName}" \
+                                        "${_archiveSigPubName}" "${_archiveReadMeName}")
+
+    declare -gr _archiveFiles=("${_archiveEncryptedName}" "${_archiveEncryptedSigName}" "${_archiveAgePubName}" \
+                               "${_archiveSigPubName}" "${_archiveReadMeName}")
+
+    declare -gr _archivePubFiles=("${_archiveEncryptedSigName}" "${_archiveAgePubName}" "${_archiveSigPubName}" \
+                                  "${_archiveReadMeName}")
+
+    # Current archive version
+
     declare -gr _archiveVersion="1.0"
 }
 

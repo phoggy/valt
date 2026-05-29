@@ -475,6 +475,11 @@ _extractKey() {
     fi
 }
 
+_assertValtKey() {
+    local key="$1"
+    local type; type="${ keyType "${key}"; }"
+    [[ ${type} == key ]] || invalidArgs "${key} is not a valt key"
+}
 
 _addRecipientFromKey() {
     assertFile "$1"
