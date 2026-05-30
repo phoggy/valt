@@ -85,17 +85,17 @@ newSecureArchive() {
     local privateKey=
     local tarArgs=()
     local encryptArgs=()
+    local inputPaths=()
     local hasRecipient=0
-    local fileCount=0
     local timestamp=
-    local i path
 
     # Options
     local destDir="${PWD}"
     local name="${USER}"
     local timeZoneName='UTC'
     local force=0
-    local readmeText
+    local userReadmeText
+    local currentDir="${PWD}"
 
     # Parse options
 
@@ -107,10 +107,10 @@ newSecureArchive() {
             -f | --force) force=1 ;;
             -n | --name) shift; assertValidFileName "$1"; name="$1" ;;
             -z | --zone) shift; timeZoneName="$1" ;;
-            -u | --user-text) shift; readmeText="$1" ;;
+            -u | --user-text) shift; userReadmeText="$1" ;;
             -o | --output-dir) shift; assertDirectory "$1"; destDir="$1" ;;
-            -C ) shift; tarArgs+=(-C "$1"); (( fileCount++ )) ;;
-            *) tarArgs+=("$1"); (( fileCount++ )) ;;
+            -C ) shift; tarArgs+=(-C "$1"); [[ "$1" == /* ]] && currentDir="$1" || currentDir="${PWD}/$1" ;;
+            *) tarArgs+=("$1"); [[ "$1" == /* ]] && inputPaths+=("$1") || inputPaths+=("${currentDir}/$1") ;;
         esac
         shift
     done
@@ -122,7 +122,7 @@ newSecureArchive() {
 
     [[ -n "${privateKey}" ]] || invalidArgs "signing identity file required"
     (( hasRecipient )) || invalidArgs "one or more recipients required"
-    (( fileCount )) || invalidArgs "one or more files required"
+    (( ${#inputPaths[@]} )) || invalidArgs "one or more files required"
 
     # Chack output file conflict
 
@@ -133,10 +133,11 @@ newSecureArchive() {
 
     _checkOutputConflict ${force} "${archiveFile}" "${archivePubFile}"
 
-    # Create secure work dir
+    # Create secure work dir sized to hold payload.tar + encrypted.tar simultaneously (2× input)
 
+    local inputSizeMb; inputSizeMb=${ du -sm "${inputPaths[@]}" 2>/dev/null | gawk '{sum += $1} END {print int(sum) + 1}'; }
     local workDir isRamBacked
-    makeSecureTempDir workDir isRamBacked
+    makeSecureTempDir workDir isRamBacked $(( inputSizeMb * 2 + 64 ))
     if (( ! isRamBacked )); then
         local choice
         warn "Could not create secure RAM backed temp storage."
@@ -145,9 +146,8 @@ newSecureArchive() {
         (( choice == 0 )) && bye
     fi
 
-    # Since we will do three operations that require decrypting the private key, get it now.
-    # Store it in a local variable with the same as the text var so that it will go out of
-    # scope when we exit.
+    # Since we will do three operations that require decrypting the private key, get it now. Store it in a local variable
+    # with the same as the text var so that it will go out of scope when we exit.
 
     local rayvnTest_ValtKeyPassphrase="${rayvnTest_ValtKeyPassphrase}"
     if [[ ! -n ${rayvnTest_ValtKeyPassphrase} ]]; then
@@ -168,10 +168,9 @@ newSecureArchive() {
     assertFile "${tempFile}"
     mv "${tempFile}" "${workDir}/${_archiveSigPubName}" || fail
 
-    # Create the README file TODO!! include: created date, archive/valt/rayvn versions (USER, machine?)
+    # Create the private README file
 
-    local readMeFile="${workDir}/${_archiveReadMeName}"
-    echo "blah blah" > "${readMeFile}"
+    _privateReadMe "${workDir}/${_archiveReadMeName}" "${userReadmeText}"
 
     # Create the payload file and sign it
 debug "creating payload.tar" > ${terminal}
@@ -191,6 +190,9 @@ debug "signing encrypted payload.tar"
 
     rm "${workDir}/${_archivePayloadName}" "${workDir}/${_archivePayloadSigName}"|| fail
 
+    # Create the public README file (overwrites the private one already in the encrypted tar)
+
+    _publicReadMe "${workDir}/${_archiveReadMeName}" "${userReadmeText}"
 
     # Create the archive files
 
@@ -205,8 +207,9 @@ debug "creating archive files"
 
 extractPublicArchive() {
     assertFile "$1"
-    local tempDir; tempDir="${ makeTempDir; }"
-    tar -xf
+    local privateArchive="$1"
+    local publicArchive="${privateArchive}.pub"
+    tar xf "${privateArchive}" "${_archivePubFiles[@]}" | tar cj > ${publicArchive}
 }
 
 verifySecureArchive() {
@@ -216,9 +219,6 @@ verifySecureArchive() {
     echo ; # TODO!!
 }
 
-extractSecureArchive() {
-    echo ; # TODO!!
-}
 
 
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/archive' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
@@ -273,6 +273,30 @@ _init_valt_archive() {
     # Current archive version
 
     declare -gr _archiveVersion="1.0"
+}
+
+_publicReadMe() {
+    local file="$1"
+    local userText="$2"
+
+    # TODO
+    #  - overview of content
+    #  - include create date, archive/valt/rayvn versions. (USER? machine?)
+    #  - include verify and extract instructions, two ways
+    #    1. using valt
+    #    2. using age, minisign, tar
+    #  - Include user text
+
+    echo "private" > "${file}" # TODO
+}
+
+_privateReadMe() {
+    local file="$1"
+    local userText="$2"
+
+    # TODO Similar to public, but only needs verification instructions since already extracted
+
+    echo "public" > "${file}" # TODO
 }
 
 _checkOutputConflict() {
