@@ -170,7 +170,7 @@ newSecureArchive() {
 
     # Create the private README file
 
-    _privateReadMe "${workDir}/${_archiveReadMeName}" "${userReadmeText}"
+    _privateReadMe "${workDir}/${_archiveReadMeName}" "${archiveName}" "${userReadmeText}"
 
     # Create the payload file and sign it
 debug "creating payload.tar" > ${terminal}
@@ -192,7 +192,7 @@ debug "signing encrypted payload.tar"
 
     # Create the public README file (overwrites the private one already in the encrypted tar)
 
-    _publicReadMe "${workDir}/${_archiveReadMeName}" "${userReadmeText}"
+    _publicReadMe "${workDir}/${_archiveReadMeName}" "${archiveName}" "${userReadmeText}"
 
     # Create the archive files
 
@@ -276,27 +276,49 @@ _init_valt_archive() {
 }
 
 _publicReadMe() {
-    local file="$1"
-    local userText="$2"
-
-    # TODO
-    #  - overview of content
-    #  - include create date, archive/valt/rayvn versions. (USER? machine?)
-    #  - include verify and extract instructions, two ways
-    #    1. using valt
-    #    2. using age, minisign, tar
-    #  - Include user text
-
-    echo "private" > "${file}" # TODO
+    _renderArchiveReadMe "archive-readme-public.tmpl" "$1" "$2" "$3"
 }
 
 _privateReadMe() {
-    local file="$1"
-    local userText="$2"
+    _renderArchiveReadMe "archive-readme-private.tmpl" "$1" "$2" "$3"
+}
 
-    # TODO Similar to public, but only needs verification instructions since already extracted
+_renderArchiveReadMe() {
+    local templateName="$1"
+    local outputFile="$2"
+    local archiveName="$3"
+    local userText="${4:-(none)}"
 
-    echo "public" > "${file}" # TODO
+    local template; readFile "${valtHome}/etc/${templateName}" template
+
+    local valtVersion; valtVersion=${ gawk -F"'" '/^projectVersion=/{print $2}' "${valtHome}/rayvn.pkg"; }
+    local rayvnVersion; rayvnVersion=${ gawk -F"'" '/^projectVersion=/{print $2}' "${rayvnHome}/rayvn.pkg"; }
+    local created; created="${ TZ=UTC date '+%Y-%m-%d %H:%M:%S UTC'; }"
+    local author="${USER}@${ hostname -s; }"
+    userText="${userText//\\n/$'\n'}"
+
+    local substitutions=(
+        "ARCHIVE_NAME:${archiveName}"
+        "CREATED:${created}"
+        "AUTHOR:${author}"
+        "VALT_VERSION:${valtVersion}"
+        "RAYVN_VERSION:${rayvnVersion}"
+        "FORMAT_VERSION:${_archiveVersion}"
+        "USER_TEXT:${userText}"
+        "ENCRYPTED_NAME:${_archiveEncryptedName}"
+        "ENCRYPTED_SIG_NAME:${_archiveEncryptedSigName}"
+        "PAYLOAD_NAME:${_archivePayloadName}"
+        "PAYLOAD_SIG_NAME:${_archivePayloadSigName}"
+    )
+
+    local key value entry
+    for entry in "${substitutions[@]}"; do
+        key="${entry%%:*}"
+        value="${entry#*:}"
+        template="${template//\$\{${key}\}/${value}}"
+    done
+
+    printf '%s\n' "${template}" > "${outputFile}"
 }
 
 _checkOutputConflict() {

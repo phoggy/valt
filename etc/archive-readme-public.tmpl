@@ -1,0 +1,81 @@
+═══════════════════════════════════════════════════════════════════════
+  SECURE ARCHIVE
+═══════════════════════════════════════════════════════════════════════
+
+  This archive is encrypted and signed. The contents can only be
+  accessed by someone who holds the corresponding private key.
+
+  Archive:  ${ARCHIVE_NAME}
+  Created:  ${CREATED}
+  Author:   ${AUTHOR}
+
+───────────────────────────────────────────────────────────────────────
+  Notes
+───────────────────────────────────────────────────────────────────────
+
+${USER_TEXT}
+
+───────────────────────────────────────────────────────────────────────
+  Files
+───────────────────────────────────────────────────────────────────────
+
+  ${ENCRYPTED_NAME}
+      The encrypted archive. Requires a private key to decrypt.
+
+  ${ENCRYPTED_SIG_NAME}
+      Cryptographic signature of the encrypted archive.
+
+  minisign.pub    Public key used to verify the signatures above.
+  age.pub         Public key used when encrypting this archive.
+  README.txt      This file.
+
+───────────────────────────────────────────────────────────────────────
+  What You Need
+───────────────────────────────────────────────────────────────────────
+
+  To access this archive you need:
+
+    1. The private key file (.key) from the intended recipient.
+
+    2. Two free, open-source command-line tools:
+
+         age       https://github.com/FiloSottile/age/releases
+         minisign  https://jedisct1.github.io/minisign/
+
+       Both are available for macOS, Linux, and Windows.
+
+───────────────────────────────────────────────────────────────────────
+  Step-by-Step Instructions
+───────────────────────────────────────────────────────────────────────
+
+  Open a terminal, change to the directory containing these files,
+  then follow the steps below.
+
+  1. Verify the archive has not been tampered with:
+
+       minisign -V -p minisign.pub -m ${ENCRYPTED_NAME}
+
+     You should see: Signature and comment signature verified
+
+  2. Decrypt the archive:
+
+       age -d -i <key> -o decrypted.tar.xz ${ENCRYPTED_NAME}
+
+     Replace <key> with the path to the private key file.
+     You may be prompted for the key passphrase.
+
+  3. Expand the decrypted archive:
+
+       tar xJf decrypted.tar.xz
+
+  4. Verify the payload has not been tampered with:
+
+       minisign -V -p minisign.pub -m ${PAYLOAD_NAME}
+
+     You should see: Signature and comment signature verified
+
+  5. Extract the contents:
+
+       tar xJf ${PAYLOAD_NAME}
+
+  The files are now in your current directory.

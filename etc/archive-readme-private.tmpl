@@ -1,0 +1,50 @@
+═══════════════════════════════════════════════════════════════════════
+  SECURE ARCHIVE CONTENTS
+═══════════════════════════════════════════════════════════════════════
+
+  Archive:  ${ARCHIVE_NAME}
+  Created:  ${CREATED}
+  Author:   ${AUTHOR}
+
+───────────────────────────────────────────────────────────────────────
+  Notes
+───────────────────────────────────────────────────────────────────────
+
+${USER_TEXT}
+
+───────────────────────────────────────────────────────────────────────
+  Files
+───────────────────────────────────────────────────────────────────────
+
+  ${PAYLOAD_NAME}
+      The archive payload. Contains the files that were encrypted.
+
+  ${PAYLOAD_SIG_NAME}
+      Cryptographic signature of the payload.
+
+  minisign.pub    Public key used to verify the signature above.
+  age.pub         Public key used when encrypting this archive.
+  README.txt      This file.
+
+───────────────────────────────────────────────────────────────────────
+  Verify & Extract
+───────────────────────────────────────────────────────────────────────
+
+  Open a terminal, change to the directory containing these files,
+  then follow the steps below.
+
+  You will need minisign to verify the payload signature:
+
+    minisign  https://jedisct1.github.io/minisign/
+
+  1. Verify the payload has not been tampered with:
+
+       minisign -V -p minisign.pub -m ${PAYLOAD_NAME}
+
+     You should see: Signature and comment signature verified
+
+  2. Extract the contents:
+
+       tar xJf ${PAYLOAD_NAME}
+
+  The files are now in your current directory.
