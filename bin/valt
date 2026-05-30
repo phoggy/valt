@@ -3,17 +3,15 @@
 
 usage() {
     echo
-    show bold "Public key encryption of files and directories, using" cyan "rage" "(see" blue "${rageProjectUrl}" ")."
+    show bold "Public key encryption of files and directories, using" cyan "age" "(see" blue "${ageProjectUrl}" glue ")."
     echo
     show "Usage:" bold blue "${scriptName}" "[OPTIONS]" italic "COMMAND"
     echo
     echo "Commands"
     echo
     echo "    pass             Generate and/or evaluate password/passphrase strength."
-    echo "    keys             Generate a public key pair, with encrypted private key."
-    echo "    encrypt          Encrypt one or more files or directories."
-    echo "    decrypt          Decrypt a '.valt' file."
-    echo "    append           Append one or more files to an existing .valt file." # TODO!!
+    echo "    keys             Generate a key pair with a password/passphrase encrypted private key."
+    echo "    archive          Create a secure archive from one or more files or directories, or extract files from one."
     echo
     echo "Options"
     echo
@@ -21,7 +19,6 @@ usage() {
     echo
     echo "Environment Variables"
     echo
-    echo "    VALT_VISIBILITY  Set default visibility mode."
     echo "    VALT_TIMEOUT     Set input timeout, in seconds (default: 30)."
     echo
     show "Run" bold blue "${projectName}" italic "COMMAND" bold blue "--help" "for more information on a command."
@@ -45,7 +42,7 @@ init() {
 
     # Global constants
 
-    declare -grx rageProjectUrl='https://github.com/str4d/rage'
+    declare -grx ageProjectUrl='https://github.com/filosottile/age'
     declare -grx valtBinDir="${0%/*}"
     declare -grx valtConfigDir="${ configDirPath; }"
     declare -grx valtProjectUrl='https://github.com/phoggy/valt'
