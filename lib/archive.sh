@@ -173,17 +173,13 @@ newSecureArchive() {
     _privateReadMe "${workDir}/${_archiveReadMeName}" "${archiveName}" "${userReadmeText}"
 
     # Create the payload file and sign it
-debug "creating payload.tar" > ${terminal}
-    # TODO: the -H pax arg for extended headers is gnu-tar. Worth it for new dependency?
+
     tar cJ "${tarArgs[@]}" > "${workDir}/${_archivePayloadName}" || fail
     signFile "${privateKey}" "${workDir}/${_archivePayloadName}" || fail
 
     # Create the encrypted tar and sign it
 
-debug "creating encrypted tar"
     tar cJ -C "${workDir}" "${_archiveEncryptedFiles[@]}" | encrypt "${encryptArgs[@]}" -o "${workDir}/${_archiveEncryptedName}" || fail
-
-debug "signing encrypted payload.tar"
     signFile "${privateKey}" "${workDir}/${_archiveEncryptedName}" || fail
 
     # Remove the payload files so we only have the encrypted forms
@@ -196,7 +192,6 @@ debug "signing encrypted payload.tar"
 
     # Create the archive files
 
-debug "creating archive files"
     tar cJ -C "${workDir}" "${_archiveFiles[@]}" > ${archiveFile} || fail
     tar cJ -C "${workDir}" "${_archivePubFiles[@]}" > ${archivePubFile} || fail
 
@@ -205,11 +200,23 @@ debug "creating archive files"
     echo "${archiveFile}"
 }
 
+# ◇ Extract the public portion of a secure archive, creating a .valt.pub file alongside it.
+#   The .valt.pub contains the signature, public keys, and README but not the encrypted payload,
+#   making it safe to share publicly. Useful when the .valt.pub was not retained from creation.
+#
+# · USAGE
+#
+#   extractPublicArchive ARCHIVE
+#
+#   ARCHIVE  Path to the .valt archive file.
+
 extractPublicArchive() {
     assertFile "$1"
     local privateArchive="$1"
     local publicArchive="${privateArchive}.pub"
-    tar xf "${privateArchive}" "${_archivePubFiles[@]}" | tar cj > ${publicArchive}
+    local tmpDir; tmpDir="${ makeTempDir; }"
+    tar xJf "${privateArchive}" -C "${tmpDir}" "${_archivePubFiles[@]}" || fail
+    tar cJ -C "${tmpDir}" "${_archivePubFiles[@]}" > "${publicArchive}" || fail
 }
 
 # ◇ Verify the signatures of a secure archive. Checks both the outer encrypted archive signature

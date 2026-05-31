@@ -7,6 +7,7 @@ main() {
     testBasicArchiveCreation
     testOuterArchiveStructure
     testPubArchiveStructure
+    testExtractPublicArchive
     testEncryptedArchiveStructure
     testPayloadContents
     testSignaturesVerify
@@ -103,6 +104,25 @@ testPubArchiveStructure() {
     assertFile "${pubExtractDir}/${_archiveAgePubName}"
     assertFile "${pubExtractDir}/${_archiveReadMeName}"
     assertFalse "pub archive must not contain encrypted tar" test -f "${pubExtractDir}/${_archiveEncryptedName}"
+}
+
+testExtractPublicArchive() {
+    local outputDir; outputDir="${ makeTempDir; }"
+    local file; file="${ newSecureArchive -C "${testInputDir}" file1.txt \
+        -i "${keyFile}" -R "${pubFile}" -n pub-extract -o "${outputDir}"; }"
+    rm "${file}.pub" || fail "test setup: failed to remove existing pub archive"
+
+    extractPublicArchive "${file}"
+
+    local pubArchive="${file}.pub"
+    assertFile "${pubArchive}"
+    local extractDir; extractDir="${ makeTempDir; }"
+    tar xJf "${pubArchive}" -C "${extractDir}" || fail
+    assertFile "${extractDir}/${_archiveEncryptedSigName}"
+    assertFile "${extractDir}/${_archiveSigPubName}"
+    assertFile "${extractDir}/${_archiveAgePubName}"
+    assertFile "${extractDir}/${_archiveReadMeName}"
+    assertFalse "pub archive must not contain encrypted tar" test -f "${extractDir}/${_archiveEncryptedName}"
 }
 
 testEncryptedArchiveStructure() {
