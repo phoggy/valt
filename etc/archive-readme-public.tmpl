@@ -1,55 +1,53 @@
-═══════════════════════════════════════════════════════════════════════
-  SECURE ARCHIVE
-═══════════════════════════════════════════════════════════════════════
 
-  This archive is encrypted and signed. The contents can only be
-  accessed by someone who holds the corresponding private key.
+█ SECURE ARCHIVE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  Archive:  ${ARCHIVE_NAME}
-  Created:  ${CREATED}
-  Author:   ${AUTHOR}
+${ARCHIVE_NAME} by ${AUTHOR}
 
-───────────────────────────────────────────────────────────────────────
-  Notes
-───────────────────────────────────────────────────────────────────────
+This archive is encrypted and signed. The contents can only be accessed by someone who holds the
+corresponding private key.
 
-${USER_TEXT}
+${NOTES_SECTION}
+▋ Files
+───────────────────────────────────────────────────────────────────────────────────────────────────
 
-───────────────────────────────────────────────────────────────────────
-  Files
-───────────────────────────────────────────────────────────────────────
+  ${ARCHIVE_NAME}
+  │
+  ├── encrypted.tar.xz.age            The encrypted archive. Requires the private key to decrypt.
+  ├── encrypted.tar.xz.age.minisign   Cryptographic signature of the encrypted archive.
+  ├── minisign.pub                    Public key used to verify the signatures above.
+  ├── age.pub                         Public key used when encrypting this archive.
+  └── README.txt                      This file.
 
-  ${ENCRYPTED_NAME}
-      The encrypted archive. Requires a private key to decrypt.
 
-  ${ENCRYPTED_SIG_NAME}
-      Cryptographic signature of the encrypted archive.
+▋ Tools
+───────────────────────────────────────────────────────────────────────────────────────────────────
 
-  minisign.pub    Public key used to verify the signatures above.
-  age.pub         Public key used when encrypting this archive.
-  README.txt      This file.
+  This archive can be accessed using valt (the tool that created it) or manually using the
+  individual tools listed below. All are free, open-source, and available for macOS and Linux.
 
-───────────────────────────────────────────────────────────────────────
-  What You Need
-───────────────────────────────────────────────────────────────────────
+  valt       Created this archive. Handles everything automatically if you have it installed.
+             https://phoggy.github.io/valt
 
-  To access this archive you need:
+  age        Encryption tool used to protect the archive contents.
+             https://github.com/FiloSottile/age/releases
 
-    1. The private key file (.key) from the intended recipient.
+  minisign   Signing tool used to verify the archive has not been tampered with.
+             https://jedisct1.github.io/minisign/
 
-    2. Two free, open-source command-line tools:
+  tar        Standard archive utility, included with macOS and Linux.
 
-         age       https://github.com/FiloSottile/age/releases
-         minisign  https://jedisct1.github.io/minisign/
 
-       Both are available for macOS, Linux, and Windows.
+▋ Extract with valt
+───────────────────────────────────────────────────────────────────────────────────────────────────
 
-───────────────────────────────────────────────────────────────────────
-  Step-by-Step Instructions
-───────────────────────────────────────────────────────────────────────
+  valt extract ${ARCHIVE_NAME} -i <valt.key>
 
-  Open a terminal, change to the directory containing these files,
-  then follow the steps below.
+
+▋ Extract Manually
+───────────────────────────────────────────────────────────────────────────────────────────────────
+
+  Open a terminal and change to the directory containing these files, then:
 
   1. Verify the archive has not been tampered with:
 
@@ -61,8 +59,7 @@ ${USER_TEXT}
 
        age -d -i <key> -o decrypted.tar.xz ${ENCRYPTED_NAME}
 
-     Replace <key> with the path to the private key file.
-     You may be prompted for the key passphrase.
+     Replace <key> with the path to the private key file. You may be prompted for a passphrase.
 
   3. Expand the decrypted archive:
 
@@ -79,3 +76,10 @@ ${USER_TEXT}
        tar xJf ${PAYLOAD_NAME}
 
   The files are now in your current directory.
+
+
+▋ Reference
+───────────────────────────────────────────────────────────────────────────────────────────────────
+
+  Created:   ${CREATED}
+  Tools:     valt ${VALT_VERSION}  ·  age ${AGE_VERSION}  ·  minisign ${MINISIGN_VERSION}

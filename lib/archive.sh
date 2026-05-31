@@ -287,24 +287,31 @@ _renderArchiveReadMe() {
     local templateName="$1"
     local outputFile="$2"
     local archiveName="$3"
-    local userText="${4:-(none)}"
+    local userText="$4"
 
     local template; readFile "${valtHome}/etc/${templateName}" template
 
     local valtVersion; valtVersion=${ gawk -F"'" '/^projectVersion=/{print $2}' "${valtHome}/rayvn.pkg"; }
-    local rayvnVersion; rayvnVersion=${ gawk -F"'" '/^projectVersion=/{print $2}' "${rayvnHome}/rayvn.pkg"; }
+    local ageVersion; ageVersion=${ age --version 2>&1 | gsed 's/^v//'; }
+    local minisignVersion; minisignVersion=${ minisign -v 2>&1 | gawk '{print $2}'; }
     local created; created="${ TZ=UTC date '+%Y-%m-%d %H:%M:%S UTC'; }"
     local author="${USER}@${ hostname -s; }"
-    userText="${userText//\\n/$'\n'}"
+
+    local notesSection=''
+    if [[ -n ${userText} ]]; then
+        local divider='───────────────────────────────────────────────────────────────────────────────────────────────────'
+        userText="${userText//\\n/$'\n'}"
+        notesSection=$'\n▋ Notes\n'"${divider}"$'\n\n'"${userText}"$'\n'
+    fi
 
     local substitutions=(
         "ARCHIVE_NAME:${archiveName}"
         "CREATED:${created}"
         "AUTHOR:${author}"
         "VALT_VERSION:${valtVersion}"
-        "RAYVN_VERSION:${rayvnVersion}"
-        "FORMAT_VERSION:${_archiveVersion}"
-        "USER_TEXT:${userText}"
+        "AGE_VERSION:${ageVersion}"
+        "MINISIGN_VERSION:${minisignVersion}"
+        "NOTES_SECTION:${notesSection}"
         "ENCRYPTED_NAME:${_archiveEncryptedName}"
         "ENCRYPTED_SIG_NAME:${_archiveEncryptedSigName}"
         "PAYLOAD_NAME:${_archivePayloadName}"
