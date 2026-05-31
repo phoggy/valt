@@ -219,8 +219,6 @@ verifySecureArchive() {
     echo ; # TODO!!
 }
 
-
-
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/archive' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 
@@ -295,7 +293,7 @@ _renderArchiveReadMe() {
     local ageVersion; ageVersion=${ age --version 2>&1 | gsed 's/^v//'; }
     local minisignVersion; minisignVersion=${ minisign -v 2>&1 | gawk '{print $2}'; }
     local created; created="${ TZ=UTC date '+%Y-%m-%d %H:%M:%S UTC'; }"
-    local author="${USER}@${ hostname -s; }"
+    local author; author="${USER}@${ hostname -s; }"
 
     local notesSection=''
     if [[ -n ${userText} ]]; then
