@@ -63,7 +63,7 @@
 #   -i, --identity PATH        The valt.key file used to sign the archive.
 #   -r, --recipient RECIPIENT  Encrypt to the specified RECIPIENT. See the recipient() function in 'valt/keys'.
 #   -R, --recipient-file PATH  Encrypt to one or more recipients. PATH can be a valt key or contain a list of recipients (see the
-#                              createRecipientsFile() function in 'valt/keys'). Valt private key files require passphrase input
+#                              newRecipientsFile() function in 'valt/keys'). Valt private key files require passphrase input
 #                              for decryption. Can be repeated.
 #   -f, --force                Overwrite any existing output file (default: fail).
 #   -n, --name NAME            Specify the archive file name prefix (default: ${USER}).

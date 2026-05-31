@@ -296,12 +296,12 @@ recipient() {
 #
 # · USAGE
 #
-#   createRecipientsFile recipientsFile keyFile...
+#   newRecipientsFile recipientsFile keyFile...
 #
 #   recipientsFile (string)      Path to the recipients file to create.
 #   keyFile        (string)...   One or more valt .pub or .key file paths.
 
-createRecipientsFile() {
+newRecipientsFile() {
     local recipientsFile="$1"; shift
     local recipient
     (( $# )) || invalidArgs "one or more valt key files required"

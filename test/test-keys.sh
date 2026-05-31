@@ -8,7 +8,7 @@ main() {
     testKeyType
     testRecipientFromPub
     testRecipientFromKey
-    testCreateRecipientsFile
+    testNewRecipientsFile
     testPublicSigningKeyToTempFile
     testSigningKeyToTempFile
     testArmorKeyFile
@@ -63,10 +63,10 @@ testRecipientFromKey() {
     assertEqual "${rPub}" "${rKey}" "recipient from key should match recipient from pub"
 }
 
-testCreateRecipientsFile() {
+testNewRecipientsFile() {
     local recipientsFile; recipientsFile="${ makeTempFile; }"
     local r; r="${ recipient "${pubFile}"; }"
-    createRecipientsFile "${recipientsFile}" "${pubFile}"
+    newRecipientsFile "${recipientsFile}" "${pubFile}"
     assertTrue "recipients file must contain recipient" grep -qF "${r}" "${recipientsFile}"
 }
 
