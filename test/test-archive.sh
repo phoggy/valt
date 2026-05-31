@@ -10,6 +10,11 @@ main() {
     testEncryptedArchiveStructure
     testPayloadContents
     testSignaturesVerify
+    testVerifySecureArchive
+    testVerifyFailsOnTamperedOuter
+    testVerifyFailsOnTamperedPayload
+    testVerifyMissingArchiveFails
+    testVerifyMissingIdentityFails
 
     # README content
     testPublicReadmeStructure
@@ -49,7 +54,7 @@ init() {
     declare -g outerExtractDir innerExtractDir payloadExtractDir
 
     local testKeyDir; testKeyDir="${ makeTempDir; }"
-    createValtKeys 'test' "${testKeyDir}" pubFile keyFile
+    newValtKeys 'test' "${testKeyDir}" pubFile keyFile
 
     testInputDir="${ makeTempDir; }"
     echo 'hello from file1' > "${testInputDir}/file1.txt"
@@ -125,6 +130,57 @@ testSignaturesVerify() {
         verifyFileSignature "${pubFile}" \
                             "${innerExtractDir}/${_archivePayloadName}" \
                             "${innerExtractDir}/${_archivePayloadSigName}"
+}
+
+testVerifySecureArchive() {
+    verifySecureArchive "${archiveFile}" -i "${keyFile}"
+}
+
+testVerifyFailsOnTamperedOuter() {
+    local tamperDir; tamperDir="${ makeTempDir; }"
+    tar xJf "${archiveFile}" -C "${tamperDir}" || fail
+    echo 'tampered' >> "${tamperDir}/${_archiveEncryptedName}"
+    local tamperedArchive="${tamperDir}/tampered.valt"
+    tar cJf "${tamperedArchive}" -C "${tamperDir}" "${_archiveFiles[@]}" || fail
+    ( verifySecureArchive "${tamperedArchive}" -i "${keyFile}" ) 2>/dev/null \
+        && fail "must fail when encrypted archive is tampered"
+    return 0
+}
+
+testVerifyFailsOnTamperedPayload() {
+    local outerDir; outerDir="${ makeTempDir; }"
+    tar xJf "${archiveFile}" -C "${outerDir}" || fail
+
+    # Decrypt, tamper with payload, re-encrypt, re-sign
+    local innerDir; innerDir="${ makeTempDir; }"
+    decrypt -i "${keyFile}" -o "${innerDir}/decrypted.tar.xz" "${outerDir}/${_archiveEncryptedName}" || fail
+    tar xJf "${innerDir}/decrypted.tar.xz" -C "${innerDir}" || fail
+    echo 'tampered' >> "${innerDir}/${_archivePayloadName}"
+
+    # Re-package the tampered inner tar (without re-signing) and re-encrypt
+    local r; r="${ recipient "${keyFile}"; }"
+    tar cJf - -C "${innerDir}" "${_archiveEncryptedFiles[@]}" \
+        | encrypt -r "${r}" -o "${outerDir}/${_archiveEncryptedName}" || fail
+    signFile "${keyFile}" "${outerDir}/${_archiveEncryptedName}" \
+             "${outerDir}/${_archiveEncryptedSigName}" || fail
+
+    local tamperedArchive="${outerDir}/tampered-payload.valt"
+    tar cJf "${tamperedArchive}" -C "${outerDir}" "${_archiveFiles[@]}" || fail
+    ( verifySecureArchive "${tamperedArchive}" -i "${keyFile}" ) 2>/dev/null \
+        && fail "must fail when payload is tampered"
+    return 0
+}
+
+testVerifyMissingArchiveFails() {
+    ( verifySecureArchive "/nonexistent/path.valt" -i "${keyFile}" ) 2>/dev/null \
+        && fail "must fail with nonexistent archive"
+    return 0
+}
+
+testVerifyMissingIdentityFails() {
+    ( verifySecureArchive "${archiveFile}" ) 2>/dev/null \
+        && fail "must fail without identity"
+    return 0
 }
 
 # ─── README ──────────────────────────────────────────────────────────────────

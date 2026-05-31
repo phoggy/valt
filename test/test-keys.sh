@@ -3,7 +3,7 @@
 main() {
     init "$@"
 
-    testCreateValtKeys
+    testNewValtKeys
     testVerifyValtKeys
     testKeyType
     testRecipientFromPub
@@ -28,10 +28,10 @@ init() {
     skipKeyPassphraseAdvice=1
     declare -g testKeyDir pubFile keyFile
     testKeyDir="${ makeTempDir; }"
-    createValtKeys 'test' "${testKeyDir}" pubFile keyFile
+    newValtKeys 'test' "${testKeyDir}" pubFile keyFile
 }
 
-testCreateValtKeys() {
+testNewValtKeys() {
     assertFile "${pubFile}"
     assertFile "${keyFile}"
     assertEqual "${testKeyDir}/test.pub" "${pubFile}"

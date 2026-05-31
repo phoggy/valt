@@ -25,7 +25,7 @@ init() {
     skipKeyPassphraseAdvice=1
     declare -g testKeyDir pubFile keyFile testFile
     testKeyDir="${ makeTempDir; }"
-    createValtKeys 'test' "${testKeyDir}" pubFile keyFile
+    newValtKeys 'test' "${testKeyDir}" pubFile keyFile
     testFile="${ makeTempFile test.txt; }"
     echo 'The quick brown fox jumps over the lazy dog.' > "${testFile}"
 }

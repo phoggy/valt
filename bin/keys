@@ -173,7 +173,7 @@ createKeys() {
     echo
     header -u "Generating Keys"
 
-    createValtKeys "${keyName}" "${outputDir}" || fail
+    newValtKeys "${keyName}" "${outputDir}" || fail
     local pubKeyFile; pubKeyFile="${ tildePath "${publicKeyFile}"; }"
     local keyFile; keyFile="${ tildePath "${privateKeyFile}"; }"
     echo

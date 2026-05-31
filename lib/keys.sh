@@ -80,7 +80,7 @@
 #
 # · USAGE
 #
-#   createValtKeys [keyName] [keyDir] [valtPubFileResultVar] [valtKeyFileResultVar]
+#   newValtKeys [keyName] [keyDir] [valtPubFileResultVar] [valtKeyFileResultVar]
 #
 #   A '-' may be passed for any arg to enable passing a subsequent value.
 #
@@ -91,11 +91,11 @@
 #
 # · EXAMPLE
 #
-#   createValtKeys                      # creates valt.pub and valt.key files in the ~/.config/valt/ directory.
-#   createValtKeys - - pubFile keyFile  # same as above but assigns key paths to pubFile keyFile vars.
-#   createValtKeys frodo                # creates frodo.pub and frodo.key in the ~/.config/valt/ directory.
+#   newValtKeys                      # creates valt.pub and valt.key files in the ~/.config/valt/ directory.
+#   newValtKeys - - pubFile keyFile  # same as above but assigns key paths to pubFile keyFile vars.
+#   newValtKeys frodo                # creates frodo.pub and frodo.key in the ~/.config/valt/ directory.
 
-createValtKeys() {
+newValtKeys() {
     local keyName="${1:-valt}"
     local keyDir="${2:-?}"
     local _valtPubFileResultVar="${3:-?}"

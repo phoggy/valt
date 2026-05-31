@@ -212,18 +212,68 @@ extractPublicArchive() {
     tar xf "${privateArchive}" "${_archivePubFiles[@]}" | tar cj > ${publicArchive}
 }
 
-verifySecureArchive() {
-    assertFile "$1"
-    local keyFile="$1"
+# ◇ Verify the signatures of a secure archive. Checks both the outer encrypted archive signature
+#   and the inner payload signature (requires decryption with the private key).
+#
+# · USAGE
+#
+#   verifySecureArchive ARCHIVE -i PATH
+#
+#   ARCHIVE             Path to the .valt archive file.
+#   -i, --identity PATH The valt.key file used to decrypt and verify signatures.
 
-    echo ; # TODO!!
+verifySecureArchive() {
+    local archiveFile= keyFile=
+
+    while (( $# )); do
+        case "$1" in
+            -i | --identity) shift; _assertValtKey "$1"; keyFile="$1" ;;
+            *) [[ -z ${archiveFile} ]] || invalidArgs "unexpected argument: $1"
+               assertFile "$1"; archiveFile="$1" ;;
+        esac
+        shift
+    done
+
+    [[ -n ${archiveFile} ]] || invalidArgs "archive file required"
+    [[ -n ${keyFile} ]] || invalidArgs "identity file required"
+
+    # Extract outer archive (contents are still encrypted — regular temp dir is fine)
+
+    local outerDir; outerDir="${ makeTempDir; }"
+    tar xJf "${archiveFile}" -C "${outerDir}" || fail
+
+    # Verify outer signature
+
+    verifyFileSignature "${keyFile}" "${outerDir}/${_archiveEncryptedName}" \
+                        "${outerDir}/${_archiveEncryptedSigName}"
+
+    # Get key passphrase once for both decrypt and inner verify
+
+    local rayvnTest_ValtKeyPassphrase="${rayvnTest_ValtKeyPassphrase}"
+    if [[ -z ${rayvnTest_ValtKeyPassphrase} ]]; then
+        local path; path="${ tildePath "${keyFile}"; }"
+        local prompt; prompt="${ show "Enter passphrase for" blue "${path}"; }"
+        readPassword "${prompt}" rayvnTest_ValtKeyPassphrase 30 false || fail
+        cursorUpOneAndEraseLine
+    fi
+
+    # Decrypt and expand inner archive to a secure temp dir
+
+    local innerDir; makeSecureTempDir innerDir
+    decrypt -i "${keyFile}" -o "${innerDir}/decrypted.tar.xz" "${outerDir}/${_archiveEncryptedName}" || fail
+    tar xJf "${innerDir}/decrypted.tar.xz" -C "${innerDir}" || fail
+
+    # Verify inner payload signature
+
+    verifyFileSignature "${keyFile}" "${innerDir}/${_archivePayloadName}" \
+                        "${innerDir}/${_archivePayloadSigName}"
 }
 
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/archive' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 
 _init_valt_archive() {
-    require 'valt/keys' 'valt/password' 'rayvn/prompt'
+    require 'valt/keys' 'valt/password' 'valt/decrypt' 'valt/sign' 'rayvn/prompt'
 
     #   backup-2026-05-28_23.14_PDT.valt
     #   │
