@@ -31,6 +31,11 @@ main() {
     testCustomName
     testCustomOutputDir
 
+    # Extract
+    testExtractSecureArchive
+    testExtractSecureArchiveCustomOutputDir
+    testExtractSecureArchiveFailsOnTamperedOuter
+
     # Validation
     testMissingIdentityFails
     testMissingRecipientFails
@@ -293,6 +298,36 @@ testCustomOutputDir() {
         -n outdir-test -o "${outputDir}"; }"
     assertContains "${outputDir}" "${file}"
     assertFile "${file}"
+}
+
+# ─── Extract ─────────────────────────────────────────────────────────────────
+
+testExtractSecureArchive() {
+    local outputDir; outputDir="${ makeTempDir; }"
+    extractSecureArchive "${archiveFile}" -i "${keyFile}" -o "${outputDir}"
+    assertFile "${outputDir}/file1.txt"
+    assertFile "${outputDir}/file2.txt"
+    assertFile "${outputDir}/subdir/file3.txt"
+    assertInFile 'hello from file1' "${outputDir}/file1.txt"
+    assertInFile 'nested content' "${outputDir}/subdir/file3.txt"
+}
+
+testExtractSecureArchiveCustomOutputDir() {
+    local outputDir; outputDir="${ makeTempDir; }"
+    extractSecureArchive "${archiveFile}" -i "${keyFile}" -o "${outputDir}"
+    assertFile "${outputDir}/file1.txt"
+}
+
+testExtractSecureArchiveFailsOnTamperedOuter() {
+    local tamperDir; tamperDir="${ makeTempDir; }"
+    tar xJf "${archiveFile}" -C "${tamperDir}" || fail
+    echo 'tampered' >> "${tamperDir}/${_archiveEncryptedName}"
+    local tamperedArchive="${tamperDir}/tampered-extract.valt"
+    tar cJf "${tamperedArchive}" -C "${tamperDir}" "${_archiveFiles[@]}" || fail
+    local outputDir; outputDir="${ makeTempDir; }"
+    ( extractSecureArchive "${tamperedArchive}" -i "${keyFile}" -o "${outputDir}" ) 2>/dev/null \
+        && fail "must fail when encrypted archive is tampered"
+    return 0
 }
 
 # ─── Validation ──────────────────────────────────────────────────────────────

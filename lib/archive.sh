@@ -3,58 +3,8 @@
 # Secure archives.
 # Use via: require 'valt/archive'
 
-# ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-# ◇ DESIGN NOTES
-#
-# Archive tar is signed using minisign and encrypted with Age. Encryption provides confidentiality, signature provides
-# authenticity/integrity:
-#
-#   - Files can be stored somewhere less trusted (cloud, shared NAS).
-#   - Corruption or tampering can be detected with confidence.
-#   - Provide a formal provenance chain, could matter for legal/financial docs.
-#
-# ◇ Valt File Structure
-#
-#   backup-2026-05-28_23.14_PDT.valt
-#   │
-#   ├── encrypted.tar.xz.age
-#   │   ├── payload.tar
-#   │   ├── payload.tar.minisign
-#   │   ├── minisign.pub
-#   │   ├── age.pub
-#   │   └── README.txt # include : created date, archive/valt/rayvn versions, (USER, machine info?) etc.
-#   ├── encrypted.tar.xz.age.minisign
-#   ├── minisign.pub
-#   ├── age.pub
-#   └── README.txt
-#
-# The encrypted tar structure ensures there is always a valid payload signature to use even if the outer one is missing or
-# tampered with. The clear files are present for single-file convenience. The readme is from a template that includes generic
-# description, metadata and instructions along with user supplied content.
-#
-# Only tar, age and minisign are required for access, valt automates for convenience.
-#
-# While .valt files should be safe to distribute publicly, users will likely prefer to distribute privately. To support this
-# case and to ensure availability of the clear files, a copy is created without the encrypted tar. This can (and should) be made
-# publicly available:
-#
-#   backup-2026-05-28_23.14_PDT.valt.pub
-#   │
-#   ├── encrypted.tar.age.minisign
-#   ├── minisign.pub
-#   ├── age.pub
-#   └── README.txt
-#
-# ◇ Valt Keys
-#
-# See valt/keys for details.
-#
-# ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-
-
-
 # ◇ Create an encrypted, signed archive from one or more files, directories and archives. The archive file path is written to
-#   standard output. Also creates the public version of the archive (same path plus ".pub" suffix).
+#   standard output. Also creates the public version of the archive (same path plus ".pub" suffix). See NOTES below for details.
 #
 # · USAGE
 #
@@ -80,6 +30,44 @@
 #   newSecureArchive project/ -R valt.pub -n backup -t -o ~/backups       # timestamped name, written to ~/backups
 #   newSecureArchive -C ~/dev/ projectX foo.txt -R valt.pub               # -C sets source root ~/dev/ and adds subsequent inputs
 #   newSecureArchive -C ~/dev/ projectX -C ~/docs/ notes.txt -R valt.pub  # each -C sets a new source root for subsequent inputs
+#
+# · NOTES
+#
+#   Encryption provides confidentiality while signatures provide authenticity/integrity:
+#
+#     - Files can be stored somewhere less trusted (cloud, shared NAS).
+#     - Corruption or tampering can be detected with confidence.
+#     - Provides a formal provenance chain for legal/financial docs.
+#
+#   Valt File Structure
+#
+#   backup-2026-05-28_23.14_PDT.valt
+#   │
+#   ├── encrypted.tar.xz.age
+#   │   ├── payload.tar
+#   │   ├── payload.tar.minisign
+#   │   ├── minisign.pub
+#   │   ├── age.pub
+#   │   └── README.txt
+#   ├── encrypted.tar.xz.age.minisign
+#   ├── minisign.pub
+#   ├── age.pub
+#   └── README.txt
+#
+#   The encrypted tar structure ensures there is always a valid payload signature to use even if the outer one is missing or
+#   tampered with. The unencrypted files can be shared publicly and are packaged as a separate file:
+#
+#   backup-2026-05-28_23.14_PDT.valt.pub
+#   │
+#   ├── encrypted.tar.age.minisign
+#   ├── minisign.pub
+#   ├── age.pub
+#   └── README.txt
+#
+#   This file can be recreated from the original via the extractPublicArchive function.
+#
+#   Only tar, age and minisign are required for access to the contents of a valt archive. The verifySecureArchive and
+#   extractSecureArchive functions simplify the process.
 
 newSecureArchive() {
     local privateKey=
@@ -124,7 +112,7 @@ newSecureArchive() {
     (( hasRecipient )) || invalidArgs "one or more recipients required"
     (( ${#inputPaths[@]} )) || invalidArgs "one or more files required"
 
-    # Chack output file conflict
+    # Check output file conflict
 
     local archiveName="${name}.valt"
     local archivePubName="${archiveName}.pub"
@@ -150,7 +138,7 @@ newSecureArchive() {
     # with the same as the text var so that it will go out of scope when we exit.
 
     local rayvnTest_ValtKeyPassphrase="${rayvnTest_ValtKeyPassphrase}"
-    if [[ ! -n ${rayvnTest_ValtKeyPassphrase} ]]; then
+    if [[ -z ${rayvnTest_ValtKeyPassphrase} ]]; then
         local path; path="${ tildePath "${privateKey}"; }"
         local prompt; prompt="${ show "Enter passphrase for" blue "${path}"; }"
         readPassword "${prompt}" rayvnTest_ValtKeyPassphrase 30 false || fail
@@ -198,25 +186,6 @@ newSecureArchive() {
     # Finally, return the archive file name via stdout
 
     echo "${archiveFile}"
-}
-
-# ◇ Extract the public portion of a secure archive, creating a .valt.pub file alongside it.
-#   The .valt.pub contains the signature, public keys, and README but not the encrypted payload,
-#   making it safe to share publicly. Useful when the .valt.pub was not retained from creation.
-#
-# · USAGE
-#
-#   extractPublicArchive ARCHIVE
-#
-#   ARCHIVE  Path to the .valt archive file.
-
-extractPublicArchive() {
-    assertFile "$1"
-    local privateArchive="$1"
-    local publicArchive="${privateArchive}.pub"
-    local tmpDir; tmpDir="${ makeTempDir; }"
-    tar xJf "${privateArchive}" -C "${tmpDir}" "${_archivePubFiles[@]}" || fail
-    tar cJ -C "${tmpDir}" "${_archivePubFiles[@]}" > "${publicArchive}" || fail
 }
 
 # ◇ Verify the signatures of a secure archive. Checks both the outer encrypted archive signature
@@ -275,6 +244,90 @@ verifySecureArchive() {
     verifyFileSignature "${keyFile}" "${innerDir}/${_archivePayloadName}" \
                         "${innerDir}/${_archivePayloadSigName}"
 }
+
+# ◇ Verify and extract the contents of a secure archive into a directory.
+#   Checks both the outer and inner signatures before extracting the payload.
+#
+# · USAGE
+#
+#   extractSecureArchive ARCHIVE -i PATH [-o DIR]
+#
+#   ARCHIVE             Path to the .valt archive file.
+#   -i, --identity PATH The valt.key file used to decrypt and verify signatures.
+#   -o, --output-dir    Directory to extract contents into (default: ${PWD}).
+
+extractSecureArchive() {
+    local archiveFile= keyFile= destDir="${PWD}"
+
+    while (( $# )); do
+        case "$1" in
+            -i | --identity) shift; _assertValtKey "$1"; keyFile="$1" ;;
+            -o | --output-dir) shift; assertDirectory "$1"; destDir="$1" ;;
+            *) [[ -z ${archiveFile} ]] || invalidArgs "unexpected argument: $1"
+               assertFile "$1"; archiveFile="$1" ;;
+        esac
+        shift
+    done
+
+    [[ -n ${archiveFile} ]] || invalidArgs "archive file required"
+    [[ -n ${keyFile} ]] || invalidArgs "identity file required"
+
+    # Extract outer archive (contents are still encrypted — regular temp dir is fine)
+
+    local outerDir; outerDir="${ makeTempDir; }"
+    tar xJf "${archiveFile}" -C "${outerDir}" || fail
+
+    # Verify outer signature
+
+    verifyFileSignature "${keyFile}" "${outerDir}/${_archiveEncryptedName}" \
+                        "${outerDir}/${_archiveEncryptedSigName}"
+
+    # Get key passphrase once for both decrypt and inner verify
+
+    local rayvnTest_ValtKeyPassphrase="${rayvnTest_ValtKeyPassphrase}"
+    if [[ -z ${rayvnTest_ValtKeyPassphrase} ]]; then
+        local path; path="${ tildePath "${keyFile}"; }"
+        local prompt; prompt="${ show "Enter passphrase for" blue "${path}"; }"
+        readPassword "${prompt}" rayvnTest_ValtKeyPassphrase 30 false || fail
+        cursorUpOneAndEraseLine
+    fi
+
+    # Decrypt and expand inner archive to a secure temp dir
+
+    local innerDir; makeSecureTempDir innerDir
+    decrypt -i "${keyFile}" -o "${innerDir}/decrypted.tar.xz" "${outerDir}/${_archiveEncryptedName}" || fail
+    tar xJf "${innerDir}/decrypted.tar.xz" -C "${innerDir}" || fail
+
+    # Verify inner payload signature
+
+    verifyFileSignature "${keyFile}" "${innerDir}/${_archivePayloadName}" \
+                        "${innerDir}/${_archivePayloadSigName}"
+
+    # Extract payload to destination
+
+    tar xJf "${innerDir}/${_archivePayloadName}" -C "${destDir}" || fail
+}
+
+# ◇ Extract the public portion of a secure archive, creating a .valt.pub file alongside it.
+#   The .valt.pub contains the signature, public keys, and README but not the encrypted payload,
+#   making it safe to share publicly. Useful when the .valt.pub was not retained from creation.
+#
+# · USAGE
+#
+#   extractPublicArchive ARCHIVE
+#
+#   ARCHIVE  Path to the .valt archive file.
+
+extractPublicArchive() {
+    assertFile "$1"
+    local privateArchive="$1"
+    local publicArchive="${privateArchive}.pub"
+    local tmpDir; tmpDir="${ makeTempDir; }"
+    tar xJf "${privateArchive}" -C "${tmpDir}" "${_archivePubFiles[@]}" || fail
+    tar cJ -C "${tmpDir}" "${_archivePubFiles[@]}" > "${publicArchive}" || fail
+}
+
+
 
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/archive' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
