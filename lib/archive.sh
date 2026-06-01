@@ -134,16 +134,11 @@ newSecureArchive() {
         (( choice == 0 )) && bye
     fi
 
-    # Since we will do three operations that require decrypting the private key, get it now. Store it in a local variable
-    # with the same as the text var so that it will go out of scope when we exit.
+    # Since we will do multiple operations that require decrypting the private key, prepare for it once. Shadow with a local
+    # variable so that it will go out of scope when we exit.
 
     local rayvnTest_ValtKeyPassphrase="${rayvnTest_ValtKeyPassphrase}"
-    if [[ -z ${rayvnTest_ValtKeyPassphrase} ]]; then
-        local path; path="${ tildePath "${privateKey}"; }"
-        local prompt; prompt="${ show "Enter passphrase for" blue "${path}"; }"
-        readPassword "${prompt}" rayvnTest_ValtKeyPassphrase 30 false || fail
-        cursorUpOneAndEraseLine
-    fi
+    _prepareKey "${privateKey}"
 
     # Create the age.pub file
 
@@ -199,7 +194,7 @@ newSecureArchive() {
 #   -i, --identity PATH  The valt.key file used to decrypt and verify signatures.
 
 verifySecureArchive() {
-    local archiveFile= keyFile=
+    local archiveFile keyFile
 
     while (( $# )); do
         case "$1" in
@@ -223,15 +218,11 @@ verifySecureArchive() {
     verifyFileSignature "${keyFile}" "${outerDir}/${_archiveEncryptedName}" \
                         "${outerDir}/${_archiveEncryptedSigName}"
 
-    # Get key passphrase once for both decrypt and inner verify
+    # Since we will do multiple operations that require decrypting the private key, prepare for it once. Shadow with a local
+    # variable so that it will go out of scope when we exit.
 
     local rayvnTest_ValtKeyPassphrase="${rayvnTest_ValtKeyPassphrase}"
-    if [[ -z ${rayvnTest_ValtKeyPassphrase} ]]; then
-        local path; path="${ tildePath "${keyFile}"; }"
-        local prompt; prompt="${ show "Enter passphrase for" blue "${path}"; }"
-        readPassword "${prompt}" rayvnTest_ValtKeyPassphrase 30 false || fail
-        cursorUpOneAndEraseLine
-    fi
+    _prepareKey "${keyFile}"
 
     # Decrypt and expand inner archive to a secure temp dir
 
@@ -433,6 +424,16 @@ _renderArchiveReadMe() {
     done
 
     printf '%s\n' "${template}" > "${outputFile}"
+}
+
+_prepareKey() {
+    local _key="$1"
+    if [[ -z ${rayvnTest_ValtKeyPassphrase} ]]; then
+        local _path; _path="${ tildePath "${_key}"; }"
+        local _prompt; _prompt="${ show "Enter passphrase for" blue "${_path}"; }"
+        readPassword "${_prompt}" rayvnTest_ValtKeyPassphrase 30 false || fail
+        cursorUpOneAndEraseLine
+    fi
 }
 
 _checkOutputConflict() {

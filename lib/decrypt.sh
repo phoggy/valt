@@ -86,7 +86,7 @@ _age() {
 
     if (( requiresPassphrase )); then
 
-        # Yes, get it.
+        # Yep, get it.
 
         local phraze
         if [[ -n ${rayvnTest_ValtKeyPassphrase} ]]; then
