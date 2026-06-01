@@ -195,8 +195,8 @@ newSecureArchive() {
 #
 #   verifySecureArchive ARCHIVE -i PATH
 #
-#   ARCHIVE             Path to the .valt archive file.
-#   -i, --identity PATH The valt.key file used to decrypt and verify signatures.
+#   ARCHIVE              Path to the .valt archive file.
+#   -i, --identity PATH  The valt.key file used to decrypt and verify signatures.
 
 verifySecureArchive() {
     local archiveFile= keyFile=
@@ -252,12 +252,12 @@ verifySecureArchive() {
 #
 #   extractSecureArchive ARCHIVE -i PATH [-o DIR]
 #
-#   ARCHIVE             Path to the .valt archive file.
-#   -i, --identity PATH The valt.key file used to decrypt and verify signatures.
-#   -o, --output-dir    Directory to extract contents into (default: ${PWD}).
+#   ARCHIVE              Path to the .valt archive file.
+#   -i, --identity PATH  The valt.key file used to decrypt and verify signatures.
+#   -o, --output-dir     Directory to extract contents into (default: ${PWD}).
 
 extractSecureArchive() {
-    local archiveFile= keyFile= destDir="${PWD}"
+    local archiveFile keyFile destDir="${PWD}"
 
     while (( $# )); do
         case "$1" in
@@ -328,13 +328,14 @@ extractPublicArchive() {
 }
 
 
-
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/archive' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 
 _init_valt_archive() {
     require 'valt/keys' 'valt/password' 'valt/decrypt' 'valt/sign' 'rayvn/prompt'
 
+    # File names
+    #
     #   backup-2026-05-28_23.14_PDT.valt
     #   │
     #   ├── encrypted.tar.xz.age              _archiveEncryptedName
@@ -354,8 +355,6 @@ _init_valt_archive() {
     #   ├── minisign.pub                      _archiveSigPubName
     #   ├── age.pub                           _archiveAgePubName
     #   └── README.txt                        _archiveReadMeName
-
-    # File names
 
     declare -gr _archiveAgePubName="age.pub"
     declare -gr _archiveSigPubName="minisign.pub"
