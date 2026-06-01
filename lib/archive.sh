@@ -153,7 +153,7 @@ newSecureArchive() {
 
     # Create the private README file
 
-    _privateReadMe "${workDir}/${_archiveReadMeName}" "${archiveName}" "${userReadmeText}"
+    _privateReadMe "${workDir}/${_archiveReadMeName}" "${archiveName}" "${userReadmeText}" "${timestamp}"
 
     # Create the payload file and sign it
 
@@ -171,7 +171,7 @@ newSecureArchive() {
 
     # Create the public README file (overwrites the private one already in the encrypted tar)
 
-    _publicReadMe "${workDir}/${_archiveReadMeName}" "${archiveName}" "${userReadmeText}"
+    _publicReadMe "${workDir}/${_archiveReadMeName}" "${archiveName}" "${userReadmeText}" "${timestamp}"
 
     # Create the archive files
 
@@ -374,11 +374,11 @@ _init_valt_archive() {
 }
 
 _publicReadMe() {
-    _renderArchiveReadMe "archive-readme-public.tmpl" "$1" "$2" "$3"
+    _renderArchiveReadMe "archive-readme-public.tmpl" "$1" "$2" "$3" "$4" 
 }
 
 _privateReadMe() {
-    _renderArchiveReadMe "archive-readme-private.tmpl" "$1" "$2" "$3"
+    _renderArchiveReadMe "archive-readme-private.tmpl" "$1" "$2" "$3" "$4" 
 }
 
 _renderArchiveReadMe() {
@@ -386,13 +386,13 @@ _renderArchiveReadMe() {
     local outputFile="$2"
     local archiveName="$3"
     local userText="$4"
+    local created="$5"
 
     local template; readFile "${valtHome}/etc/${templateName}" template
 
     local valtVersion; valtVersion=${ gawk -F"'" '/^projectVersion=/{print $2}' "${valtHome}/rayvn.pkg"; }
     local ageVersion; ageVersion=${ age --version 2>&1 | gsed 's/^v//'; }
     local minisignVersion; minisignVersion=${ minisign -v 2>&1 | gawk '{print $2}'; }
-    local created; created="${ TZ=UTC date '+%Y-%m-%d %H:%M:%S UTC'; }"
     local author; author="${USER}@${ hostname -s; }"
 
     local notesSection=''
