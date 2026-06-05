@@ -95,7 +95,7 @@ _age() {
             local prompt="Enter passphrase"
             if [[ -n "${passphraseFor}" ]]; then
                 local path; path="${ tildePath "${passphraseFor}"; }"
-                prompt+="${ show "for" blue "${path}"; }"
+                prompt+="${ show " for" blue "${path}"; }"
             fi
 
             if (( confirmPassphrase )); then

@@ -374,11 +374,11 @@ _init_valt_archive() {
 }
 
 _publicReadMe() {
-    _renderArchiveReadMe "archive-readme-public.tmpl" "$1" "$2" "$3" "$4" 
+    _renderArchiveReadMe "archive-readme-public.tmpl" "$1" "$2" "$3" "$4"
 }
 
 _privateReadMe() {
-    _renderArchiveReadMe "archive-readme-private.tmpl" "$1" "$2" "$3" "$4" 
+    _renderArchiveReadMe "archive-readme-private.tmpl" "$1" "$2" "$3" "$4"
 }
 
 _renderArchiveReadMe() {
@@ -424,16 +424,6 @@ _renderArchiveReadMe() {
     done
 
     printf '%s\n' "${template}" > "${outputFile}"
-}
-
-_prepareKey() {
-    local _key="$1"
-    if [[ -z ${rayvnTest_ValtKeyPassphrase} ]]; then
-        local _path; _path="${ tildePath "${_key}"; }"
-        local _prompt; _prompt="${ show "Enter passphrase for" blue "${_path}"; }"
-        readPassword "${_prompt}" rayvnTest_ValtKeyPassphrase 30 false || fail
-        cursorUpOneAndEraseLine
-    fi
 }
 
 _checkOutputConflict() {

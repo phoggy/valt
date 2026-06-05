@@ -209,7 +209,10 @@ verifyValtKeys() {
     # Extract public encryption key from valt.key and ensure it matches valt.pub and ensure both start with 'age'
 
     local publicEncrypt; publicEncrypt="${ gawk '!/^#/ && NF { print; exit }' "${valtPubFile}"; }"
+    local rayvnTest_ValtKeyPassphrase="${rayvnTest_ValtKeyPassphrase}"
+    _prepareKey "${valtKeyFile}"
     local extractedPublicEncrypt; extractedPublicEncrypt="${ recipient "${valtKeyFile}"; }"
+
     [[ "${publicEncrypt:0:3}" == 'age' ]] || fail "${valtPubFile} public encryption key does not begin with 'age'"
     [[ "${extractedPublicEncrypt:0:3}" == 'age' ]] || fail "${valtKeyFile} public encryption key doest not begin with 'age'"
     [[ "${extractedPublicEncrypt}" == "${publicEncrypt}" ]] || fail "extracted public encryption key does not match"
@@ -221,7 +224,7 @@ verifyValtKeys() {
     local extractedPublicSign; mapfile -t extractedPublicSign < <( cat "${extractedPublicSignFile}" )
     (( ${#publicSign[@]} == 2 )) || fail "public signing key must be 2 lines"
     (( ${#extractedPublicSign[@]} == 2 )) || fail "extracted public signing key must be 2 lines"
-    local i _decl
+    local i
     for (( i=0; i < 2; i++ )); do
         line="${publicSign[i]:17}"
         [[ "${line}" == "${extractedPublicSign[i]}" ]] || fail "extracted public signing key does not match"
@@ -472,6 +475,16 @@ _extractKey() {
         printf '%s\n' "${lines[@]}" > "${resultFile}" || fail
     else
         printf '%s\n' "${lines[@]}"
+    fi
+}
+
+_prepareKey() {
+    local _key="$1"
+    if [[ -z ${rayvnTest_ValtKeyPassphrase} ]]; then
+        local _path; _path="${ tildePath "${_key}"; }"
+        local _prompt; _prompt="${ show "Enter passphrase for" blue "${_path}"; }"
+        readPassword "${_prompt}" rayvnTest_ValtKeyPassphrase 30 false || fail
+        cursorUpOneAndEraseLine
     fi
 }
 
