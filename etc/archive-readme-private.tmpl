@@ -15,7 +15,7 @@ ${NOTES_SECTION}
   │
   └── encrypted.tar.xz.age            (you decrypted this)
       ├── payload.tar                 The archive payload. Contains the original files.
-      ├── payload.tar.minisign        Cryptographic signature of the payload.
+      ├── payload.tar.minisig         Cryptographic signature of the payload.
       ├── minisign.pub                Public key used to verify the signature above.
       ├── age.pub                     Public key used when encrypting this archive.
       └── README.txt                  This file.
@@ -24,19 +24,14 @@ ${NOTES_SECTION}
 ▋ Tools
 ───────────────────────────────────────────────────────────────────────────────────────────────────
 
-  valt       Created this archive. Can verify and extract everything from the outer archive.
-             https://phoggy.github.io/valt
-
-  minisign   Signing tool used to verify the payload has not been tampered with.
+  minisign   Signing tool used to verify the payload has not been tampered with. See
              https://jedisct1.github.io/minisign/
 
   tar        Standard archive utility, included with macOS and Linux.
 
-
-▋ Verify & Extract with valt
-───────────────────────────────────────────────────────────────────────────────────────────────────
-
-  valt extract ${ARCHIVE_NAME} -i <valt.key>
+  valt       Created this archive. Can verify and extract the payload using the *outer* archive.
+             Since you already have the decrypted inner tar, the manual instructions below may be
+             easier. See https://phoggy.github.io/valt
 
 
 ▋ Verify & Extract Manually
@@ -56,6 +51,11 @@ ${NOTES_SECTION}
 
   The files are now in your current directory.
 
+
+▋ Verify & Extract with valt
+───────────────────────────────────────────────────────────────────────────────────────────────────
+
+  valt extract ${ARCHIVE_NAME} -i <valt.key>
 
 ▋ Reference
 ───────────────────────────────────────────────────────────────────────────────────────────────────

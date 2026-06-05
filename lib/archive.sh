@@ -45,11 +45,11 @@
 #   │
 #   ├── encrypted.tar.xz.age
 #   │   ├── payload.tar
-#   │   ├── payload.tar.minisign
+#   │   ├── payload.tar.minisig
 #   │   ├── minisign.pub
 #   │   ├── age.pub
 #   │   └── README.txt
-#   ├── encrypted.tar.xz.age.minisign
+#   ├── encrypted.tar.xz.age.minisig
 #   ├── minisign.pub
 #   ├── age.pub
 #   └── README.txt
@@ -59,7 +59,7 @@
 #
 #   backup-2026-05-28_23.14_PDT.valt.pub
 #   │
-#   ├── encrypted.tar.age.minisign
+#   ├── encrypted.tar.age.minisig
 #   ├── minisign.pub
 #   ├── age.pub
 #   └── README.txt
@@ -331,18 +331,18 @@ _init_valt_archive() {
     #   │
     #   ├── encrypted.tar.xz.age              _archiveEncryptedName
     #   │   ├── payload.tar                   _archivePayloadName
-    #   │   ├── payload.tar.minisign          _archivePayloadSigName
+    #   │   ├── payload.tar.minisig          _archivePayloadSigName
     #   │   ├── minisign.pub                  _archiveSigPubName
     #   │   ├── age.pub                       _archiveAgePubName
     #   │   └── README.txt                    _archiveReadMeName
-    #   ├── encrypted.tar.xz.age.minisign     _archiveEncryptedSigName
+    #   ├── encrypted.tar.xz.age.minisig     _archiveEncryptedSigName
     #   ├── minisign.pub                      _archiveSigPubName
     #   ├── age.pub                           _archiveAgePubName
     #   └── README.txt                        _archiveReadMeName
 
     #   backup-2026-05-28_23.14_PDT.valt.pub
     #   │
-    #   ├── encrypted.tar.age.minisign        _archiveEncryptedSigName
+    #   ├── encrypted.tar.age.minisig        _archiveEncryptedSigName
     #   ├── minisign.pub                      _archiveSigPubName
     #   ├── age.pub                           _archiveAgePubName
     #   └── README.txt                        _archiveReadMeName

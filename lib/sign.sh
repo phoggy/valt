@@ -11,7 +11,7 @@
 #
 #   keyFile        (string)  Path to the valt private key file.
 #   targetFile     (string)  Path to the file to sign.
-#   signatureFile  (string)  Optional path for the signature output file (default: targetFile.minisign).
+#   signatureFile  (string)  Optional path for the signature output file (default: targetFile.minisig).
 
 signFile() {
     assertFile "$1"
@@ -41,7 +41,7 @@ signFile() {
 #
 #   keyFile        (string)  Path to a valt .pub or .key file.
 #   targetFile     (string)  Path to the file to verify.
-#   signatureFile  (string)  Optional path to the signature file (default: targetFile.signature).
+#   signatureFile  (string)  Optional path to the signature file (default: targetFile.minisig).
 
 verifyFileSignature() {
     assertFile "$1"
@@ -68,7 +68,7 @@ PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/sign' PRIVATE 
 
 _init_valt_sign() {
     require 'valt/keys'
-    declare -grx _signatureFileSuffix="minisign"
+    declare -grx _signatureFileSuffix="minisig"
 }
 
 _setSignatureFile() {

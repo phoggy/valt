@@ -14,7 +14,7 @@ ${NOTES_SECTION}
   ${ARCHIVE_NAME}
   │
   ├── encrypted.tar.xz.age            The encrypted archive. Requires the private key to decrypt.
-  ├── encrypted.tar.xz.age.minisign   Cryptographic signature of the encrypted archive.
+  ├── encrypted.tar.xz.age.minisig    Cryptographic signature of the encrypted archive.
   ├── minisign.pub                    Public key used to verify the signatures above.
   ├── age.pub                         Public key used when encrypting this archive.
   └── README.txt                      This file.
@@ -26,13 +26,13 @@ ${NOTES_SECTION}
   This archive can be accessed using valt (the tool that created it) or manually using the
   individual tools listed below. All are free, open-source, and available for macOS and Linux.
 
-  valt       Created this archive. Handles everything automatically if you have it installed.
+  valt       Created this archive. Handles everything automatically if you have it installed. See
              https://phoggy.github.io/valt
 
-  age        Encryption tool used to protect the archive contents.
+  age        Encryption tool used to protect the archive contents. See
              https://github.com/FiloSottile/age/releases
 
-  minisign   Signing tool used to verify the archive has not been tampered with.
+  minisign   Signing tool used to verify the archive has not been tampered with. See
              https://jedisct1.github.io/minisign/
 
   tar        Standard archive utility, included with macOS and Linux.
