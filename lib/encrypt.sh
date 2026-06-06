@@ -38,7 +38,7 @@ encrypt() {
 
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/encrypt' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
-_init_valt_encrypt() {     # TODO: _valt_encrypt_init  reads properly
+_init_valt_encrypt() {
     require 'valt/keys'
 
     declare -g _encryptVarName
