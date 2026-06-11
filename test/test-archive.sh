@@ -167,7 +167,7 @@ testVerifyFailsOnTamperedOuter() {
     echo 'tampered' >> "${tamperDir}/${_archiveEncryptedName}"
     local tamperedArchive="${tamperDir}/tampered.valt"
     tar cJf "${tamperedArchive}" -C "${tamperDir}" "${_archiveFiles[@]}" || fail
-    ( verifySecureArchive "${tamperedArchive}" -i "${keyFile}" ) 2>/dev/null \
+    ( verifySecureArchive "${tamperedArchive}" -i "${keyFile}" ) 2> /dev/null \
         && fail "must fail when encrypted archive is tampered"
     return 0
 }
@@ -191,19 +191,19 @@ testVerifyFailsOnTamperedPayload() {
 
     local tamperedArchive="${outerDir}/tampered-payload.valt"
     tar cJf "${tamperedArchive}" -C "${outerDir}" "${_archiveFiles[@]}" || fail
-    ( verifySecureArchive "${tamperedArchive}" -i "${keyFile}" ) 2>/dev/null \
+    ( verifySecureArchive "${tamperedArchive}" -i "${keyFile}" ) 2> /dev/null \
         && fail "must fail when payload is tampered"
     return 0
 }
 
 testVerifyMissingArchiveFails() {
-    ( verifySecureArchive "/nonexistent/path.valt" -i "${keyFile}" ) 2>/dev/null \
+    ( verifySecureArchive "/nonexistent/path.valt" -i "${keyFile}" ) 2> /dev/null \
         && fail "must fail with nonexistent archive"
     return 0
 }
 
 testVerifyMissingIdentityFails() {
-    ( verifySecureArchive "${archiveFile}" ) 2>/dev/null \
+    ( verifySecureArchive "${archiveFile}" ) 2> /dev/null \
         && fail "must fail without identity"
     return 0
 }
@@ -280,7 +280,7 @@ testNoForceFailsOnConflict() {
     local ts; ts="${ timeStamp UTC; }"
     touch "${outputDir}/conflict-${ts}.valt"
     ( newSecureArchive -C "${testInputDir}" file1.txt \
-        -i "${keyFile}" -R "${pubFile}" -n conflict -z UTC -o "${outputDir}" ) 2>/dev/null \
+        -i "${keyFile}" -R "${pubFile}" -n conflict -z UTC -o "${outputDir}" ) 2> /dev/null \
         && fail "must fail when archive already exists"
     return 0
 }
@@ -325,7 +325,7 @@ testExtractSecureArchiveFailsOnTamperedOuter() {
     local tamperedArchive="${tamperDir}/tampered-extract.valt"
     tar cJf "${tamperedArchive}" -C "${tamperDir}" "${_archiveFiles[@]}" || fail
     local outputDir; outputDir="${ makeTempDir; }"
-    ( extractSecureArchive "${tamperedArchive}" -i "${keyFile}" -o "${outputDir}" ) 2>/dev/null \
+    ( extractSecureArchive "${tamperedArchive}" -i "${keyFile}" -o "${outputDir}" ) 2> /dev/null \
         && fail "must fail when encrypted archive is tampered"
     return 0
 }

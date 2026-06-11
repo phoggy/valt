@@ -27,10 +27,10 @@ main() {
 }
 
 init() {
-    file=
-    unpackDir=
-    identities=()
-    decryptedFile=
+    declare -g file
+    declare -g unpackDir
+    declare -g decryptedFile
+    declare -ga identities=()
 
     # Flags
 

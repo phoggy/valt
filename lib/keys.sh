@@ -114,7 +114,7 @@ newValtKeys() {
     local agePublicKey
     local agePrivateKey=()
     local valtPubKey=()
-    local index _decl
+    local index line
     _assertKeyFileDoesNotExist "${_keyFile}"
     _assertKeyFileDoesNotExist "${_publicKeyFile}"
     _assertKeyFileDoesNotExist "${_publicSigningKeyFile}"
@@ -224,7 +224,7 @@ verifyValtKeys() {
     local extractedPublicSign; mapfile -t extractedPublicSign < <( cat "${extractedPublicSignFile}" )
     (( ${#publicSign[@]} == 2 )) || fail "public signing key must be 2 lines"
     (( ${#extractedPublicSign[@]} == 2 )) || fail "extracted public signing key must be 2 lines"
-    local i
+    local i line
     for (( i=0; i < 2; i++ )); do
         line="${publicSign[i]:17}"
         [[ "${line}" == "${extractedPublicSign[i]}" ]] || fail "extracted public signing key does not match"

@@ -62,17 +62,17 @@ init() {
     declare -gr cssOverrideFileName='override.css'
     declare -gr htmlFileName='note.html'
     declare -gr qrCodeFileName='qr.svg'
-    qrCodeFile=
-    armoredKey=
-    defaultPrinter=
+    declare -g documentsFile
+    declare -g qrCodeFile
+    declare -g armoredKey
 
     # Options
-    outputDir="${ configDirPath; }"
-    htmlTemplateFile="${valtHome}/etc/key-doc-template.html"
-    cssOverrideFile=
-    htmlFile=
-    keyName='-' # use default
-    htmlFile=
+    declare -g outputDir; outputDir="${ configDirPath; }"
+    declare -g htmlTemplateFile="${valtHome}/etc/key-doc-template.html"
+    declare -g cssOverrideFile
+    declare -g htmlFile
+    declare -g keyName='-' # use default
+    declare -g htmlFile
 
     # Flags
     declare -g force=0
@@ -328,6 +328,7 @@ generateFooterTemplate() {
         }
         ' "${valtHome}/etc/key-doc.css"; }"
 
+    # lint-skip-start
     cat <<- EOF
 		<style>
 		    ${footerClass}
@@ -336,16 +337,18 @@ generateFooterTemplate() {
 		    }
 		</style>
 		<div class="footer">
-		    <span>${author} Private Key</span>
-		    <span>${ date '+%B %e, %Y'; }</span>
-		    <span class="page-info"><span class="pageNumber"></span><span class="totalPages"></span></span>
-		</div>
+		    <span> ${author} Private Key</span>
+		    <span> ${ date '+%B %e, %Y'; }</span>
+		    <span class="page-info"> <span class="pageNumber"> </span> <span class="totalPages"> </span> </span>
+		< /div>
 	EOF
+    # lint-skip-end
 }
 
 _passphraseGridHtml() {
+    # lint-skip-start
     cat <<- EOF
-		<passphrase-grid length="140"></passphrase-grid>
+		<passphrase-grid length="140"> </passphrase-grid>
 		<script>
 		    class PassphraseGrid extends HTMLElement {
 		        connectedCallback() {
@@ -364,6 +367,7 @@ _passphraseGridHtml() {
 		    customElements.define('passphrase-grid', PassphraseGrid);
 		</script>
 	EOF
+    # lint-skip-end
 }
 
 generateHtml() {
@@ -385,7 +389,7 @@ generateHtml() {
     fi
 
     local _PASSPHRASE_LOCATION="The last page has a space for the passphrase to be hand written. If not there, the notes below \
-        should provide some information to help find the passphrase. If you <em>don't have or can't get the passphrase</em>, \
+        should provide some information to help find the passphrase. If you < em> don't have or can't get the passphrase< /em> , \
         stop here. Yes, really (so sorry!)."
 
     # Transform contacts into list items

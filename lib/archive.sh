@@ -123,7 +123,7 @@ newSecureArchive() {
 
     # Create secure work dir sized to hold payload.tar + encrypted.tar simultaneously (2× input)
 
-    local inputSizeMb; inputSizeMb=${ du -sm "${inputPaths[@]}" 2>/dev/null | gawk '{sum += $1} END {print int(sum) + 1}'; }
+    local inputSizeMb; inputSizeMb=${ du -sm "${inputPaths[@]}" 2> /dev/null | gawk '{sum += $1} END {print int(sum) + 1}'; }
     local workDir isRamBacked
     makeSecureTempDir workDir isRamBacked $(( inputSizeMb * 2 + 64 ))
     if (( ! isRamBacked )); then

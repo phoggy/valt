@@ -55,9 +55,9 @@ init() {
 
     # Arguments
 
-    newPassphrase=0
-    command=
-    commandOptions=()
+    declare -g newPassphrase=0
+    declare -g command
+    declare -ga commandOptions=()
 
     # Parse input
 

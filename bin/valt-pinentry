@@ -35,16 +35,17 @@ init() {
     readonly confirmPrompt='Confirm'
     readonly confirmError='confirmation does not match'
 
+
     # Path to a pinentry executable, if requested and found
 
-    proxyPath=
+    declare -g proxyPath
 
     # Request state (update resetRequestState() if change)
 
-    description=
-    timeout=0
-    confirm=
-    proxyCommand=
+    declare -g description
+    declare -g timeout=0
+    declare -g confirm
+    declare -g proxyCommand
 
     # Emit debug header if enabled
 
