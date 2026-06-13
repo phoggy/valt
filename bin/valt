@@ -1,9 +1,13 @@
 #!/usr/bin/env rayvn-bash
 # shellcheck disable=SC2155
 
+# TODO: consider a different structure that eliminates other binaries and moves most functionality to shared libs
+#       with remainder here. e.g. 'valt/keydoc' generateKeyDocument privateKey
+
+
 usage() {
     echo
-    show bold "Public key encryption of files and directories, using" cyan "age" "(see" blue "${ageProjectUrl}" glue ")."
+    show bold "Public key encryption for files and directories, using" cyan "age" "(see" blue "${ageProjectUrl}" glue ")."
     echo
     show "Usage:" bold blue "${scriptName}" "[OPTIONS]" italic "COMMAND"
     echo
@@ -11,7 +15,10 @@ usage() {
     echo
     echo "    pass             Generate and/or evaluate password/passphrase strength."
     echo "    keys             Generate a key pair with a password/passphrase encrypted private key."
+    echo "    document         Generate backup documentation for an existing key pair."   # TODO!
     echo "    archive          Create a secure archive from one or more files or directories, or extract files from one."
+    echo
+    show "Run" bold blue "${scriptName}" italic "COMMAND" bold blue "--help" "for more information on a command."
     echo
     echo "Options"
     echo
@@ -20,8 +27,6 @@ usage() {
     echo "Environment Variables"
     echo
     echo "    VALT_TIMEOUT     Set input timeout, in seconds (default: 30)."
-    echo
-    show "Run" bold blue "${projectName}" italic "COMMAND" bold blue "--help" "for more information on a command."
     echo
     bye "${@}"
 }
@@ -67,6 +72,7 @@ init() {
         case "${1}" in
             pass) newPassphrase=1 ;;
             keys) setCommand keys ;;
+            document) setCommand document ;;
             encrypt) setCommand encrypt ;;
             decrypt) setCommand decrypt ;;
             --expert) expertMode=true ;; # TODO update usage when implemented
