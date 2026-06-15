@@ -5,6 +5,7 @@
         <title>Key Document</title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Google+Sans+Flex:opsz,wght@6..144,1..1000&family=Shantell+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Shantell+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="${_CSS_PATH}">
         ${_CSS_OVERRIDE}
@@ -16,13 +17,17 @@
         <br>
         <p>${_GREETING}</p>
 
-        <p>This document contains a “private key” that can unlock files encrypted with the associated
-            public key. This document is intended as a backup and <strong>must</strong> be kept in a safe place. It contains
-            instructions for using the private key to unlock a file — these instructions are a bit technical, so it includes
-            some ways to get help if needed.</p>
+        <p>This document contains a private key that can unlock files encrypted with the associated public key. It is
+            intended as a backup so <strong>must</strong> be kept in at least one secure place, e.g. a safe-deposit box,
+            fire safe, a trusted friend or family member.
 
-        <p>Know that the key <em>itself</em> is locked, so it <strong>cannot</strong> be used without the passphrase used to
-            create it. ${_PASSPHRASE_LOCATION}</p>
+            Instructions for using the key to unlock a file are provided. The instructions are a bit technical, so it
+            includes some ways to get help if needed.</p>
+
+        <p>Know that the key <em>itself</em> is encrypted, so it <strong>cannot</strong> be used without the passphrase used
+            to create it. The last page has space for the passphrase to be hand written. If not there, the notes below should
+            provide some information to help find the passphrase. If you don't have or can't get the passphrase, so sorry but
+            there is nothing you can do but stop here.</p>
 
         <p>Welcome to the modern world of digital security.</p>
 
@@ -231,7 +236,7 @@
 
         <h2>Passphrase</h2>
 
-        <p>${_PASSPHRASE_INTRO}</p>
+        <p>Write the passphrase in the boxes below, one character per box:</p>
 
         ${_PASSPHRASE_SECTION}
 

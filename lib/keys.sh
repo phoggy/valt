@@ -372,6 +372,8 @@ PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/keys' PRIVATE 
 _init_valt_keys() {
     require 'valt/encrypt' 'valt/decrypt'  'valt/sign'
 
+    declare -grx valtProjectUrl='https://github.com/phoggy/valt'
+
     declare -grx valtPublicKeySuffix='pub'
     declare -grx valtPrivateKeySuffix='key'
 

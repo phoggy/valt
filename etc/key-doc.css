@@ -1,7 +1,7 @@
 :root {
-    --font-family-body: Arial, Helvetica, sans-serif;
-    --font-family-code: "Fira Code", Inconsolata, Consolas, monospace;
+    --font-family-body: "Google Sans Flex", Arial, Helvetica, sans-serif;
     --font-family-human: "Shantell Sans", "Architects Daughter", "Indie Flower", "Zapfino", "Brush Script MT", "Caflisch Script Pro", "Brush Script Std", cursive;
+    --font-family-code: "Fira Code", Inconsolata, Consolas, monospace;
 
     --color-red: #e93147;
     --color-orange: #ec7500;
@@ -22,8 +22,8 @@
 
 body {
     font-family: var(--font-family-body);
-    font-size: 14px;
-    font-weight: 400;
+    font-size: 15px;
+    font-weight: 00;
     color: #222;
     background-color: white;
     padding: 2em;

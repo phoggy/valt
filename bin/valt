@@ -49,7 +49,7 @@ init() {
 
     declare -grx ageProjectUrl='https://github.com/filosottile/age'
     declare -grx valtBinDir="${0%/*}"
-    declare -grx valtConfigDir="${ configDirPath; }"
+    declare -grx _valtConfigDir="${ configDirPath; }"
     declare -grx valtProjectUrl='https://github.com/phoggy/valt'
 
     # Global options
