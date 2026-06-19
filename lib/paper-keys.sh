@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-# Creates a PDF documenting use of the "paper key" generated from a valt.key. A paper key is simply a printable
-# representation of the valt.key binary file, in this case both a QR code and a PEM version as extra backup.
+# Creates a PDF documenting use of the included "paper key" generated from a valt.key. A paper key is a printable
+# backup of the valt.key binary file, both as a QR code and as PEM file.
+#
 # Use via: require 'valt/paper-keys'
 
 preparePaperKey() {
@@ -36,8 +37,8 @@ _init_valt_paper-keys() {
 
     currentProjectName='valt' # force, since part of valt project
     local configDir; configDir="${ configDirPath; }"
-    declare -gr _valtConfigDir="${configDir}"
-    declare -gr _defaultKeyInfoFile="${_valtConfigDir}/key.info"
+    declare -gr valtConfigDir="${configDir}"
+    declare -gr _defaultKeyInfoFile="${valtConfigDir}/key.info"
     declare -gr _defaultHtmlTemplateFile="${valtHome}/etc/key-doc-template.html"
     declare -gr _keyInfoTemplateFile="${valtHome}/etc/key-info-template.sh"
     declare -gr _cssMainFileName="key-doc.css"
@@ -80,7 +81,7 @@ _loadKeyInfo() {
     fi
 
     echo
-    show "The" bold "key.info" "file at" blue "${_valtConfigDir}" "${status} completed."
+    show "The" bold "key.info" "file at" blue "${valtConfigDir}" "${status} completed."
     echo "Please edit and complete it before proceeding."
     bye
 }
