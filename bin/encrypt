@@ -21,7 +21,7 @@ usage() {
     echo "    -v, --verify IDENTITY       Use the identity file (private key) at IDENTITY to verify the encrypted file."
     echo "    -f, --force                 Replace any existing output file without asking."
     echo "    -d, --delete                Delete input file(s) after verification (ignored otherwise)."
-    commonOptions 32 false
+    showCommonOptions 32 false
     bye "${@}"
 }
 
