@@ -79,8 +79,7 @@ readPassword() {
     local -i cancelled=0
     local -i visible=1
     local -i show=1
-    local -i pwned=
-    local score=
+    local resultCode=0
     resultVarRef=''
     (( skipReadPasswordCheck )) && checkResult=false
     [[ -v passwordVisibility ]] || declare -gx passwordVisibility='none'
@@ -98,34 +97,58 @@ readPassword() {
     else
         _readPassword
     fi
-
     [[ ${result} == '' ]] && cancelled=1
 
-    if (( ! cancelled )); then
+    # Check result if requested and not canceled
 
-        # Check result if requested
-        if [[ ${checkResult} == true ]]; then
-            IFS=',' read -r -a score <<< "${ echo "${result}" | mrld -t; }"
-            echo -n "  ⮕  ${score[0]} (${score[1]}/4), ${score[2]} to crack" > ${terminal}
-            hasNotBeenPwned "${result}"; pwned=$?
+    if (( ! cancelled )) && [[ ${checkResult} == true ]]; then
+        local notSafeReasons=() resultScore
+        checkPassword result notSafeReasons resultScore; resultCode=$?
+debugVar resultScore
+        echo -n "  ⮕  ${resultScore}"
+        if (( resultCode )); then
+            local _i
+            show nl nl "This password/passphrase is" error "not safe" "to use:" nl
+            for (( _i=0; _i < ${#notSafeReasons[@]}; _i++ )); do
+                show "    " blue "-" error "${notSafeReasons[_i]}"
+            done
+            echo
         fi
+    else
+        echo > ${terminal} # complete the line
     fi
-    echo > ${terminal} # complete the line
 
-    # Return the result if not canceled and not pwned
+    # Return the result if not canceled and either unchecked or safe to use
 
-    if (( ! cancelled )); then
-        if (( pwned == 1 )); then
-            warn "Could not check if this password/phrase has been breached!" > ${terminal}
-            if [[ -n ${expertMode} ]]; then
-                resultVarRef="${result}"
-            fi
-        elif (( pwned == 2 )); then
-            error "This password/phrase is present in a large set of breached passwords so is not safe to use!" > ${terminal}
-        else
-            resultVarRef="${result}"
-        fi
+    (( resultCode == 0 )) && resultVarRef="${result}"
+    return ${resultCode}
+}
+
+checkPassword() {
+    local _passVar=$1
+    local -n _notSafeReasonsRef=$2
+    local _scoreVar=$3
+    local -n _scoreRef=$3
+    local pwned score apiError=0 breachCount=0 _notSafeReasons=()
+
+    # Check pwned database
+
+    hasNotBeenPwned ${_passVar} apiError breachCount; pwned=$?
+    if (( pwned == 1 )); then
+        _notSafeReasons+=( "${ show error "breach check failed" "(error" warning "${apiError}" glue ")"; }" )
+    elif (( pwned == 2 )); then
+        local s=; (( breachCount > 1 )) && s='s'
+        _notSafeReasons+=( "${ show error "breached ${breachCount} time$s" "(see" blue "https://haveibeenpwned.com/Passwords" glue ")"; }" )
     fi
+
+    # Check strength and return score message if requested
+
+    IFS=',' read -r -a score <<< "${ echo "${result}" | mrld -t; }"
+    (( score[1] > 2 )) || _notSafeReasons+=( "${ show error "too weak"; }")
+    [[ -n ${_scoreVar} ]] && _scoreRef="${score[0]} (${score[1]}/4), ${score[2]} to crack"
+debugVar _passVar _scoreVar _notSafeReasons
+    _notSafeReasonsRef=("${_notSafeReasons[@]}")
+    return ${#_notSafeReasons[@]}
 }
 
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/password' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
