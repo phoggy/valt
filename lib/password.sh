@@ -135,7 +135,8 @@ checkPassword() {
 
     hasNotBeenPwned ${_passVar} apiError breachCount; pwned=$?
     if (( pwned == 1 )); then
-        _notSafeReasons+=( "${ show error "breach check failed" "(error" warning "${apiError}" glue ")"; }" )
+        local apiErrorMessage; apiErrorMessage=${ _curlErrorMessage "${apiError}"; }
+        _notSafeReasons+=( "${ show error "breach check failed:" warning "${apiErrorMessage}"; }" )
     elif (( pwned == 2 )); then
         local s=; (( breachCount > 1 )) && s='s'
         _notSafeReasons+=( "${ show error "breached ${breachCount} time$s" "(see" blue "https://haveibeenpwned.com/Passwords" glue ")"; }" )
