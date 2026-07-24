@@ -104,7 +104,6 @@ readPassword() {
     if (( ! cancelled )) && [[ ${checkResult} == true ]]; then
         local notSafeReasons=() resultScore
         checkPassword result notSafeReasons resultScore; resultCode=$?
-debugVar resultScore
         echo -n "  ⮕  ${resultScore}"
         if (( resultCode )); then
             local _i
@@ -113,6 +112,8 @@ debugVar resultScore
                 show "    " blue "-" error "${notSafeReasons[_i]}"
             done
             echo
+        else
+            echo > ${terminal} # complete the line
         fi
     else
         echo > ${terminal} # complete the line
@@ -146,8 +147,7 @@ checkPassword() {
 
     IFS=',' read -r -a score <<< "${ echo "${result}" | mrld -t; }"
     (( score[1] > 2 )) || _notSafeReasons+=( "${ show error "too weak"; }")
-    [[ -n ${_scoreVar} ]] && _scoreRef="${score[0]} (${score[1]}/4), ${score[2]} to crack"
-debugVar _passVar _scoreVar _notSafeReasons
+    [[ -n ${_scoreVar} ]] && _scoreRef="${ show "${score[0]} (${score[1]}/4), ${score[2]} to crack (" glue italic "determined attacker" glue ")"; }"
     _notSafeReasonsRef=("${_notSafeReasons[@]}")
     return ${#_notSafeReasons[@]}
 }
