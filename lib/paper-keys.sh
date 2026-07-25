@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
-# Creates a PDF documenting use of the included "paper key" generated from a valt.key. A paper key is a printable
-# backup of the valt.key binary file, both as a QR code and as PEM file.
+# ◇ Loads key info from a file to prepare a paper key PDF, sourcing key metadata
+#   needed for QR and PEM generation.
 #
-# Use via: require 'valt/paper-keys'
+# · ARGS
+#
+#   [keyInfoFile] (string)  Path to the key info file (default: ${valtConfigDir}/key.info)
 
 preparePaperKey() {
     local keyInfoFile="${1:-${_defaultKeyInfoFile}}"
@@ -11,6 +13,17 @@ preparePaperKey() {
         _loadKeyInfo "${keyInfoFile}"
     }
 }
+
+# ◇ Generates a paper key PDF from a private key file, storing the output path in a result variable.
+#
+# · ARGS
+#
+#   privateKeyFile (string)   Path to the private key file.
+#   resultVarRef   (string)   Name of the variable to receive the output paper key file path.
+#   [keyInfoFile]  (string)   Path to the key info file (default: ${valtConfigDir}/key.info).
+#   [cssOverride]  (string)   Path to an optional CSS override file.
+#   [htmlTemplate] (string)   Path to an HTML template file
+#                             (default: ${valtHome}/etc/key-doc-template.html).
 
 newPaperKey() {
     _assertValtKey "$1"

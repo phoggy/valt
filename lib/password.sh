@@ -5,12 +5,13 @@
 
 # TODO: don't display strength (via mrld) as it is inaccurate. Just pick a threshold and warn is week if below.
 
-# Generate a random password of random length within the given range.
-# Prints the generated password.
-# Args: [minLength] [maxLength]
+# ◇ Outputs a randomly generated password of random length within a given range.
 #
-#   minLength - minimum password length (default: 24)
-#   maxLength - maximum password length (default: 32)
+# · ARGS
+#
+#   [minLength] (int)  Minimum password length (default: 24).
+#   [maxLength] (int)  Maximum password length (default: 32).
+
 generatePassword() {
     local -i minLength="${1:-24}"
     local -i maxLength="${2:-32}"
@@ -29,12 +30,13 @@ generatePassword() {
     echo "${password}"
 }
 
-# Generate a random passphrase using the Orchard Street Long word list via phraze.
-# Prints the generated passphrase.
-# Args: [wordCount] [separator]
+# ◇ Outputs a random passphrase using the Orchard Street Long word list (17,576 words) via phraze.
 #
-#   wordCount - number of words in the passphrase (default: 5)
-#   separator - string placed between words (default: space)
+# · ARGS
+#
+#   [wordCount] (int)     Number of words in the passphrase (default: 5).
+#   [separator] (string)  String placed between words (default: ' ').
+
 generatePassphrase() {
     local -i wordCount="${1:-5}"
     local separator="${2:- }"
@@ -42,13 +44,15 @@ generatePassphrase() {
     phraze  --list "${list}" --sep "${separator}" --words "${wordCount}"
 }
 
-# Interactively prompt for a password twice and verify both entries match.
-# Stores the verified password in a nameref variable. Fails if entries do not match.
-# Args: resultVarRef [timeout]
+# ◇ Interactively prompts for a password twice and stores the verified result in resultVarRef.
+#   Fails if the entries do not match or the first entry is empty.
 #
-#   prompt - prompt string, e.g. "Password"
-#   resultVarRef - nameref variable to receive the verified password
-#   timeout   - seconds to wait for each entry before timing out (default: 30)
+# · ARGS
+#
+#   prompt (string)        Prompt label displayed before each entry.
+#   resultVarRef (string)  Name of the variable to receive the verified password.
+#   [timeout] (int)        Seconds to wait for each entry (default: 30).
+
 readConfirmedPassword() {
     local p1 p2
     local prompt="$1"
@@ -62,14 +66,26 @@ readConfirmedPassword() {
     resultVarRef="${p1}"
 }
 
-# Interactively prompt for a password with optional strength checking and breach detection.
-# Stores the entered password in a nameref variable. Visibility controlled by passwordVisibility.
-# Args: prompt resultVarRef [timeout] [checkResult]
+# ◇ Interactively prompts for a password, storing the result in resultVarRef.
 #
-#   prompt      - label displayed before the input field
-#   resultVarRef   - nameref variable to receive the entered password
-#   timeout     - seconds to wait for input before timing out (default: 30)
-#   checkResult - if 'true', check strength and breach status (default: 'true')
+# · ARGS
+#
+#   prompt (string)         Label displayed before the input field.
+#   resultVarRef (string)   Name of the variable to receive the entered password.
+#   [timeout] (int)         Seconds to wait for input (default: 30).
+#   [checkResult] (bool)    Check password strength and breach status (default: 'true').
+#
+# · ENV VARS
+#
+#   passwordVisibility     Controls input display: 'none' hides input, 'hide' masks it,
+#                          'show' reveals it (default: 'none').
+#   skipReadPasswordCheck  When set and non-zero, disables strength checking.
+#
+# · RETURNS
+#
+#   0  password accepted
+#   1  password is unsafe or strength check failed
+
 readPassword() {
     local result count=0 mask key
     local prompt; prompt="${ show bold "$1: "; }"
@@ -124,6 +140,20 @@ readPassword() {
     (( resultCode == 0 )) && resultVarRef="${result}"
     return ${resultCode}
 }
+
+# ◇ Checks a password against the HaveIBeenPwned breach database and evaluates its strength.
+#
+# · ARGS
+#
+#   _passVar (string)              Name of the variable holding the password to check.
+#   _notSafeReasonsRef (arrayRef)  Array populated with formatted failure reason messages.
+#   _scoreVar (string)             Name of the variable to receive the formatted strength score,
+#                                  or empty to skip score output.
+#
+# · RETURNS
+#
+#   0  password passed all checks
+#   N  number of reasons the password is not safe (breach and/or strength failures)
 
 checkPassword() {
     local _passVar=$1

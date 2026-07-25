@@ -3,12 +3,14 @@
 # Enable/disable use of valt pinentry for password input.
 # Use via: require 'valt/pinentry'
 
-# Set PINENTRY_PROGRAM to valt's custom pinentry binary, enabling custom passphrase entry.
+# ◇ Sets PINENTRY_PROGRAM to the path of the valt-pinentry binary.
+
 useValtPinEntry() {
     declare -gx PINENTRY_PROGRAM="${ binaryPath valt-pinentry; }"
 }
 
-# Unset PINENTRY_PROGRAM, restoring the default pinentry behavior.
+# ◇ Unsets PINENTRY_PROGRAM, restoring the default pinentry behavior.
+
 disableValtPinEntry() {
     unset PINENTRY_PROGRAM
 }
