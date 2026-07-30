@@ -148,10 +148,10 @@ readPassword() {
 #
 # · ARGS
 #
-#   _passVar (string)              Name of the variable holding the password to check.
-#   _notSafeReasonsRef (arrayRef)  Array populated with formatted failure reason messages.
-#   _scoreVar (string)             Name of the variable to receive the formatted strength score,
-#                                  or empty to skip score output.
+#   passVar (string)              Name of the variable holding the password to check.
+#   notSafeReasonsRef (arrayRef)  Array populated with formatted failure reason messages.
+#   scoreVar (string)             Name of the variable to receive the formatted strength score,
+#                                 or empty to skip score output.
 #
 # · RETURNS
 #
@@ -185,10 +185,95 @@ checkPassword() {
     return ${#_notSafeReasons[@]}
 }
 
+# ◇ Returns a formatted password strength report as an array of description strings.
+#   Element 0 is the overall level/description (e.g. "weak (2/4)"); each subsequent element describes one crack-time
+#   scenario as "<characterization>, <type>: <time> to crack".
+#
+# · ARGS
+#
+#   passVar (string)           Name of the variable holding the password to check.
+#   useCase (string)           Either 'account' (online/offline attacks against a service whose password hashing you don't
+#                              control) or 'age' (offline attacks against an Age-encrypted file or private key, at Age's default
+#                              scrypt work factor).
+#   strengthRef (intRef)       Name of the variable to return the 0-4 strength value.
+#   resultArrayRef (arrayRef)  Name of an array variable to populate with the formatted strength report.
+
+passwordStrength() {
+    local _passVar="$1"
+    local _useCase="$2"
+    local -n _scoreRef="$3"
+    local -n _resultArrayRef="$4"
+    local -A _scores
+    local _score _scoreDesc _key _keys _age color
+
+    local -A _crackType=(
+        [100-per-hour]="throttled online attack"
+        [10-per-second]="unthrottled online attack"
+        [10k-per-second]="offline attack, slow hash, many cores"
+        [10B-per-second]="offline attack, fast hash, many cores"
+        [age-scrypt-1-core]="offline attack, scrypt hash, single core"
+        [age-scrypt-32-cores]="offline attack, scrypt hash, 32 cores"
+        [age-scrypt-128-cores]="offline attack, scrypt hash, 128 cores"
+        [age-scrypt-1024-cores]="offline attack, scrypt hash, 1024 cores")
+
+    local -A _characterization=(
+        [100-per-hour]="casual attacker"
+        [10-per-second]="motivated attacker"
+        [10k-per-second]="determined attacker"
+        [10B-per-second]="state-level attacker"
+        [age-scrypt-1-core]="casual attacker"
+        [age-scrypt-32-cores]="motivated attacker"
+        [age-scrypt-128-cores]="determined attacker"
+        [age-scrypt-1024-cores]="state-level attacker")
+
+    case "${_useCase}" in
+        account)
+            _age=false
+            _keys=(100-per-hour 10-per-second 10k-per-second 10B-per-second)
+            ;;
+        age)
+            _age=true
+            _keys=(age-scrypt-1-core age-scrypt-32-cores age-scrypt-128-cores age-scrypt-1024-cores)
+            ;;
+        *) fail "unknown use case: '${_useCase}' (expected 'account' or 'age')" ;;
+    esac
+
+    _passwordScore "${_passVar}" _score _scoreDesc _scores "${_age}"
+
+    _scoreRef=${_score}
+    (( _score < 3 )) && color="error" || color="success"
+    _resultArrayRef=( "${ show ${color} "${_scoreDesc} (${_score}/4)"; }")
+    local desc
+    for _key in "${_keys[@]}"; do
+        desc="${ show bold "${_scores[${_key}]}" "to crack for ${_characterization[${_key}]} (" glue italic "${_crackType[${_key}]}" glue ")"; }"
+        _resultArrayRef+=("${desc}")
+    done
+}
+
+
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/password' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_password() {
     require 'rayvn/prompt' 'valt/pwned'
+}
+
+_passwordScore() {
+    local -n _passRef="$1"
+    local -n _scoreRef="$2"
+    local -n _scoreDescRef="$3"
+    local -n _resultMapRef="$4"
+    local _age="${5:-false}"
+    local key value mrldArgs=(--verbose)
+    [[ ${_age} == true ]] && mrldArgs+=(--age)
+
+    local json; json="${ printf '%s\n' "${_passRef}" | mrld "${mrldArgs[@]}"; }"
+
+    _scoreRef="${ printf '%s' "${json}" | jq -r '.level'; }"
+    _scoreDescRef="${ printf '%s' "${json}" | jq -r '.description'; }"
+
+    while IFS='=' read -r key value; do
+        _resultMapRef["${key//_/-}"]="${value}"
+    done < <(printf '%s' "${json}" | jq -r '.crack_times | to_entries[] | "\(.key)=\(.value)"')
 }
 
 _readPassword() {
