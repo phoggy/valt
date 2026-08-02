@@ -174,10 +174,10 @@ passwordStrength() {
     local -n _scoreRef="$4"
     local -n _resultArrayRef="$5"
     local _breached _apiError=0 _breachCount=0 _breachInfo _breachSummary
-    local _score _scoreDesc _strengthSummary _summary _info
+    local _score _scoreDesc _strengthSummary _crackSummary _crackTimes _primaryCount _summary _info
     local _time _actor _detail _primary _json
     local _unsafe=0
-    local _context="against ${_threatLevel} attacker on ${_useCase}"
+    local _context="against ${_threatLevel} ${_useCase} attacker"
 
     [[ ${_useCase} == account || ${_useCase} == file ]] || \
         fail "unknown use case: '${_useCase}' (expected 'account' or 'file')"
@@ -211,12 +211,12 @@ passwordStrength() {
     _scoreDesc="${ printf '%s' "${_json}" | jq -r '.description'; }"
 
     if (( _score < 3 )); then
-        _strengthSummary="${ show error "${_scoreDesc}" "(" glue error "${_score}/4" glue ")"; } ${_context}"
+        _strengthSummary="${ show error "${_scoreDesc}" "(" glue error "${_score}/4" glue ")" error "${_context}"; }"
         _unsafe=1
     elif (( _unsafe )); then
         _strengthSummary=""
     else
-        _strengthSummary="${ show success "${_scoreDesc}" "(" glue success "${_score}/4" glue ")"; } ${_context}"
+        _strengthSummary="${ show success "${_scoreDesc}" "(" glue success "${_score}/4" glue ")" success "${_context}"; }"
     fi
 
     # Create final summary
@@ -231,20 +231,24 @@ passwordStrength() {
         _summary="✅ ${_strengthSummary}, ${_breachSummary}"
     fi
 
-    # Build result array
+    # Build crack times
 
-    _resultArrayRef=("${_summary}" "${_breachInfo}" )
-    if (( ! _unsafe )); then
-        while IFS=$'\t' read -r _time _actor _detail _primary; do
-            if [[ ${_primary} == true ]]; then
-                _info="${ show bold underline "${_time}" "to crack ${_actor} (" glue italic "${_detail}" glue ")"; }"
-            else
-                _info="${ show bold "${_time}" "to crack ${_actor} (" glue italic "${_detail}" glue ")"; }"
-            fi
-            _resultArrayRef+=("${_info}")
-        done < <(printf '%s' "${_json}" | jq -r '.report[] | [.time, .actor, .detail, .primary] | @tsv')
-    fi
+    _primaryCount=0
+    _crackTimes=()
+    _crackSummary="Estimated time to crack, strength score based on underlined scenario"
+    while IFS=$'\t' read -r _time _actor _detail _primary; do
+        if [[ ${_primary} == true ]]; then
+            (( _primaryCount++ )); (( _primaryCount == 2 )) && _crackSummary+="s"
+            _info="${ show bold underline "${_time}" "to crack ${_actor} (" glue italic "${_detail}" glue ")"; }"
+        else
+            _info="${ show bold "${_time}" "to crack ${_actor} (" glue italic "${_detail}" glue ")"; }"
+        fi
+        _crackTimes+=("- ${_info}")
+    done < <(printf '%s' "${_json}" | jq -r '.report[] | [.time, .actor, .detail, .primary] | @tsv')
 
+    # Finalize results
+
+    _resultArrayRef=("${_summary}" "" "${_crackSummary}:" "" "${_crackTimes[@]}" "" "${_breachInfo}")
     _scoreRef=${_score}
     return ${_unsafe}
 }
