@@ -52,21 +52,24 @@ generatePassphrase() {
 #
 # · ARGS
 #
-#   prompt (string)                   Prompt label displayed before each entry.
-#   resultVarRef (string)             Name of the variable to receive the verified password.
-#   [testUseCase] ('account'|'file')  Test password strength and breach status if provided (default: '').
-#   [timeout] (int)                   Seconds to wait for each entry (default: 30).
+#   prompt (string)                              Prompt label displayed before each entry.
+#   resultVarRef (string)                        Name of the variable to receive the verified password.
+#   [testUseCase] ('account'|'file')              Test password strength and breach status if provided (default: '').
+#   [testThreatLevel] ('casual'|'motivated'|      How much guessing power to judge strength against (default: 'determined').
+#                      'determined'|'state-level')
+#   [timeout] (int)                               Seconds to wait for each entry (default: 30).
 
 readConfirmedPassword() {
     local _p1 _p2
     local _prompt="$1"
     local -n _resultVarRef="$2"
     local _testUseCase="${3:-}"
-    local _timeout="${4:-30}"
+    local _testThreatLevel="${4:-}"
+    local _timeout="${5:-30}"
     local _confirmPrompt; _confirmPrompt="${ padString "Confirm" ${#_prompt} before; }"
-    readPassword "${_prompt}" _p1 "${_testUseCase}" "${_timeout}" || fail
+    readPassword "${_prompt}" _p1 "${_testUseCase}" "${_testThreatLevel}" "${_timeout}" || fail
     [[ ${_p1} == '' ]] && fail "cancelled" > ${terminal}
-    readPassword "${_confirmPrompt}" _p2 '' "${_timeout}" || fail
+    readPassword "${_confirmPrompt}" _p2 '' '' "${_timeout}" || fail
     [[ ${_p1} == "${_p2}" ]] || fail "entries do not match" > ${terminal}
     _resultVarRef="${_p1}"
 }
@@ -75,10 +78,12 @@ readConfirmedPassword() {
 #
 # · ARGS
 #
-#   prompt (string)                   Label displayed before the input field.
-#   resultVarRef (string)             Name of the variable to receive the entered password.
-#   [testUseCase] ('account'|'file')  Test password strength and breach status if provided (default: '').
-#   [timeout] (int)                   Seconds to wait for input (default: 30).
+#   prompt (string)                              Label displayed before the input field.
+#   resultVarRef (string)                        Name of the variable to receive the entered password.
+#   [testUseCase] ('account'|'file')              Test password strength and breach status if provided (default: '').
+#   [testThreatLevel] ('casual'|'motivated'|      How much guessing power to judge strength against (default: 'determined').
+#                      'determined'|'state-level')
+#   [timeout] (int)                               Seconds to wait for input (default: 30).
 #
 # · ENV VARS
 #
@@ -96,7 +101,8 @@ readPassword() {
     local _prompt; _prompt="${ show bold "$1: "; }"
     local -n _resultVarRef="$2"
     local _testUseCase="${3:-}"
-    local _timeout="${4:-30}"
+    local _testThreatLevel="${4:-}"
+    local _timeout="${5:-30}"
     local -i _cancelled=0
     local -i _visible=1
     local -i _show=1
@@ -125,7 +131,7 @@ readPassword() {
     if (( ! _cancelled )) && [[ -n ${_testUseCase} ]]; then
         local -a _strengthReport=()
         local _strengthScore
-        passwordStrength _result "${_testUseCase}" _strengthScore _strengthReport; _resultCode=$?
+        passwordStrength _result "${_testUseCase}" "${_testThreatLevel}" _strengthScore _strengthReport; _resultCode=$?
         echo -n "  ⮕  ${_strengthReport[0]}"
         if (( _resultCode )); then
             show nl nl "${_strengthReport[1]}" nl
@@ -151,6 +157,8 @@ readPassword() {
 #   useCase (string)           Either 'account' (online/offline attacks against a service whose password hashing you don't
 #                              control) or 'file' (offline attacks against an Age-encrypted file or private key, at Age's default
 #                              scrypt work factor).
+#   threatLevel (string)       How much guessing power to judge the strength verdict against: 'casual', 'motivated',
+#                              'determined', or 'state-level'. Empty defaults to mrld's own default ('determined').
 #   strengthRef (intRef)       Name of the variable to return the 0-4 strength value.
 #   resultArrayRef (arrayRef)  Name of an array variable to populate with the formatted strength report.
 #
@@ -162,8 +170,9 @@ readPassword() {
 passwordStrength() {
     local _passVar="$1"
     local _useCase="$2"
-    local -n _scoreRef="$3"
-    local -n _resultArrayRef="$4"
+    local _threatLevel="${3:-determined}"
+    local -n _scoreRef="$4"
+    local -n _resultArrayRef="$5"
     local _breached _apiError=0 _breachCount=0 _breachInfo _breachSummary
     local _score _scoreDesc _strengthSummary _summary _info
     local _time _actor _detail _json
@@ -171,6 +180,8 @@ passwordStrength() {
 
     [[ ${_useCase} == account || ${_useCase} == file ]] || \
         fail "unknown use case: '${_useCase}' (expected 'account' or 'file')"
+    [[ ${_threatLevel} == casual || ${_threatLevel} == motivated || ${_threatLevel} == determined || ${_threatLevel} == state-level ]] || \
+        fail "unknown threat level: '${_threatLevel}' (expected 'casual', 'motivated', 'determined', or 'state-level')"
 
     # Check pwned database and summarize
 
@@ -194,7 +205,7 @@ passwordStrength() {
     # what it returns.
 
     local -n _passRef="${_passVar}"
-    _json="${ printf '%s\n' "${_passRef}" | mrld --verbose --use-case "${_useCase}"; }"
+    _json="${ printf '%s\n' "${_passRef}" | mrld --verbose --use-case "${_useCase}" --threat-level "${_threatLevel}"; }"
     _score="${ printf '%s' "${_json}" | jq -r '.level'; }"
     _scoreDesc="${ printf '%s' "${_json}" | jq -r '.description'; }"
 
