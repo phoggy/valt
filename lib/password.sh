@@ -177,7 +177,7 @@ passwordStrength() {
     local _score _scoreDesc _strengthSummary _summary _info
     local _time _actor _detail _primary _json
     local _unsafe=0
-    local _prefix="${_useCase}/${_threatLevel}: "
+    local _context="against ${_threatLevel} attacker on ${_useCase}"
 
     [[ ${_useCase} == account || ${_useCase} == file ]] || \
         fail "unknown use case: '${_useCase}' (expected 'account' or 'file')"
@@ -211,24 +211,24 @@ passwordStrength() {
     _scoreDesc="${ printf '%s' "${_json}" | jq -r '.description'; }"
 
     if (( _score < 3 )); then
-        _strengthSummary="${ show error "${_scoreDesc}" "(" glue error "${_score}/4" glue ")"; }"
+        _strengthSummary="${ show error "${_scoreDesc}" "(" glue error "${_score}/4" glue ")"; } ${_context}"
         _unsafe=1
     elif (( _unsafe )); then
         _strengthSummary=""
     else
-        _strengthSummary="${ show success "${_scoreDesc}" "(" glue success "${_score}/4" glue ")"; }"
+        _strengthSummary="${ show success "${_scoreDesc}" "(" glue success "${_score}/4" glue ")"; } ${_context}"
     fi
 
     # Create final summary
 
     if (( _unsafe )); then
         if (( _breached )); then
-            _summary="⛔ ${_prefix}${ show bold error "Do NOT use:" "${_breachSummary}, ${_strengthSummary}"; }"
+            _summary="⛔ ${ show bold error "Do NOT use:" "${_breachSummary}, ${_strengthSummary}"; }"
         else
-            _summary="⚠️ ${_prefix}${ show bold warning "Not safe to use:" "${_strengthSummary}, ${_breachSummary}"; }"
+            _summary="⚠️ ${ show bold warning "Not safe to use:" "${_strengthSummary}, ${_breachSummary}"; }"
         fi
     else
-        _summary="✅ ${_prefix}${_strengthSummary}, ${_breachSummary}"
+        _summary="✅ ${_strengthSummary}, ${_breachSummary}"
     fi
 
     # Build result array
