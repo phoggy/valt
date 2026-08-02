@@ -175,8 +175,9 @@ passwordStrength() {
     local -n _resultArrayRef="$5"
     local _breached _apiError=0 _breachCount=0 _breachInfo _breachSummary
     local _score _scoreDesc _strengthSummary _summary _info
-    local _time _actor _detail _json
+    local _time _actor _detail _primary _json
     local _unsafe=0
+    local _prefix="${_useCase}/${_threatLevel}: "
 
     [[ ${_useCase} == account || ${_useCase} == file ]] || \
         fail "unknown use case: '${_useCase}' (expected 'account' or 'file')"
@@ -222,22 +223,26 @@ passwordStrength() {
 
     if (( _unsafe )); then
         if (( _breached )); then
-            _summary="⛔ ${ show bold error "Do NOT use:" "${_breachSummary}, ${_strengthSummary}"; }"
+            _summary="⛔ ${_prefix}${ show bold error "Do NOT use:" "${_breachSummary}, ${_strengthSummary}"; }"
         else
-            _summary="⚠️ ${ show bold warning "Not safe to use:" "${_strengthSummary}, ${_breachSummary}"; }"
+            _summary="⚠️ ${_prefix}${ show bold warning "Not safe to use:" "${_strengthSummary}, ${_breachSummary}"; }"
         fi
     else
-        _summary="✅ ${_strengthSummary}, ${_breachSummary}"
+        _summary="✅ ${_prefix}${_strengthSummary}, ${_breachSummary}"
     fi
 
     # Build result array
 
     _resultArrayRef=("${_summary}" "${_breachInfo}" )
     if (( ! _unsafe )); then
-        while IFS=$'\t' read -r _time _actor _detail; do
-            _info="${ show bold "${_time}" "to crack ${_actor} (" glue italic "${_detail}" glue ")"; }"
+        while IFS=$'\t' read -r _time _actor _detail _primary; do
+            if [[ ${_primary} == true ]]; then
+                _info="${ show bold underline "${_time}" "to crack ${_actor} (" glue italic "${_detail}" glue ")"; }"
+            else
+                _info="${ show bold "${_time}" "to crack ${_actor} (" glue italic "${_detail}" glue ")"; }"
+            fi
             _resultArrayRef+=("${_info}")
-        done < <(printf '%s' "${_json}" | jq -r '.report[] | [.time, .actor, .detail] | @tsv')
+        done < <(printf '%s' "${_json}" | jq -r '.report[] | [.time, .actor, .detail, .primary] | @tsv')
     fi
 
     _scoreRef=${_score}
