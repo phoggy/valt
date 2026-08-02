@@ -55,8 +55,8 @@ generatePassphrase() {
 #   prompt (string)                              Prompt label displayed before each entry.
 #   resultVarRef (string)                        Name of the variable to receive the verified password.
 #   [testUseCase] ('account'|'file')              Test password strength and breach status if provided (default: '').
-#   [testThreatLevel] ('casual'|'motivated'|      How much guessing power to judge strength against (default: 'determined').
-#                      'determined'|'state-level')
+#   [testThreatLevel] ('casual'|'motivated'|      How much guessing power to judge strength against (default: 'professional').
+#                      'professional'|'nation-state')
 #   [timeout] (int)                               Seconds to wait for each entry (default: 30).
 
 readConfirmedPassword() {
@@ -78,12 +78,14 @@ readConfirmedPassword() {
 #
 # · ARGS
 #
-#   prompt (string)                              Label displayed before the input field.
-#   resultVarRef (string)                        Name of the variable to receive the entered password.
-#   [testUseCase] ('account'|'file')              Test password strength and breach status if provided (default: '').
-#   [testThreatLevel] ('casual'|'motivated'|      How much guessing power to judge strength against (default: 'determined').
-#                      'determined'|'state-level')
-#   [timeout] (int)                               Seconds to wait for input (default: 30).
+#   prompt (string)             Label displayed before the input field.
+#   resultVarRef (string)       Name of the variable to receive the entered password.
+#   [strengthUseCase] (string)  Test password strength and breach status if provided, either 'account' (online/offline attacks
+#                               against a service whose password hashing you don't control) or 'file' (offline attacks against
+#                               an Age-encrypted file or private key, at Age's default scrypt work factor).
+#   [threatLevel] (string)      How much guessing power to judge the strength verdict against: 'casual', 'motivated',
+#                               'professional', or 'nation-state' (default: 'professional').
+#   [timeout] (int)             Seconds to wait for input (default: 30).
 #
 # · ENV VARS
 #
@@ -158,7 +160,7 @@ readPassword() {
 #                              control) or 'file' (offline attacks against an Age-encrypted file or private key, at Age's default
 #                              scrypt work factor).
 #   threatLevel (string)       How much guessing power to judge the strength verdict against: 'casual', 'motivated',
-#                              'determined', or 'state-level'. Empty defaults to mrld's own default ('determined').
+#                              'professional', or 'nation-state' (default: 'professional').
 #   strengthRef (intRef)       Name of the variable to return the 0-4 strength value.
 #   resultArrayRef (arrayRef)  Name of an array variable to populate with the formatted strength report.
 #
@@ -170,7 +172,7 @@ readPassword() {
 passwordStrength() {
     local _passVar="$1"
     local _useCase="$2"
-    local _threatLevel="${3:-determined}"
+    local _threatLevel="${3:-professional}"
     local -n _scoreRef="$4"
     local -n _resultArrayRef="$5"
     local _breached _apiError=0 _breachCount=0 _breachInfo _breachSummary
@@ -181,8 +183,8 @@ passwordStrength() {
 
     [[ ${_useCase} == account || ${_useCase} == file ]] || \
         fail "unknown use case: '${_useCase}' (expected 'account' or 'file')"
-    [[ ${_threatLevel} == casual || ${_threatLevel} == motivated || ${_threatLevel} == determined || ${_threatLevel} == state-level ]] || \
-        fail "unknown threat level: '${_threatLevel}' (expected 'casual', 'motivated', 'determined', or 'state-level')"
+    [[ ${_threatLevel} == casual || ${_threatLevel} == motivated || ${_threatLevel} == professional || ${_threatLevel} == nation-state ]] || \
+        fail "unknown threat level: '${_threatLevel}' (expected 'casual', 'motivated', 'professional', or 'nation-state')"
 
     # Check pwned database and summarize
 
@@ -235,7 +237,7 @@ passwordStrength() {
 
     _primaryCount=0
     _crackTimes=()
-    _crackSummary="Estimated time to crack, strength score based on underlined scenario"
+    _crackSummary="Strength score based on the underlined crack time scenario"
     while IFS=$'\t' read -r _time _actor _detail _primary; do
         if [[ ${_primary} == true ]]; then
             (( _primaryCount++ )); (( _primaryCount == 2 )) && _crackSummary+="s"
