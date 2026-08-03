@@ -174,7 +174,7 @@ passwordStrength() {
     local _threatLevel="${3:-professional}"
     local -n _scoreRef="$4"
     local -n _resultArrayRef="$5"
-    local _breached _apiError=0 _breachCount=0 _breachInfo _breachSummary
+    local _breached _apiError=0 _breachCount=0 _breachInfo _breachSummary _sourcesInfo
     local _score _scoreDesc _strengthSummary _crackSummary _crackTimes _primaryCount _summary _info
     local _time _actor _detail _primary _json
     local _unsafe=0
@@ -200,6 +200,7 @@ passwordStrength() {
         _unsafe=1
     fi
     _breachInfo="${ show "See" blue "https://haveibeenpwned.com/Passwords" "for breach information."; }"
+    _sourcesInfo="${ show "See" blue "https://github.com/phoggy/mrld#methodology-and-sources" "for how these estimates are calculated."; }"
 
     # Check strength and summarize — mrld itself now owns crack-time scenario selection,
     # attacker-type labeling, and collapsing for the given use case (see its --use-case flag
@@ -249,7 +250,7 @@ passwordStrength() {
 
     # Finalize results
 
-    _resultArrayRef=("${_summary}" "" "${_crackSummary}:" "" "${_crackTimes[@]}" "" "${_breachInfo}")
+    _resultArrayRef=("${_summary}" "" "${_crackSummary}:" "" "${_crackTimes[@]}" "" "${_breachInfo}" "${_sourcesInfo}")
     _scoreRef=${_score}
     return ${_unsafe}
 }
