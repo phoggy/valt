@@ -31,6 +31,12 @@ main() {
 }
 
 init() {
+
+    # TODO: update using current CLI specification model and rayvn args command
+
+    warn "Under Construction"; bye "Come back again later"
+
+
     declare -grx ageProjectUrl='https://github.com/filosottile/age'
     declare -grx valtBinDir="${0%/*}"
     declare -grx valtConfigDir="${ configDirPath; }"
@@ -47,20 +53,7 @@ init() {
 #        ['paper-keys']="newPaperKeys"
 #        ['archive']="newArchive"
     )
-    local argSpec=( "--name|-n:str" "--force|-f"  "--count:+int"  "bool" '*' )
 
-    generateParser valt argSpec
-    echo; echo; echo
-    generateParser valt cliSpec
-    exit
-
-
-
-
-
-    parseCommand valt commandHandlers 0 "$@"
-    debugVar commandHandler commandOptions
-    exit
 }
 
 # ---- newPassphrase -----

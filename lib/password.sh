@@ -80,7 +80,7 @@ readConfirmedPassword() {
 #
 #   prompt (string)             Label displayed before the input field.
 #   resultVarRef (string)       Name of the variable to receive the entered password.
-#   [strengthUseCase] (string)  Test password strength and breach status if provided, either 'account' (online/offline attacks
+#   [strengthUseCase] (string)  Estimate password strength and breach status if provided, either 'account' (online/offline attacks
 #                               against a service whose password hashing you don't control) or 'file' (offline attacks against
 #                               an Age-encrypted file or private key, at Age's default scrypt work factor).
 #   [threatLevel] (string)      How much guessing power to judge the strength verdict against: 'casual', 'motivated',
@@ -149,7 +149,7 @@ readPassword() {
     return ${_resultCode}
 }
 
-# ◇ Returns a formatted password strength report as an array of description strings. Element 0 is a summary, subsequent elements
+# ◇ Returns a formatted password strength estimate as an array of description strings. Element 0 is a summary, subsequent elements
 #   provide additional detail.
 #
 # · ARGS
