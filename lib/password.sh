@@ -89,9 +89,8 @@ readConfirmedPassword() {
 #
 # · ENV VARS
 #
-#   passwordVisibility     Controls input display: 'none' hides input, 'hide' masks it,
-#                          'show' reveals it (default: 'none').
-#   skipReadPasswordCheck  When set and non-zero, disables strength checking.
+#   passwordVisibility          Controls input display: 'none' hides input, 'hide' masks it, 'show' reveals it (default: 'none').
+#   skipReadPasswordStrength    When set and non-zero, disables strength checking.
 #
 # · RETURNS
 #
@@ -110,7 +109,7 @@ readPassword() {
     local -i _show=1
     local _resultCode=0
     _resultVarRef=''
-    (( skipReadPasswordCheck )) && _testUseCase=''
+    (( skipReadPasswordStrength )) && _testUseCase=''
     [[ -v passwordVisibility ]] || declare -gx passwordVisibility='none'
 
     case ${passwordVisibility} in
@@ -150,8 +149,8 @@ readPassword() {
     return ${_resultCode}
 }
 
-# ◇ Returns a formatted password strength report as an array of description strings. Element 0 is a summary, 1 is a pointer to
-#   HaveIBeenPwned for more information on breaches. If safe to use, additional elements each describe one crack-time scenario.
+# ◇ Returns a formatted password strength report as an array of description strings. Element 0 is a summary, subsequent elements
+#   provide additional detail.
 #
 # · ARGS
 #

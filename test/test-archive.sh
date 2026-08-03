@@ -54,7 +54,7 @@ init() {
 
     rayvnTest_ValtKeyPassphrase='valt-test-passphrase-12345'
     skipKeyPassphraseAdvice=1
-    skipReadPasswordCheck=1
+    skipReadPasswordStrength=1
 
     declare -g pubFile keyFile testInputDir archiveOutputDir archiveFile archivePubFile
     declare -g outerExtractDir innerExtractDir payloadExtractDir

@@ -1,10 +1,6 @@
 #!/usr/bin/env rayvn-bash
 # shellcheck disable=SC2155
 
-# TODO: consider a different structure that eliminates other binaries and moves most functionality to shared libs
-#       with remainder here. e.g. 'valt/keydoc' generateKeyDocument privateKey
-
-
 usage() {
     echo
     show bold "Public key encryption for files and directories, using" cyan "age" "(see" blue "${ageProjectUrl}" glue ")."
@@ -13,86 +9,223 @@ usage() {
     echo
     echo "Commands"
     echo
-    echo "    pass             Generate and/or evaluate password/passphrase strength."
-    echo "    keys             Generate a key pair with a password/passphrase encrypted private key."
-    echo "    document         Generate backup documentation for an existing key pair."   # TODO!
+    echo "    keys             Create a key pair with an encrypted private key and a paper key as backup."
+    echo "    paper            Create a backup paper key and documentation for an existing key pair."
     echo "    archive          Create a secure archive from one or more files or directories, or extract files from one."
+    echo "    passphrase       Generate and/or evaluate passphrase strength."
+    echo "    password         Generate and/or evaluate password strength."
+    echo "    pwned            Check whether a password/phrase appears in the HaveIBeenPwned breach database."
     echo
     show "Run" bold blue "${scriptName}" italic "COMMAND" bold blue "--help" "for more information on a command."
     echo
     echo "Options"
     echo
-    commonOptions 21
-    echo
-    echo "Environment Variables"
-    echo
-    echo "    VALT_TIMEOUT     Set input timeout, in seconds (default: 30)."
+    showCommonOptions 21
     echo
     bye "${@}"
 }
 
 main() {
     init "${@}"
-    if (( newPassphrase )); then
-        require 'valt/password'
-        generatePassphrase
-    elif [[ -n ${command} ]]; then
-        executeClean ${command} "${commandOptions[@]}"  # TODO: revisit need for clean vars!
-    else
-        usage
-    fi
+    "${commandHandler}"
 }
 
 init() {
-
-    # Global constants
-
     declare -grx ageProjectUrl='https://github.com/filosottile/age'
     declare -grx valtBinDir="${0%/*}"
-    declare -grx _valtConfigDir="${ configDirPath; }"
+    declare -grx valtConfigDir="${ configDirPath; }"
     declare -grx valtProjectUrl='https://github.com/phoggy/valt'
 
-    # Global options
+    declare -gAr cliSpec=(
+        ['pass']="newPassphrase(--words|-w:+int --separator|-s:str --count|-c:+int)"
+        ['passphrase']="newPassphrase(--words|-w:+int --separator|-s:str --count|-c:+int)"
+        ['password']="newPassword(--length|-l:+int)"
+#        ['pwned']=checkPass"newPassword"
+#        ['keys']="newKeys"
+#        ['keygen']="newKeys"
+#        ['paper']="newPaperKeys"
+#        ['paper-keys']="newPaperKeys"
+#        ['archive']="newArchive"
+    )
+    local argSpec=( "--name|-n:str" "--force|-f"  "--count:+int"  "bool" '*' )
 
-    declare -gx passwordVisibility="${VALT_VISIBILITY:-none}"           # none|hide|show
-    declare -gx expertMode="${VALT_EXPERT_MODE:-}"                      # any value enables
-    declare -grx inputTimeout="${VALT_INPUT_TIMEOUT:-30}"               # seconds
+    generateParser valt argSpec
+    echo; echo; echo
+    generateParser valt cliSpec
+    exit
 
-    # Arguments
 
-    declare -g newPassphrase=0
-    declare -g command
-    declare -ga commandOptions=()
 
-    # Parse input
 
-    [[ $1 ]] || usage
 
-    while (( $# > 0 )); do
-        case "${1}" in
-            pass) newPassphrase=1 ;;
-            keys) setCommand keys ;;
-            document) setCommand document ;;
-            encrypt) setCommand encrypt ;;
-            decrypt) setCommand decrypt ;;
-            --expert) expertMode=true ;; # TODO update usage when implemented
-            --visibility) shift; passwordVisibility="${1}" ;;
-            -h | --help) [[ -n ${command} ]] && commandOptions+=("${1}") || usage ;;
-            -v) projectVersion valt; exit 0 ;;
-            --version) projectVersion valt true; exit 0 ;;
-            --debug*) setDebug "$@"; shift $? ;;
-            *) commandOptions+=("${1}") ;;
-        esac
-        shift
-    done
-
-    #    debugVar passwordVisibility expertMode proxyPinEntry command commandOptions
-
-    assertValidVisibility
-    [[ ${newPassphrase} || -n ${command} ]] || usage "missing command"
-
-    checkProjectDependencies 'valt'
+    parseCommand valt commandHandlers 0 "$@"
+    debugVar commandHandler commandOptions
+    exit
 }
+
+# ---- newPassphrase -----
+
+newPassphrase() {
+    local words="${commandOptions['words']:-5}"
+    local separator="${commandOptions['separator']:-" "}"
+    local count="${commandOptions['count']:-1}"
+debug "newPassphrase(words=${words}, separator='${separator}', count=${count})"
+}
+
+newPassphraseUsage() {
+    echo "valt passphrase [--words N] [--separator SEP] [--count N]"
+    echo
+    echo "  Generate one or more new passphrases."
+    echo
+    echo "  --words N        The number of words in the passphrase (default: 5)."
+    echo "  --separator SEP  The separator string between words (default: ' ')."
+    echo "  --count N        The number of passphrases to generate (default: 1)."
+}
+
+# ---- newPassword -----
+
+newPassword() {
+    echo newPassword
+}
+
+newPasswordUsage() {
+    echo newPasswordUsage
+}
+
+# ---- checkPass -----
+
+checkPass() {
+    echo checkPass
+}
+
+checkPassUsage() {
+    echo checkPassUsage
+}
+
+# ---- newPaperKeys -----
+
+newPaperKeys() {
+    echo newPaperKeys
+}
+
+newPaperKeysUsage() {
+    echo newPaperKeysUsage
+}
+
+# ---- newKeys -----
+
+newArchive() {
+    echo newArchive
+}
+
+newArchiveUsage() {
+    echo newArchiveUsage
+}
+
+
+
+
+# ---- shared Functions -----
+
+#_setCommand() {
+#    commandHandler=${commandHandlers["$1"]};
+#    [[ -n commandHandler ]] || usage "unknown command: $1"
+#}
+#
+#_setCommandHelp() {
+#    commandHandler="${commandHandler}Usage"
+#    declare -f "${commandHandler}" > /dev/null || fail "missing ${commandHandler} function"
+#}
+#
+#_setCommandOption() {
+#    debug "_setCommandOption $1"
+#    if [[ -n "${_currentOption}" ]]; then
+#        local key="${_currentOption}"; _currentOption=
+#        local args="${commandOptions[${key}]}"
+#        [[ -n ${args} ]] && args="${args} $1" || args="$1"
+#        commandOptions+=(["${key}"]="${args}")
+#    else
+#        _currentOption="${1//-/}"
+#        local existing="${commandOptions[${_currentOption}]}"
+#        [[ -n "${existing}" ]] && fail "--${_currentOption} passed more than once"
+#        commandOptions+=(["${_currentOption}"]=)
+#    fi
+#    debugVar option commandOptions
+#}
+#
+#_setCommandArg() {
+#    debug "_setCommandArg $1"
+#    [[ -n "${_currentOption}" ]] && _setCommandOption "$1" || commandArgs+=("$1")
+#    debugVar option commandOptions commandArgs
+#}
+#
+#_assertCommandArgs() {
+#    local count="$1"
+#    [[ ${#commandArgs[@]} ]] != "${count}"
+#}
+#
+#main() {
+#    init "${@}"
+#    if (( newPassphrase )); then
+#        require 'valt/password'
+#        generatePassphrase
+#    elif [[ -n ${command} ]]; then
+#        executeClean ${command} "${commandOptions[@]}"  # TODO: revisit need for clean vars!
+#    else
+#        usage
+#    fi
+#}
+#
+#init() {
+#
+#    # Constants
+#
+#    declare -grx ageProjectUrl='https://github.com/filosottile/age'
+#    declare -grx valtBinDir="${0%/*}"
+#    declare -grx _valtConfigDir="${ configDirPath; }"
+#    declare -grx valtProjectUrl='https://github.com/phoggy/valt'
+#
+#    # Global options
+#
+#    declare -gx passwordVisibility="${VALT_VISIBILITY:-none}"           # none|hide|show
+#    declare -gx expertMode="${VALT_EXPERT_MODE:-}"                      # any value enables
+#    declare -grx inputTimeout="${VALT_INPUT_TIMEOUT:-30}"               # seconds
+#
+#    # Arguments
+#
+#    declare -g newPassphrase=0
+#    declare -g command
+#    declare -ga commandOptions=()
+#
+#    # Parse input
+#
+#    [[ $1 ]] || usage
+#
+#    while (( $# > 0 )); do
+#        case "${1}" in
+#            pass) newPassphrase=1 ;;
+#            keys) setCommand keys ;;
+#            document) setCommand document ;;
+#            encrypt) setCommand encrypt ;;
+#            decrypt) setCommand decrypt ;;
+#            --expert) expertMode=true ;; # TODO update usage when implemented
+#            --visibility) shift; passwordVisibility="${1}" ;;
+#            -h | --help) [[ -n ${command} ]] && commandOptions+=("${1}") || usage ;;
+#            -v) projectVersion valt; exit 0 ;;
+#            --version) projectVersion valt true; exit 0 ;;
+#            --debug*) setDebug "$@"; shift $? ;;
+#            *) commandOptions+=("${1}") ;;
+#        esac
+#        shift
+#    done
+#
+#    #    debugVar passwordVisibility expertMode proxyPinEntry command commandOptions
+#
+#    assertValidVisibility
+#    [[ ${newPassphrase} || -n ${command} ]] || usage "missing command"
+#
+#    checkProjectDependencies 'valt'
+#}
 
 setCommand() {
     command="${valtBinDir}/${1}"
@@ -107,8 +240,7 @@ assertValidVisibility() {
 
 # Boot rayvn with initial required libraries
 
-source rayvn.up 'rayvn/core' 'rayvn/dependencies' || exit
-
+source rayvn.up 'rayvn/core' 'rayvn/args' 'rayvn/dependencies' || exit
 main "${@}"
 
 
