@@ -199,7 +199,7 @@ passwordStrength() {
         _breachSummary="${ show error "present in ${_breachCount} breach${end}"; }"
         _unsafe=1
     fi
-    _breachInfo="${ show "See" blue "https://haveibeenpwned.com/Passwords" "for breach information."; }"
+    _breachInfo="${ show "See" blue "https://haveibeenpwned.com/Passwords" "for more on password breaches."; }"
     _sourcesInfo="${ show "See" blue "https://github.com/phoggy/mrld#methodology-and-sources" "for how these estimates are calculated."; }"
 
     # Check strength and summarize — mrld itself now owns crack-time scenario selection,
