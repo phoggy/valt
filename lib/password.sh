@@ -196,7 +196,8 @@ passwordStrength() {
         _unsafe=1
     elif (( _breached == 2 )); then
         local end=; (( _breachCount > 1 )) && end='es'
-        _breachSummary="${ show error "present in ${_breachCount} breach${end}"; }"
+        local breachCountText; breachCountText="${ printf "%'d" "${_breachCount}"; }"
+        _breachSummary="${ show error "present in ${breachCountText} breach${end}"; }"
         _unsafe=1
     fi
     _breachInfo="${ show "See" blue "https://haveibeenpwned.com/Passwords" "for more on password breaches."; }"
