@@ -14,8 +14,8 @@
 # break keys based on 256-bit elliptic curves, the current best practice. A consequence of this choice is significantly larger
 # public keys, from 63 bytes to 1960 bytes.
 #
-# A valt key is passphrase encrypted and contains both minisign keys and age public key as comments, along with age private key.
-# A valt public key is plaintext and is an Age public key with minisign public key as comment(s).
+# A valt key is passphrase encrypted and contains both minisign keys and age public key as comments, along with the age private
+# key. A valt public key is plaintext and is an Age public key with minisign public key as comment(s).
 #
 #   valt.key: secure private key used by valt for signing and decryption
 #   valt.pub: public key used by valt for signature verification and encryption

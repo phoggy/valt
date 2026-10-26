@@ -65,6 +65,8 @@ nix run github:phoggy/valt
 ```
 
 All dependencies are declared in the `flake.nix` file in the `runtimeDeps` list. New dependencies must be added there.
+Homebrew installs resolve these automatically, including third-party taps like [mrld](https://github.com/phoggy/mrld)
+(used for password strength estimation) - no separate `brew tap` step is needed.
 
 ### Recovery
 
