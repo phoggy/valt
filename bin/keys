@@ -62,7 +62,7 @@ init() {
     declare -g keyInfoFile
     declare -g cssOverrideFile
     declare -g htmlFile
-    declare -g keyName='-' # use default
+    declare -g keyName='valt'
 
     # Flags
     declare -g force=0

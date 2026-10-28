@@ -96,8 +96,9 @@
 #   newValtKeys frodo                # creates frodo.pub and frodo.key in the ~/.config/valt/ directory.
 
 newValtKeys() {
-    local keyName="${1:-valt}"
-    local keyDir="${2:-?}"
+    local keyName="${1:--}"
+    local keyDir="${2:--}"
+    [[ ${keyName} == '-' ]] && keyName='valt'
     local _valtPubFileResultVar="${3:-?}"
     local _valtKeyFileResultVar="${4:-?}"
 
