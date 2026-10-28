@@ -14,6 +14,22 @@ preparePaperKey() {
     }
 }
 
+# ◇ Returns 0 if the key info file has been marked completed, 1 otherwise. If the file does not
+#   exist, it is created from the template so that it can be edited.
+#
+# · ARGS
+#
+#   [keyInfoFile] (string)  Path to the key info file (default: ${valtConfigDir}/key.info)
+
+isKeyInfoComplete() {
+    local keyInfoFile="${1:-${_defaultKeyInfoFile}}"
+    if [[ ! -f "${keyInfoFile}" ]]; then
+        cp "${_keyInfoTemplateFile}" "${keyInfoFile}" || fail
+        return 1
+    fi
+    ( sourceConfigFile "${keyInfoFile}"; [[ ${completed} == 'yes' ]] )
+}
+
 # ◇ Generates a paper key PDF from a private key file, storing the output path in a result variable.
 #
 # · ARGS

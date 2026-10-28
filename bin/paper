@@ -1,0 +1,98 @@
+#!/usr/bin/env rayvn-bash
+# shellcheck shell=bash
+
+usage() {
+    echo
+    show bold "Generate backup documentation (a \"paper key\") for an existing key pair."
+    echo
+    show "Usage:" bold blue "valt paper" "[OPTIONS] [KEY_FILE]"
+    echo
+    show "Creates a PDF from the private key at" blue "KEY_FILE" "(default:" blue "${_valtConfigDir}/valt.key" glue ")," \
+         "personalized from the" blue "key.info" "file."
+    echo "The PDF is written next to the key and replaces any existing one, so this can be re-run whenever key.info changes."
+    echo "The passphrase is not required, since the private key is included in its encrypted form."
+    echo
+    show "Please ensure that you print at least one copy of the PDF file" bold "and" italic "write your passphrase" "on the last page (or"
+    echo "leave the passphrase blank and add instructions on where to find in the Notes section)."
+    echo
+    echo "Options"
+    echo
+    echo "    -n, --name NAME          Use the NAME.key file in the default directory, e.g. bob.key."
+    echo "    -k, --key-info PATH      Use the key info file at PATH instead of the default."
+    echo "    -t, --template TEMPLATE  Use the TEMPLATE html file instead of the default."
+    echo "    -c, --css CSS            Apply style overrides from the CSS file."
+    showCommonOptions 29 false
+    echo
+    show "See" bold blue "valt keys --help" "for document customization details."
+    bye "$@"
+}
+
+main() {
+    init "$@"
+    createPaperKey
+}
+
+# shellcheck disable=SC2155
+init() {
+    currentProjectName='valt' # force, since part of valt project
+    local configDir; configDir="${ configDirPath; }"
+    declare -gr _valtConfigDir="${configDir}"
+
+    # Options
+    declare -g privateKeyFile
+    declare -g keyName
+    declare -g keyInfoFile
+    declare -g cssOverrideFile
+    declare -g htmlTemplateFile
+
+    while (( $# )); do
+        case "$1" in
+            --) ;;
+            -n | --name) shift; assertValidFileName "$1"; keyName="$1" ;;
+            -k | --key-info) shift; setFileVar keyInfoFile "$1" "key info file path" ;;
+            -t | --template) shift; setFileVar htmlTemplateFile "$1" "html template file path" ;;
+            -c | --css) shift; setFileVar cssOverrideFile "$1" "CSS" ;;
+            -h | --help) usage ;;
+            -v) projectVersion 'valt'; exit 0 ;;
+            --version) projectVersion 'valt' true; exit 0 ;;
+            --debug*) setDebug "$@"; shift $? ;;
+            -*) usage "Unknown option: $1" ;;
+            *) [[ -z ${privateKeyFile} ]] || usage "Only one key file may be specified."; privateKeyFile="$1" ;;
+        esac
+        shift
+    done
+
+    if [[ -n ${keyName} ]]; then
+        [[ -z ${privateKeyFile} ]] || usage "Specify either --name or KEY_FILE, not both."
+        privateKeyFile="${_valtConfigDir}/${keyName}.key"
+    elif [[ -z ${privateKeyFile} ]]; then
+        privateKeyFile="${_valtConfigDir}/valt.key"
+    fi
+    assertFile "${privateKeyFile}" "private key file"
+}
+
+createPaperKey() {
+    local existingPdf; existingPdf="${ _paperKeyFile "${privateKeyFile}"; }"
+    local replacing=0
+    [[ -f "${existingPdf}" ]] && replacing=1
+
+    echo
+    header -u "Generating Paper Key"
+
+    local paperKeyFile
+    newPaperKey "${privateKeyFile}" paperKeyFile "${keyInfoFile}" "${cssOverrideFile}" "${htmlTemplateFile}"
+
+    echo
+    show "Paper key file:" cyan "${ tildePath "${paperKeyFile}"; }"
+    echo
+    show "Print at least one copy," italic "write your passphrase" "on the last page, and" \
+         bold "store copies in secure locations" glue "."
+    if (( replacing )); then
+        echo
+        show bold yellow "The previous paper key was replaced." "Destroy any printed copies of it so that outdated" \
+             "contact information is not relied upon."
+    fi
+}
+
+source rayvn.up 'rayvn/config' 'valt/paper-keys' || exit
+main "$@"

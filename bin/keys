@@ -11,12 +11,13 @@ usage() {
     echo
     echo "A PDF file will be created containing your keys, also in encrypted form, to serve as a backup for you and/or your"
     echo "successors. Detailed usage instructions are included. Keys are represented as a QR code and again in a text format"
-    show "(often called \"paper keys\"). Content is personalized so you will be prompted to edit a" blue "key.info" "file."
+    show "(often called \"paper keys\"). Content is personalized from a" blue "key.info" "file; if it has not been completed,"
+    show "the PDF is skipped and can be generated later with" bold blue "valt paper" glue "."
     echo
     show "Please ensure that you print at least one copy of the PDF file" bold "and" italic "write your passphrase" "on the last page (or"
     echo "leave the passphrase blank and add instructions on where to find in the Notes section)."
     echo
-    show "  " bold "store the document in secure locations, e.g. safe deposit box/fire safe and/or with trusted people!"
+    show "  🔥" bold "Store the document in secure locations, e.g. safe deposit box/fire safe and/or with trusted people! 🔥"
     echo
     echo "Options"
     echo
@@ -26,10 +27,11 @@ usage() {
     echo "    --no-verify              Do not verify keys."
     echo "    --no-advice              Do not show passphrase advice."
     echo "    --no-pdf                 Do not generate PDF file."
+    echo "    -q, --quick              Same as --no-advice --no-verify."
     echo "    -k, --key-info PATH      Use the key info file at PATH instead of the default for PDF generation."
     echo "    -t, --template TEMPLATE  Use the TEMPLATE html file instead of the default for PDF generation."
     echo "    -c, --css CSS            Apply style overrides from the CSS file for PDF generation."
-    commonOptions 29 false
+    showCommonOptions 29 false
     echo
     show bold "Document Customization"
     echo
@@ -47,9 +49,29 @@ main() {
     init "${@}"
     createKeys
     if (( generatePdf )); then
-        local paperKeyFile
-        newPaperKey ${privateKeyFile} paperKeyFile "${keyInfoFile}" "${cssOverrideFile}" "${htmlTemplateFile}"
+        if isKeyInfoComplete "${keyInfoFile}"; then
+            local paperKeyFile
+            newPaperKey ${privateKeyFile} paperKeyFile "${keyInfoFile}" "${cssOverrideFile}" "${htmlTemplateFile}"
+        else
+            showPaperKeyDeferred
+        fi
     fi
+}
+
+showPaperKeyDeferred() {
+    local infoFile; infoFile="${ tildePath "${keyInfoFile:-${_valtConfigDir}/key.info}"; }"
+    local command=('paper')
+    [[ ${privateKeyFile} == "${_valtConfigDir}/valt.key" ]] || command+=("${ tildePath "${privateKeyFile}"; }")
+    [[ -n ${keyInfoFile} ]] && command+=(-k "${ tildePath "${keyInfoFile}"; }")
+    [[ -n ${htmlTemplateFile} ]] && command+=(-t "${ tildePath "${htmlTemplateFile}"; }")
+    [[ -n ${cssOverrideFile} ]] && command+=(-c "${ tildePath "${cssOverrideFile}"; }")
+
+    echo
+    show bold yellow "Paper key not generated:" "the" blue "${infoFile}" "file has not been completed."
+    echo
+    show "Your keys are ready to use now. When you have completed" blue "key.info" glue ", generate the paper key with:"
+    echo
+    show "    " bold blue "${command[*]}"
 }
 
 init() {
@@ -83,6 +105,8 @@ init() {
             --no-pdf) generatePdf=0 ;;
             -q | --quick) skipKeyPassphraseAdvice=1; verifyKeys=0 ;;
             -f | --force) force=1 ;;
+            -v) projectVersion 'valt'; exit 0 ;;
+            --version) projectVersion 'valt' true; exit 0 ;;
             -h | --help | help) usage ;;
             --debug*) setDebug "$@"; shift $? ;;
             -*) usage "Unknown option: $1" ;;

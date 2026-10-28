@@ -34,7 +34,7 @@ init() {
 
     # TODO: update using current CLI specification model and rayvn args command
 
-    warn "Under Construction"; bye "Come back again later"
+    warn "Under Construction"; usage "Come back again later"
 
 
     declare -grx ageProjectUrl='https://github.com/filosottile/age'
