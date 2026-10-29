@@ -30,6 +30,50 @@ isKeyInfoComplete() {
     ( sourceConfigFile "${keyInfoFile}"; [[ ${completed} == 'yes' ]] )
 }
 
+# ◇ Warns if a valt private key has no paper key, or if its paper key is older than the key or
+#   the key.info file. Does nothing for files that are not valt private keys.
+#
+# · ARGS
+#
+#   keyFile (string)        Path to a private key file.
+#   [keyInfoFile] (string)  Path to the key info file (default: ${valtConfigDir}/key.info)
+
+remindPaperKey() {
+    local keyFile="$1"
+    local keyInfoFile="${2:-${_defaultKeyInfoFile}}"
+    local type; type="${ ( keyType "${keyFile}" ) 2> /dev/null; }"
+    [[ ${type} == "${valtPrivateKeySuffix}" ]] || return 0
+
+    local paperKeyFile; paperKeyFile="${ _paperKeyFile "${keyFile}"; }"
+    local key; key="${ tildePath "${keyFile}"; }"
+    local command; command="${ paperKeyCommand "${keyFile}"; }"
+
+    if [[ ! -f "${paperKeyFile}" ]]; then
+        warn "No paper key backup exists for" bold "${key}" glue "; generate one with" bold blue "${command}"
+    elif [[ "${keyFile}" -nt "${paperKeyFile}" ]]; then
+        warn "The paper key for" bold "${key}" "is older than the key; regenerate it with" bold blue "${command}"
+    elif [[ "${keyInfoFile}" -nt "${paperKeyFile}" ]]; then
+        warn "key.info has changed since the paper key for" bold "${key}" "was generated; regenerate it with" \
+             bold blue "${command}"
+    fi
+    return 0
+}
+
+# ◇ Outputs the paper command for a private key file, omitting the path if it is the default key.
+#
+# · ARGS
+#
+#   keyFile (string)  Path to a private key file.
+
+paperKeyCommand() {
+    local keyFile="$1"
+    if [[ ${keyFile} == "${valtConfigDir}/valt.${valtPrivateKeySuffix}" ]]; then
+        echo 'paper'
+    else
+        echo "paper ${ tildePath "${keyFile}"; }"
+    fi
+}
+
 # ◇ Generates a paper key PDF from a private key file, storing the output path in a result variable.
 #
 # · ARGS
@@ -62,7 +106,7 @@ newPaperKey() {
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/paper-keys' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_paper-keys() {
-    require 'valt/keys' 'valt/pdf'
+    require 'rayvn/config' 'valt/keys' 'valt/pdf'
 
     currentProjectName='valt' # force, since part of valt project
     local configDir; configDir="${ configDirPath; }"
@@ -363,8 +407,8 @@ _generateHtml() {
     # Perform the substitutions, failing if a required substitution is not defined
 
     for key in "${requiredSubstitutionKeys[@]}"; do
+        [[ -v ${key} ]] || fail "${key} not set in ${keyInfoFile}"
         value="${!key}"
-        [[ -v key ]] || fail "${key} not set in ${keyInfoFile}"
         [[ -n "${value}" ]] || fail "${key} value not set in ${keyInfoFile}"
         html=${html/\$\{${key}\}/${value}}
     done

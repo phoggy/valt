@@ -28,6 +28,9 @@ usage() {
 main() {
     init "${@}"
     encryptFile
+    if [[ -n ${verifyKeyFile} ]]; then
+        remindPaperKey "${verifyKeyFile}"
+    fi
 }
 
 init() {
@@ -180,6 +183,6 @@ replaceOutputFile() {
     show "Deleted" bold "${outputFile}"
 }
 
-source rayvn.up 'rayvn/core' 'valt/keys'
+source rayvn.up 'rayvn/core' 'valt/keys' 'valt/paper-keys'
 
 main "${@}"

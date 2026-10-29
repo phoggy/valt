@@ -60,8 +60,7 @@ main() {
 
 showPaperKeyDeferred() {
     local infoFile; infoFile="${ tildePath "${keyInfoFile:-${_valtConfigDir}/key.info}"; }"
-    local command=('paper')
-    [[ ${privateKeyFile} == "${_valtConfigDir}/valt.key" ]] || command+=("${ tildePath "${privateKeyFile}"; }")
+    local command; command=("${ paperKeyCommand "${privateKeyFile}"; }")
     [[ -n ${keyInfoFile} ]] && command+=(-k "${ tildePath "${keyInfoFile}"; }")
     [[ -n ${htmlTemplateFile} ]] && command+=(-t "${ tildePath "${htmlTemplateFile}"; }")
     [[ -n ${cssOverrideFile} ]] && command+=(-c "${ tildePath "${cssOverrideFile}"; }")

@@ -393,7 +393,7 @@ _init_valt_keys() {
     declare -grx _agePemBegin='-----BEGIN AGE ENCRYPTED FILE-----'
     declare -grx _agePemEnd='-----END AGE ENCRYPTED FILE-----'
 
-    local counterFile; counterFile="${ configDirPath 'advice.count'; }"
+    local counterFile; counterFile="${ configDirPath -p 'valt' 'advice.count'; }"
     declare -grx _adviceCounterFile="${counterFile}"
     declare -g _adviceCount=0
 }

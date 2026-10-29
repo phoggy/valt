@@ -4,6 +4,8 @@ main() {
     init "$@"
 
     testNewValtKeys
+    testNewValtKeysDefaultName
+    testAdviceCounterInValtConfigDir
     testVerifyValtKeys
     testKeyType
     testRecipientFromPub
@@ -36,6 +38,20 @@ testNewValtKeys() {
     assertFile "${keyFile}"
     assertEqual "${testKeyDir}/test.pub" "${pubFile}"
     assertEqual "${testKeyDir}/test.key" "${keyFile}"
+}
+
+testNewValtKeysDefaultName() {
+    local dir; dir="${ makeTempDir; }"
+    local defaultPubFile defaultKeyFile
+    newValtKeys - "${dir}" defaultPubFile defaultKeyFile
+    assertEqual "${dir}/valt.pub" "${defaultPubFile}"
+    assertEqual "${dir}/valt.key" "${defaultKeyFile}"
+    assertFile "${defaultPubFile}"
+    assertFile "${defaultKeyFile}"
+}
+
+testAdviceCounterInValtConfigDir() {
+    assertEqual "${HOME}/.config/valt/advice.count" "${_adviceCounterFile}"
 }
 
 testVerifyValtKeys() {
