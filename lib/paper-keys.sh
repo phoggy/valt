@@ -68,9 +68,9 @@ remindPaperKey() {
 paperKeyCommand() {
     local keyFile="$1"
     if [[ ${keyFile} == "${valtConfigDir}/valt.${valtPrivateKeySuffix}" ]]; then
-        echo 'paper'
+        echo 'valt paper'
     else
-        echo "paper ${ tildePath "${keyFile}"; }"
+        echo "valt paper ${ tildePath "${keyFile}"; }"
     fi
 }
 

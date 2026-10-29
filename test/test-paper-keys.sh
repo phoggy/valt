@@ -30,8 +30,11 @@ main() {
     # keys command
     testKeysDefaultName
     testKeysDefersPdfWhenKeyInfoIncomplete
-    testKeysVersion
     testKeysHelp
+
+    # valt command
+    testValtVersion
+    testValtHelp
 
     return 0
 }
@@ -99,12 +102,12 @@ testIsKeyInfoCompleteWhenCompleted() {
 
 testPaperKeyCommandDefaultKey() {
     local command; command="${ paperKeyCommand "${valtConfigDir}/valt.key"; }"
-    assertEqual 'paper' "${command}"
+    assertEqual 'valt paper' "${command}"
 }
 
 testPaperKeyCommandOtherKey() {
     local command; command="${ paperKeyCommand "${keyFile}"; }"
-    assertEqual "paper ${ tildePath "${keyFile}"; }" "${command}"
+    assertEqual "valt paper ${ tildePath "${keyFile}"; }" "${command}"
 }
 
 # ---- remindPaperKey ----
@@ -160,7 +163,7 @@ testRemindKeyInfoNewerThanPaperKey() {
 
 testPaperGeneratesPdf() {
     declare -g paperTestKey; newKeyCopy paperTestKey
-    local output; output="${ paper -k "${completedInfoFile}" "${paperTestKey}" 2>&1; }"
+    local output; output="${ valt paper -k "${completedInfoFile}" "${paperTestKey}" 2>&1; }"
     assertEqual 0 $? "paper must succeed: ${output}"
     assertFile "${ _paperKeyFile "${paperTestKey}"; }"
     assertContains "Paper key file:" "${output}"
@@ -168,7 +171,7 @@ testPaperGeneratesPdf() {
 }
 
 testPaperReplacesPdf() {
-    local output; output="${ paper -k "${completedInfoFile}" "${paperTestKey}" 2>&1; }"
+    local output; output="${ valt paper -k "${completedInfoFile}" "${paperTestKey}" 2>&1; }"
     assertEqual 0 $? "paper must succeed: ${output}"
     assertContains "previous paper key was replaced" "${output}"
 }
@@ -177,24 +180,24 @@ testPaperUsesTemplate() {
     local key; newKeyCopy key
     local template="${testDir}/template.html"
     echo '<html><body>${UNDEFINED_TEST_VAR}</body></html>' > "${template}"
-    local output; output="${ paper -k "${completedInfoFile}" -t "${template}" "${key}" 2>&1; }"
+    local output; output="${ valt paper -k "${completedInfoFile}" -t "${template}" "${key}" 2>&1; }"
     assertContains "UNDEFINED_TEST_VAR not set in" "${output}" "custom template must be used"
 }
 
 testPaperIncompleteKeyInfo() {
     local key; newKeyCopy key
-    local output; output="${ paper -k "${incompleteInfoFile}" "${key}" 2>&1; }"
+    local output; output="${ valt paper -k "${incompleteInfoFile}" "${key}" 2>&1; }"
     assertContains "has not been completed" "${output}"
     assertFileDoesNotExist "${ _paperKeyFile "${key}"; }"
 }
 
 testPaperRejectsNameAndKeyFile() {
-    local output; output="${ paper -n test "${keyFile}" 2>&1; }"
+    local output; output="${ valt paper -n test "${keyFile}" 2>&1; }"
     assertContains "not both" "${output}"
 }
 
 testPaperMissingKeyFile() {
-    local output; output="${ paper "${testDir}/missing.key" 2>&1; }"
+    local output; output="${ valt paper "${testDir}/missing.key" 2>&1; }"
     assertContains "not found" "${output}"
 }
 
@@ -202,7 +205,7 @@ testPaperMissingKeyFile() {
 
 testKeysDefaultName() {
     local dir; dir="${ makeTempDir; }"
-    local output; output="${ keys -o "${dir}" -q --no-pdf 2>&1; }"
+    local output; output="${ valt keys -o "${dir}" -q --no-pdf 2>&1; }"
     assertEqual 0 $? "keys must succeed: ${output}"
     assertFile "${dir}/valt.key"
     assertFile "${dir}/valt.pub"
@@ -210,24 +213,31 @@ testKeysDefaultName() {
 
 testKeysDefersPdfWhenKeyInfoIncomplete() {
     local dir; dir="${ makeTempDir; }"
-    local output; output="${ keys -n test -o "${dir}" -q -k "${incompleteInfoFile}" 2>&1; }"
+    local output; output="${ valt keys -n test -o "${dir}" -q -k "${incompleteInfoFile}" 2>&1; }"
     assertEqual 0 $? "keys must succeed: ${output}"
     assertFile "${dir}/test.key"
     assertFileDoesNotExist "${dir}/test-key.pdf"
     assertContains "Paper key not generated" "${output}"
-    assertContains "paper ${ tildePath "${dir}/test.key"; } -k ${ tildePath "${incompleteInfoFile}"; }" "${output}"
+    assertContains "valt paper ${ tildePath "${dir}/test.key"; } -k ${ tildePath "${incompleteInfoFile}"; }" "${output}"
 }
 
-testKeysVersion() {
-    local output; output="${ keys -v 2>&1; }"
-    assertEqual 0 $? "keys -v must succeed: ${output}"
+testValtVersion() {
+    local output; output="${ valt -v 2>&1; }"
+    assertEqual 0 $? "valt -v must succeed: ${output}"
     assertContains "valt " "${output}"
 }
 
-testKeysHelp() {
-    local output; output="${ keys --help 2>&1; }"
+testValtHelp() {
+    local output; output="${ valt --help 2>&1; }"
+    assertContains "keys" "${output}"
+    assertContains "paper" "${output}"
     assertContains "Print the version." "${output}"
-    assertContains "-q, --quick" "${output}"
+}
+
+testKeysHelp() {
+    local output; output="${ valt keys --help 2>&1; }"
+    assertContains "--quick, -q" "${output}"
+    assertContains "Same as --no-advice --no-verify." "${output}"
 }
 
 source rayvn.up 'rayvn/test' 'valt/paper-keys'

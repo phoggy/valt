@@ -1,240 +1,342 @@
 #!/usr/bin/env rayvn-bash
 # shellcheck disable=SC2155
+# shellcheck disable=SC2120
 
 usage() {
     echo
-    show bold "Public key encryption for files and directories, using" cyan "age" "(see" blue "${ageProjectUrl}" glue ")."
+    show bold "Public key encryption for files and archives, using" cyan "age" "(see" blue "https://github.com/filosottile/age" glue ")."
     echo
-    show "Usage:" bold blue "${scriptName}" "[OPTIONS]" italic "COMMAND"
+    show "Usage:" bold blue "${scriptName}" "COMMAND [OPTIONS]"
     echo
     echo "Commands"
     echo
-    echo "    keys             Create a key pair with an encrypted private key and a paper key as backup."
-    echo "    paper            Create a backup paper key and documentation for an existing key pair."
-    echo "    archive          Create a secure archive from one or more files or directories, or extract files from one."
-    echo "    passphrase       Generate and/or evaluate passphrase strength."
-    echo "    password         Generate and/or evaluate password strength."
-    echo "    pwned            Check whether a password/phrase appears in the HaveIBeenPwned breach database."
+    echo "    keys        Create a key pair with an encrypted private key and a paper key as backup."
+    echo "    paper       Create or regenerate the paper key for an existing key pair."
+# TODO    echo "    passphrase  Generate and/or evaluate passphrase strength."
+# TODO    echo "    password    Generate and/or evaluate password strength."
+# TODO    echo "    pwned       Check whether a password/phrase appears in the HaveIBeenPwned breach database."
     echo
-    show "Run" bold blue "${scriptName}" italic "COMMAND" bold blue "--help" "for more information on a command."
+    echo "Use COMMAND --help for additional details."
     echo
     echo "Options"
     echo
-    showCommonOptions 21
-    echo
-    bye "${@}"
+    showCommonOptions 21 true false
+    bye "$@"
 }
 
 main() {
-    init "${@}"
-    "${commandHandler}"
+    init
+    parseCommand "$@"
 }
 
 init() {
-
-    # TODO: update using current CLI specification model and rayvn args command
-
-    warn "Under Construction"; usage "Come back again later"
-
-
-    declare -grx ageProjectUrl='https://github.com/filosottile/age'
-    declare -grx valtBinDir="${0%/*}"
-    declare -grx valtConfigDir="${ configDirPath; }"
-    declare -grx valtProjectUrl='https://github.com/phoggy/valt'
-
-    declare -gAr cliSpec=(
-        ['pass']="newPassphrase(--words|-w:+int --separator|-s:str --count|-c:+int)"
-        ['passphrase']="newPassphrase(--words|-w:+int --separator|-s:str --count|-c:+int)"
-        ['password']="newPassword(--length|-l:+int)"
-#        ['pwned']=checkPass"newPassword"
-#        ['keys']="newKeys"
-#        ['keygen']="newKeys"
-#        ['paper']="newPaperKeys"
-#        ['paper-keys']="newPaperKeys"
-#        ['archive']="newArchive"
-    )
-
+    declare -gA _opts=()
+    declare -ga _args=()
 }
 
-# ---- newPassphrase -----
+SECTION="--+-+-----+-++(-++(---++++(---+( ARGUMENT PARSING )+---)++++---)++-)++-+------+-+--"
 
-newPassphrase() {
-    local words="${commandOptions['words']:-5}"
-    local separator="${commandOptions['separator']:-" "}"
-    local count="${commandOptions['count']:-1}"
-debug "newPassphrase(words=${words}, separator='${separator}', count=${count})"
-}
+# rayvn:cli cliSpec
+declare -gA cliSpec=(
+    # Generate an age key pair, with the private key encrypted by a passphrase, plus a PDF paper key as backup
+    # documentation. A strong passphrase is highly encouraged; advice and an opportunity to generate one will be offered.
+    #   --name        Name to use for key files, e.g. bob -> bob.pub, bob.key.
+    #   --output-dir  Directory for the key files (default: the valt config directory).
+    #   --force       Overwrite existing key files.
+    #   --no-verify   Do not verify keys.
+    #   --no-advice   Do not show passphrase advice.
+    #   --quick       Same as --no-advice --no-verify.
+    #   --no-pdf      Do not generate the paper key PDF.
+    #   --key-info    Key info file to use instead of the default for PDF generation.
+    #   --template    HTML template file to use instead of the default for PDF generation.
+    #   --css         CSS file with style overrides to apply for PDF generation.
+    #
+    # The PDF contains your keys, also in encrypted form, to serve as a backup for you and/or your
+    # successors, along with detailed usage instructions. Keys are represented as a QR code and again in
+    # a text format (often called "paper keys"). Content is personalized from a key.info file; if it has
+    # not been completed, the PDF is skipped and can be generated later with 'valt paper'.
+    #
+    # Please ensure that you print at least one copy of the PDF file and write your passphrase on the
+    # last page (or leave the passphrase blank and add instructions on where to find it in the Notes
+    # section), then store copies in secure locations, e.g. safe deposit box/fire safe and/or with
+    # trusted people!
+    #
+    # Document Customization
+    #
+    # The HTML template can be changed from the default and CSS style overrides can be applied. The
+    # default template and primary CSS file can be found in the valt 'etc' directory. Template
+    # substitutions are performed with variables defined in the key.info file. Note that keys prefixed
+    # with an underscore are reserved for system use.
+    ['keys']='keys(--name|-n:str=valt --output-dir|-o:dir --force|-f --no-verify --no-advice --quick|-q --no-pdf --key-info|-k:file --template|-t:file --css|-c:file --help|-h)'
 
-newPassphraseUsage() {
-    echo "valt passphrase [--words N] [--separator SEP] [--count N]"
-    echo
-    echo "  Generate one or more new passphrases."
-    echo
-    echo "  --words N        The number of words in the passphrase (default: 5)."
-    echo "  --separator SEP  The separator string between words (default: ' ')."
-    echo "  --count N        The number of passphrases to generate (default: 1)."
-}
+    # Generate the paper key PDF for an existing key pair, personalized from the key.info file. The PDF is written
+    # next to the key and replaces any existing one, so this can be re-run whenever key.info changes. The passphrase
+    # is not required, since the private key is included in its encrypted form.
+    #   KEY_FILE    The private key file (default: valt.key in the valt config directory).
+    #   --name      Use the NAME.key file in the valt config directory, e.g. bob -> bob.key.
+    #   --key-info  Key info file to use instead of the default.
+    #   --template  HTML template file to use instead of the default.
+    #   --css       CSS file with style overrides to apply.
+    #
+    # Please ensure that you print at least one copy of the PDF file and write your passphrase on the
+    # last page (or leave the passphrase blank and add instructions on where to find it in the Notes
+    # section). See 'valt keys --help' for document customization details.
+    ['paper']='paper(file? --name|-n:str --key-info|-k:file --template|-t:file --css|-c:file --help|-h)'
+)
 
-# ---- newPassword -----
+ARGS_PARSER_BEGIN="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 🚫 BEGIN generated code: DO NOT EDIT 🚫 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-newPassword() {
-    echo newPassword
-}
-
-newPasswordUsage() {
-    echo newPasswordUsage
-}
-
-# ---- checkPass -----
-
-checkPass() {
-    echo checkPass
-}
-
-checkPassUsage() {
-    echo checkPassUsage
-}
-
-# ---- newPaperKeys -----
-
-newPaperKeys() {
-    echo newPaperKeys
-}
-
-newPaperKeysUsage() {
-    echo newPaperKeysUsage
-}
-
-# ---- newKeys -----
-
-newArchive() {
-    echo newArchive
-}
-
-newArchiveUsage() {
-    echo newArchiveUsage
-}
-
-
-
-
-# ---- shared Functions -----
-
-#_setCommand() {
-#    commandHandler=${commandHandlers["$1"]};
-#    [[ -n commandHandler ]] || usage "unknown command: $1"
-#}
-#
-#_setCommandHelp() {
-#    commandHandler="${commandHandler}Usage"
-#    declare -f "${commandHandler}" > /dev/null || fail "missing ${commandHandler} function"
-#}
-#
-#_setCommandOption() {
-#    debug "_setCommandOption $1"
-#    if [[ -n "${_currentOption}" ]]; then
-#        local key="${_currentOption}"; _currentOption=
-#        local args="${commandOptions[${key}]}"
-#        [[ -n ${args} ]] && args="${args} $1" || args="$1"
-#        commandOptions+=(["${key}"]="${args}")
-#    else
-#        _currentOption="${1//-/}"
-#        local existing="${commandOptions[${_currentOption}]}"
-#        [[ -n "${existing}" ]] && fail "--${_currentOption} passed more than once"
-#        commandOptions+=(["${_currentOption}"]=)
-#    fi
-#    debugVar option commandOptions
-#}
-#
-#_setCommandArg() {
-#    debug "_setCommandArg $1"
-#    [[ -n "${_currentOption}" ]] && _setCommandOption "$1" || commandArgs+=("$1")
-#    debugVar option commandOptions commandArgs
-#}
-#
-#_assertCommandArgs() {
-#    local count="$1"
-#    [[ ${#commandArgs[@]} ]] != "${count}"
-#}
-#
-#main() {
-#    init "${@}"
-#    if (( newPassphrase )); then
-#        require 'valt/password'
-#        generatePassphrase
-#    elif [[ -n ${command} ]]; then
-#        executeClean ${command} "${commandOptions[@]}"  # TODO: revisit need for clean vars!
-#    else
-#        usage
-#    fi
-#}
-#
-#init() {
-#
-#    # Constants
-#
-#    declare -grx ageProjectUrl='https://github.com/filosottile/age'
-#    declare -grx valtBinDir="${0%/*}"
-#    declare -grx _valtConfigDir="${ configDirPath; }"
-#    declare -grx valtProjectUrl='https://github.com/phoggy/valt'
-#
-#    # Global options
-#
-#    declare -gx passwordVisibility="${VALT_VISIBILITY:-none}"           # none|hide|show
-#    declare -gx expertMode="${VALT_EXPERT_MODE:-}"                      # any value enables
-#    declare -grx inputTimeout="${VALT_INPUT_TIMEOUT:-30}"               # seconds
-#
-#    # Arguments
-#
-#    declare -g newPassphrase=0
-#    declare -g command
-#    declare -ga commandOptions=()
-#
-#    # Parse input
-#
-#    [[ $1 ]] || usage
-#
-#    while (( $# > 0 )); do
-#        case "${1}" in
-#            pass) newPassphrase=1 ;;
-#            keys) setCommand keys ;;
-#            document) setCommand document ;;
-#            encrypt) setCommand encrypt ;;
-#            decrypt) setCommand decrypt ;;
-#            --expert) expertMode=true ;; # TODO update usage when implemented
-#            --visibility) shift; passwordVisibility="${1}" ;;
-#            -h | --help) [[ -n ${command} ]] && commandOptions+=("${1}") || usage ;;
-#            -v) projectVersion valt; exit 0 ;;
-#            --version) projectVersion valt true; exit 0 ;;
-#            --debug*) setDebug "$@"; shift $? ;;
-#            *) commandOptions+=("${1}") ;;
-#        esac
-#        shift
-#    done
-#
-#    #    debugVar passwordVisibility expertMode proxyPinEntry command commandOptions
-#
-#    assertValidVisibility
-#    [[ ${newPassphrase} || -n ${command} ]] || usage "missing command"
-#
-#    checkProjectDependencies 'valt'
-#}
-
-setCommand() {
-    command="${valtBinDir}/${1}"
-}
-
-assertValidVisibility() {
-    case "${passwordVisibility}" in
-        none | hide | show) ;;
-        *) usage "unknown visibility mode: '${passwordVisibility}'"
+parseCommand() {
+    _opts=()
+    _args=()
+    parseCommonOptions valt "$@"; shift $?
+    case "$1" in
+        keys) shift; parseKeysArgs "$@"; (( _opts['help'] )) && keysCmdUsage || keysCmd ;;
+        paper) shift; parsePaperArgs "$@"; (( _opts['help'] )) && paperCmdUsage || paperCmd ;;
+        *) usage "unknown command: $1" ;;
     esac
 }
 
-# Boot rayvn with initial required libraries
+parseKeysArgs() {
+    _opts+=(['name']="valt")
+    local _prevFailHandler="${_failHandler}"
+    declare -g _failHandler=keysCmdUsage
+    local _value
+    while (( $# > 0 )); do
+        case "$1" in
+            --css | -c) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --css"; assertFile "$2"; _opts+=(['css']="$2"); shift 2 ;;
+            --css=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --css"; assertFile "${_value}"; _opts+=(['css']="${_value}"); shift ;;
+            --force | -f) _opts+=(['force']="1"); shift ;;
+            --force=*) fail "--force does not accept a value" ;;
+            --help | -h) _opts+=(['help']="1"); shift ;;
+            --help=*) fail "--help does not accept a value" ;;
+            --key-info | -k) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --key-info"; assertFile "$2"; _opts+=(['key-info']="$2"); shift 2 ;;
+            --key-info=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --key-info"; assertFile "${_value}"; _opts+=(['key-info']="${_value}"); shift ;;
+            --name | -n) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --name"; _opts+=(['name']="$2"); shift 2 ;;
+            --name=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --name"; _opts+=(['name']="${_value}"); shift ;;
+            --no-advice) _opts+=(['no-advice']="1"); shift ;;
+            --no-advice=*) fail "--no-advice does not accept a value" ;;
+            --no-pdf) _opts+=(['no-pdf']="1"); shift ;;
+            --no-pdf=*) fail "--no-pdf does not accept a value" ;;
+            --no-verify) _opts+=(['no-verify']="1"); shift ;;
+            --no-verify=*) fail "--no-verify does not accept a value" ;;
+            --output-dir | -o) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --output-dir"; assertDirectory "$2"; _opts+=(['output-dir']="$2"); shift 2 ;;
+            --output-dir=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --output-dir"; assertDirectory "${_value}"; _opts+=(['output-dir']="${_value}"); shift ;;
+            --quick | -q) _opts+=(['quick']="1"); shift ;;
+            --quick=*) fail "--quick does not accept a value" ;;
+            --template | -t) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --template"; assertFile "$2"; _opts+=(['template']="$2"); shift 2 ;;
+            --template=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --template"; assertFile "${_value}"; _opts+=(['template']="${_value}"); shift ;;
+            --) shift; (( $# == 0 )) || unknownArg "$1" ;;
+            *) unknownArg "$1" ;;
+        esac
+    done
+    declare -g _failHandler="${_prevFailHandler}"
+}
 
-source rayvn.up 'rayvn/core' 'rayvn/args' 'rayvn/dependencies' || exit
-main "${@}"
+keysCmdUsage() {
+    echo
+    show bold "Generate an age key pair, with the private key encrypted by a passphrase, plus a PDF paper key as"
+    show bold "backup documentation. A strong passphrase is highly encouraged; advice and an opportunity to"
+    show bold "generate one will be offered."
+    echo
+    show "Usage:" bold blue "valt keys" "[--css CSS] [--force] [--key-info KEY-INFO] [--name NAME] [--no-advice] [--no-pdf]"
+    echo "                 [--no-verify] [--output-dir OUTPUT-DIR] [--quick] [--template TEMPLATE]"
+    echo
+    option "--name, -n NAME" "Name to use for key files, e.g. bob -> bob.pub, bob.key. (default:" 33
+    option "" "valt)" 33
+    option "--output-dir, -o OUTPUT-DIR" "Directory for the key files (default: the valt config directory)." 33
+    option "--force, -f" "Overwrite existing key files." 33
+    option "--no-verify" "Do not verify keys." 33
+    option "--no-advice" "Do not show passphrase advice." 33
+    option "--quick, -q" "Same as --no-advice --no-verify." 33
+    option "--no-pdf" "Do not generate the paper key PDF." 33
+    option "--key-info, -k KEY-INFO" "Key info file to use instead of the default for PDF generation." 33
+    option "--template, -t TEMPLATE" "HTML template file to use instead of the default for PDF" 33
+    option "" "generation." 33
+    option "--css, -c CSS" "CSS file with style overrides to apply for PDF generation." 33
+    option "--help, -h" "Print this help message." 33
+    echo
+    echo "The PDF contains your keys, also in encrypted form, to serve as a backup for you and/or your"
+    echo "successors, along with detailed usage instructions. Keys are represented as a QR code and again in"
+    echo "a text format (often called \"paper keys\"). Content is personalized from a key.info file; if it has"
+    echo "not been completed, the PDF is skipped and can be generated later with 'valt paper'."
+    echo
+    echo "Please ensure that you print at least one copy of the PDF file and write your passphrase on the"
+    echo "last page (or leave the passphrase blank and add instructions on where to find it in the Notes"
+    echo "section), then store copies in secure locations, e.g. safe deposit box/fire safe and/or with"
+    echo "trusted people!"
+    echo
+    echo "Document Customization"
+    echo
+    echo "The HTML template can be changed from the default and CSS style overrides can be applied. The"
+    echo "default template and primary CSS file can be found in the valt 'etc' directory. Template"
+    echo "substitutions are performed with variables defined in the key.info file. Note that keys prefixed"
+    echo "with an underscore are reserved for system use."
+    declare -F keysCmdUsageExtra > /dev/null && keysCmdUsageExtra
+    bye "$@"
+}
 
+parsePaperArgs() {
+    local _prevFailHandler="${_failHandler}"
+    declare -g _failHandler=paperCmdUsage
+    local _argIndex=0 _value
+    while (( $# > 0 )); do
+        case "$1" in
+            --css | -c) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--template|-t|-c|-n|-k|-h|--key-info|--name|--help)$ ) ]] && fail "missing value for --css"; assertFile "$2"; _opts+=(['css']="$2"); shift 2 ;;
+            --css=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --css"; assertFile "${_value}"; _opts+=(['css']="${_value}"); shift ;;
+            --help | -h) _opts+=(['help']="1"); shift ;;
+            --help=*) fail "--help does not accept a value" ;;
+            --key-info | -k) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--template|-t|-c|-n|-k|-h|--key-info|--name|--help)$ ) ]] && fail "missing value for --key-info"; assertFile "$2"; _opts+=(['key-info']="$2"); shift 2 ;;
+            --key-info=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --key-info"; assertFile "${_value}"; _opts+=(['key-info']="${_value}"); shift ;;
+            --name | -n) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--template|-t|-c|-n|-k|-h|--key-info|--name|--help)$ ) ]] && fail "missing value for --name"; _opts+=(['name']="$2"); shift 2 ;;
+            --name=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --name"; _opts+=(['name']="${_value}"); shift ;;
+            --template | -t) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--template|-t|-c|-n|-k|-h|--key-info|--name|--help)$ ) ]] && fail "missing value for --template"; assertFile "$2"; _opts+=(['template']="$2"); shift 2 ;;
+            --template=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --template"; assertFile "${_value}"; _opts+=(['template']="${_value}"); shift ;;
+            --) shift
+                while (( $# > 0 )); do
+                    (( _argIndex == 0 )) && assertFile "$1" || unknownArg "$1"
+                    _args+=("$1"); (( _argIndex++ )); shift
+                done ;;
+            *) (( _argIndex == 0 )) && assertFile "$1" || unknownArg "$1"; _args+=("$1"); (( _argIndex++ )); shift ;;
+        esac
+    done
+    declare -g _failHandler="${_prevFailHandler}"
+}
 
+paperCmdUsage() {
+    echo
+    show bold "Generate the paper key PDF for an existing key pair, personalized from the key.info file. The PDF is"
+    show bold "written next to the key and replaces any existing one, so this can be re-run whenever key.info"
+    show bold "changes. The passphrase is not required, since the private key is included in its encrypted form."
+    echo
+    show "Usage:" bold blue "valt paper" "[KEY_FILE] [--css CSS] [--key-info KEY-INFO] [--name NAME] [--template TEMPLATE]"
+    echo
+    option "KEY_FILE" "The private key file (default: valt.key in the valt config directory)." 29
+    option "--name, -n NAME" "Use the NAME.key file in the valt config directory, e.g. bob ->" 29
+    option "" "bob.key." 29
+    option "--key-info, -k KEY-INFO" "Key info file to use instead of the default." 29
+    option "--template, -t TEMPLATE" "HTML template file to use instead of the default." 29
+    option "--css, -c CSS" "CSS file with style overrides to apply." 29
+    option "--help, -h" "Print this help message." 29
+    echo
+    echo "Please ensure that you print at least one copy of the PDF file and write your passphrase on the"
+    echo "last page (or leave the passphrase blank and add instructions on where to find it in the Notes"
+    echo "section). See 'valt keys --help' for document customization details."
+    declare -F paperCmdUsageExtra > /dev/null && paperCmdUsageExtra
+    bye "$@"
+}
 
+ARGS_PARSER_END="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 🚫 END generated code: DO NOT EDIT 🚫 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+SECTION="--+-+-----+-++(-++(---++++(---+( COMMANDS )+---)++++---)++-)++-+------+-+--"
+
+keysCmd() {
+    require 'valt/paper-keys'
+    local name="${_opts['name']}"
+    assertValidFileName "${name}"
+    local outputDir="${_opts['output-dir']:-${valtConfigDir}}"
+    local publicKeyFile="${outputDir}/${name}.${valtPublicKeySuffix}"
+    local privateKeyFile="${outputDir}/${name}.${valtPrivateKeySuffix}"
+    local verify=1
+    (( _opts['no-verify'] || _opts['quick'] )) && verify=0
+    (( _opts['no-advice'] || _opts['quick'] )) && declare -gx skipKeyPassphraseAdvice=1
+
+    if (( _opts['force'] )); then
+        rm -f "${publicKeyFile}" "${privateKeyFile}"
+    else
+        assertFileDoesNotExist "${privateKeyFile}"
+        assertFileDoesNotExist "${publicKeyFile}"
+    fi
+
+    createKeys "${name}" "${outputDir}" "${publicKeyFile}" "${privateKeyFile}" ${verify}
+
+    (( _opts['no-pdf'] )) && return 0
+    if isKeyInfoComplete "${_opts['key-info']}"; then
+        generatePaperKey "${privateKeyFile}"
+    else
+        showPaperKeyDeferred "${privateKeyFile}"
+    fi
+}
+
+paperCmd() {
+    require 'valt/paper-keys'
+    local keyFile="${_args[0]:-}"
+    if [[ -n ${_opts['name']} ]]; then
+        [[ -z ${keyFile} ]] || paperCmdUsage "Specify either --name or KEY_FILE, not both."
+        assertValidFileName "${_opts['name']}"
+        keyFile="${valtConfigDir}/${_opts['name']}.${valtPrivateKeySuffix}"
+    fi
+    [[ -n ${keyFile} ]] || keyFile="${valtConfigDir}/valt.${valtPrivateKeySuffix}"
+    assertFile "${keyFile}" "private key file"
+    generatePaperKey "${keyFile}"
+}
+
+SECTION="--+-+-----+-++(-++(---++++(---+( SHARED FUNCTIONS )+---)++++---)++-)++-+------+-+--"
+
+createKeys() {
+    local name="$1" outputDir="$2" publicKeyFile="$3" privateKeyFile="$4" verify=$5
+    echo
+    header -u "Generating Keys"
+
+    newValtKeys "${name}" "${outputDir}" || fail
+    echo
+    show "Public key (aka 'recipient') file:" cyan "${ tildePath "${publicKeyFile}"; }" "(includes public signing key)"
+    show "Private key (aka 'identity') file:" cyan "${ tildePath "${privateKeyFile}"; }" "(includes public key and both signing keys)"
+
+    if (( verify )); then
+        header 2 "Verifying keys"
+        verifyValtKeys "${publicKeyFile}" "${privateKeyFile}"
+        echo
+        show bold "Verified" glue ":"
+        echo
+        show "  · A file encrypted with" cyan "${name}.pub" "decrypts with passphrase and the" cyan "${name}.key" "private key. ${successCheckMark}"
+        show "  · A signature created with" cyan "${name}.key" "for the encrypted file matches. ${successCheckMark} "
+    fi
+}
+
+# Generates the paper key for privateKeyFile using the key-info, template and css options.
+
+generatePaperKey() {
+    local privateKeyFile="$1"
+    local existingPdf; existingPdf="${ _paperKeyFile "${privateKeyFile}"; }"
+    local replacing=0
+    [[ -f "${existingPdf}" ]] && replacing=1
+
+    echo
+    header -u "Generating Paper Key"
+
+    local paperKeyFile
+    newPaperKey "${privateKeyFile}" paperKeyFile "${_opts['key-info']}" "${_opts['css']}" "${_opts['template']}"
+
+    echo
+    show "Paper key file:" cyan "${ tildePath "${paperKeyFile}"; }"
+    echo
+    show "Print at least one copy," italic "write your passphrase" "on the last page, and" \
+         bold "store copies in secure locations" glue "."
+    if (( replacing )); then
+        echo
+        show bold yellow "The previous paper key was replaced." "Destroy any printed copies of it so that outdated" \
+             "contact information is not relied upon."
+    fi
+}
+
+# Explains how to generate the paper key for privateKeyFile once key.info is complete.
+
+showPaperKeyDeferred() {
+    local privateKeyFile="$1"
+    local infoFile; infoFile="${ tildePath "${_opts['key-info']:-${valtConfigDir}/key.info}"; }"
+    local command; command=("${ paperKeyCommand "${privateKeyFile}"; }")
+    [[ -n ${_opts['key-info']} ]] && command+=(-k "${ tildePath "${_opts['key-info']}"; }")
+    [[ -n ${_opts['template']} ]] && command+=(-t "${ tildePath "${_opts['template']}"; }")
+    [[ -n ${_opts['css']} ]] && command+=(-c "${ tildePath "${_opts['css']}"; }")
+
+    echo
+    show bold yellow "Paper key not generated:" "the" blue "${infoFile}" "file has not been completed."
+    echo
+    show "Your keys are ready to use now. When you have completed" blue "key.info" glue ", generate the paper key with:"
+    echo
+    show "    " bold blue "${command[*]}"
+}
+
+source rayvn.up 'rayvn/core' 'valt/keys' || exit
+main "$@"
