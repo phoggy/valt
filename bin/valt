@@ -12,6 +12,7 @@ usage() {
     echo
     echo "    keys        Create a key pair with an encrypted private key and a paper key as backup."
     echo "    paper       Create or regenerate the paper key for an existing key pair."
+    echo "    decrypt     Decrypt a file, or verify and extract a secure archive."
 # TODO    echo "    passphrase  Generate and/or evaluate passphrase strength."
 # TODO    echo "    password    Generate and/or evaluate password strength."
 # TODO    echo "    pwned       Check whether a password/phrase appears in the HaveIBeenPwned breach database."
@@ -82,6 +83,18 @@ declare -gA cliSpec=(
     # last page (or leave the passphrase blank and add instructions on where to find it in the Notes
     # section). See 'valt keys --help' for document customization details.
     ['paper']='paper(file? --name|-n:str --key-info|-k:file --template|-t:file --css|-c:file --help|-h)'
+
+    # Decrypt an encrypted file, or verify and extract a secure archive (.valt). You will be prompted
+    # for the passphrase that protects the private key.
+    #   FILE        The encrypted file (.age) or secure archive (.valt).
+    #   --identity  The private key file (default: valt.key in the valt config directory).
+    #   --output    For a file, the output file ('-' for standard output; default: FILE without .age). For an archive, the existing directory to extract into (default: the current directory).
+    #   --force     Overwrite an existing output file.
+    #
+    # If a signature file (FILE.minisig) is present, it is verified before decrypting and decryption
+    # stops if it does not match. A warning is shown if there is no signature. Archives always contain
+    # signatures, which are verified before extracting.
+    ['decrypt']='decrypt(file --identity|-i:file --output|-o:str --force|-f --help|-h)'
 )
 
 ARGS_PARSER_BEGIN="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 🚫 BEGIN generated code: DO NOT EDIT 🚫 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -91,10 +104,59 @@ parseCommand() {
     _args=()
     parseCommonOptions valt "$@"; shift $?
     case "$1" in
+        decrypt) shift; parseDecryptArgs "$@"; (( _opts['help'] )) && decryptCmdUsage || decryptCmd ;;
         keys) shift; parseKeysArgs "$@"; (( _opts['help'] )) && keysCmdUsage || keysCmd ;;
         paper) shift; parsePaperArgs "$@"; (( _opts['help'] )) && paperCmdUsage || paperCmd ;;
         *) usage "unknown command: $1" ;;
     esac
+}
+
+parseDecryptArgs() {
+    local _prevFailHandler="${_failHandler}"
+    declare -g _failHandler=decryptCmdUsage
+    local _argIndex=0 _value
+    while (( $# > 0 )); do
+        case "$1" in
+            --force | -f) _opts+=(['force']="1"); shift ;;
+            --force=*) fail "--force does not accept a value" ;;
+            --help | -h) _opts+=(['help']="1"); shift ;;
+            --help=*) fail "--help does not accept a value" ;;
+            --identity | -i) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--output|--identity|-f|-o|-h|-i|--help|--force)$ ) ]] && fail "missing value for --identity"; assertFile "$2"; _opts+=(['identity']="$2"); shift 2 ;;
+            --identity=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --identity"; assertFile "${_value}"; _opts+=(['identity']="${_value}"); shift ;;
+            --output | -o) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--output|--identity|-f|-o|-h|-i|--help|--force)$ ) ]] && fail "missing value for --output"; _opts+=(['output']="$2"); shift 2 ;;
+            --output=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --output"; _opts+=(['output']="${_value}"); shift ;;
+            --) shift
+                while (( $# > 0 )); do
+                    (( _argIndex == 0 )) && assertFile "$1" || unknownArg "$1"
+                    _args+=("$1"); (( _argIndex++ )); shift
+                done ;;
+            *) (( _argIndex == 0 )) && assertFile "$1" || unknownArg "$1"; _args+=("$1"); (( _argIndex++ )); shift ;;
+        esac
+    done
+    (( _opts['help'] || _argIndex >= 1 )) || { local -a _missingArgs=("FILE"); _missingArgs=("${_missingArgs[@]:${_argIndex}}"); (( ${#_missingArgs[@]} == 1 )) && fail "missing required argument: ${_missingArgs[0]}" || fail "missing required arguments: ${_missingArgs[*]}"; }
+    declare -g _failHandler="${_prevFailHandler}"
+}
+
+decryptCmdUsage() {
+    echo
+    show bold "Decrypt an encrypted file, or verify and extract a secure archive (.valt). You will be prompted for"
+    show bold "the passphrase that protects the private key."
+    echo
+    show "Usage:" bold blue "valt decrypt" "FILE [--force] [--identity IDENTITY] [--output OUTPUT]"
+    echo
+    option "FILE" "The encrypted file (.age) or secure archive (.valt)." 29
+    option "--identity, -i IDENTITY" "The private key file (default: valt.key in the valt config directory)." 29
+    option "--output, -o OUTPUT" "For a file, the output file ('-' for standard output; default: FILE" 29
+    option "" "without .age). For an archive, the existing directory to extract into" 29
+    option "" "(default: the current directory)." 29
+    option "--force, -f" "Overwrite an existing output file." 29
+    option "--help, -h" "Print this help message." 29
+    echo
+    echo "If a signature file (FILE.minisig) is present, it is verified before decrypting and decryption"
+    echo "stops if it does not match. A warning is shown if there is no signature. Archives always contain"
+    echo "signatures, which are verified before extracting."
+    declare -F decryptCmdUsageExtra > /dev/null && decryptCmdUsageExtra
+    bye "$@"
 }
 
 parseKeysArgs() {
@@ -271,6 +333,20 @@ paperCmd() {
     generatePaperKey "${keyFile}"
 }
 
+decryptCmd() {
+    require 'valt/paper-keys'
+    local file="${_args[0]}"
+    local keyFile="${_opts['identity']:-${valtConfigDir}/valt.${valtPrivateKeySuffix}}"
+    assertFile "${keyFile}" "private key file"
+
+    if [[ ${file} == *.valt ]]; then
+        extractArchive "${file}" "${keyFile}"
+    else
+        decryptFile "${file}" "${keyFile}"
+    fi
+    remindPaperKey "${keyFile}"
+}
+
 SECTION="--+-+-----+-++(-++(---++++(---+( SHARED FUNCTIONS )+---)++++---)++-)++-+------+-+--"
 
 createKeys() {
@@ -318,6 +394,57 @@ generatePaperKey() {
         show bold yellow "The previous paper key was replaced." "Destroy any printed copies of it so that outdated" \
              "contact information is not relied upon."
     fi
+}
+
+# Decrypts a single file, verifying its signature first if present.
+
+decryptFile() {
+    local file="$1" keyFile="$2"
+    local output="${_opts['output']}"
+    if [[ -z ${output} ]]; then
+        [[ ${file} == *.${_ageFileExtension} ]] \
+            || decryptCmdUsage "Cannot derive an output file name from '${file}'; use --output."
+        output="${file%.${_ageFileExtension}}"
+    fi
+    if [[ ${output} != '-' && -e ${output} ]] && (( ! _opts['force'] )); then
+        fail "${output} already exists; use --force to overwrite."
+    fi
+
+    verifySignatureIfPresent "${file}" "${keyFile}"
+
+    if [[ ${output} == '-' ]]; then
+        decrypt -i "${keyFile}" "${file}" || fail
+    else
+        decrypt -i "${keyFile}" -o "${output}" "${file}" || fail
+        show "Decrypted" cyan "${ tildePath "${file}"; }" "to" bold "${ tildePath "${output}"; }"
+    fi
+}
+
+# Verifies a single file's detached signature, failing on mismatch and warning if it cannot be checked.
+
+verifySignatureIfPresent() {
+    local file="$1" keyFile="$2"
+    local signatureFile="${file}.${_signatureFileSuffix}"
+    local path; path="${ tildePath "${file}"; }"
+    if [[ ! -f "${signatureFile}" ]]; then
+        warn "No signature found for" bold "${path}" glue "; its authenticity cannot be verified."
+    elif ! command -v minisign &> /dev/null; then
+        warn "minisign is not installed; the signature for" bold "${path}" "was not verified."
+    else
+        ( verifyFileSignature "${keyFile}" "${file}" "${signatureFile}" ) &> /dev/null \
+            || fail "Signature verification failed for ${path}: it may have been modified, or was signed with a different key."
+    fi
+}
+
+# Verifies and extracts a secure archive.
+
+extractArchive() {
+    local file="$1" keyFile="$2"
+    local destDir="${_opts['output']:-${PWD}}"
+    require 'valt/archive'
+    show "Verifying and extracting secure archive" cyan "${ tildePath "${file}"; }"
+    extractSecureArchive "${file}" -i "${keyFile}" -o "${destDir}" || fail
+    show "Extracted to" bold "${ tildePath "${destDir}"; }"
 }
 
 # Explains how to generate the paper key for privateKeyFile once key.info is complete.

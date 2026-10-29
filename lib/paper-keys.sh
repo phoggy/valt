@@ -86,6 +86,7 @@ paperKeyCommand() {
 #                             (default: ${valtHome}/etc/key-doc-template.html).
 
 newPaperKey() {
+    require 'valt/pdf' # deferred: installs node modules and requires a browser, so load only when generating
     _assertValtKey "$1"
     local privateKeyFile="$1"
     local -n resultVarRef="$2"
@@ -106,7 +107,7 @@ newPaperKey() {
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/paper-keys' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_paper-keys() {
-    require 'rayvn/config' 'valt/keys' 'valt/pdf'
+    require 'rayvn/config' 'valt/keys'
 
     currentProjectName='valt' # force, since part of valt project
     local configDir; configDir="${ configDirPath; }"

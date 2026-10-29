@@ -15,11 +15,19 @@ __valtComplete() {
     fi
 
     if (( cword == 1 )); then
-        COMPREPLY=($(compgen -W "keys paper -v --version -h --help" -- "${cur}"))
+        COMPREPLY=($(compgen -W "decrypt keys paper -v --version -h --help" -- "${cur}"))
         return
     fi
 
     case "${words[1]}" in
+        decrypt)
+            [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--force --help --identity --output -f -h -i -o" -- "${cur}")); return; }
+            case "${prev}" in
+                --identity|-i) COMPREPLY=($(compgen -f -- "${cur}")); return ;;
+            esac
+            local _relIdx=$(( cword - 2 ))
+            (( _relIdx == 0 )) && { COMPREPLY=($(compgen -f -- "${cur}")); return; }
+            ;;
         keys)
             [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--css --force --help --key-info --name --no-advice --no-pdf --no-verify --output-dir --quick --template -c -f -h -k -n -o -q -t" -- "${cur}")); return; }
             case "${prev}" in

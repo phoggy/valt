@@ -29,7 +29,7 @@ decrypt() {
             -a | --armor) args+=('--armor') ;;
             -o | --output) shift; outputFile="$1" ;;
             -*) invalidArgs "unknown arg: $1";;
-            *)  [[ -n "${inputFIle}" ]] && invalidArgs "only one input is supported"
+            *)  [[ -n "${inputFile}" ]] && invalidArgs "only one input is supported"
                 assertFile "$1"; inputFile="$1" ;;
         esac
         shift

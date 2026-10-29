@@ -14,6 +14,7 @@ _valt() {
     case $state in
         command)
             local -a commands=(
+                'decrypt:Decrypt an encrypted file, or verify and extract a secure archive (.valt). You will be prompted'
                 'keys:Generate an age key pair, with the private key encrypted by a passphrase, plus a PDF paper key as backup'
                 'paper:Generate the paper key PDF for an existing key pair, personalized from the key.info file. The PDF is written'
             )
@@ -21,6 +22,14 @@ _valt() {
             ;;
         args)
             case $words[1] in
+                decrypt)
+                    _arguments \
+                    '(--force -f)'{--force,-f}'[Overwrite an existing output file.]' \
+                    '(--help -h)'{--help,-h}'[Print this help message.]' \
+                    '(--identity -i)'{--identity,-i}'[The private key file (default: valt.key in the valt config directory).]:identity:_files' \
+                    '(--output -o)'{--output,-o}'[For a file, the output file ('\''-'\'' for standard output; default: FILE without .age). For an archive, the existing directory to extract into (default: the current directory).]:output:' \
+                    '1:FILE:_files'
+                    ;;
                 keys)
                     _arguments \
                     '(--css -c)'{--css,-c}'[CSS file with style overrides to apply for PDF generation.]:css:_files' \
