@@ -21,7 +21,7 @@
         pdfNodeDeps = pkgs.buildNpmPackage {
           name = "valt-pdf-node-deps";
           src = ./node;
-          npmDepsHash = "sha256-n8o805M+VDZ5KvBTVdMxRhW5kLQYyhktYBjH1y84haY=";
+          npmDepsHash = "sha256-F9ofvmPKcFZJi9VN5Rb2jk8fv2Wnzmrqh9c/KxzLqAc=";
           dontNpmBuild = true;
           npmInstallFlags = [ "--production" ];
           env = {
@@ -38,20 +38,37 @@
         runtimeDeps = [
           pkgs.bash
           rayvnPkg
-          pkgs.rage
+          pkgs.age
+          pkgs.gawk
+          pkgs.gnused
+          pkgs.coreutils
+          pkgs.gnutar
+          pkgs.xz
           pkgs.phraze
           mrldPkg
           pkgs.curl
           pkgs.nodejs
           pkgs.jq
           pkgs.minisign
-          pkgs.pinentry
         ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
           pkgs.chromium
         ] ++ [
           pkgs.qrtool
           pkgs.exiftool
           pkgs.qpdf
+        ];
+
+        # Minimal runtime dependencies for recovery (decryption and archive extraction)
+        recoverDeps = [
+          pkgs.bash
+          rayvnPkg
+          pkgs.age
+          pkgs.minisign
+          pkgs.gawk
+          pkgs.gnused
+          pkgs.coreutils
+          pkgs.gnutar
+          pkgs.xz
         ];
 
         # Fonts for PDF generation
@@ -87,6 +104,10 @@
             mkdir -p "$out/share/valt/node"
             cp node/*.js "$out/share/valt/node/"
 
+            # Install shell completions
+            install -Dm644 completions/valt.bash "$out/share/bash-completion/completions/valt"
+            install -Dm644 completions/valt.zsh "$out/share/zsh/site-functions/_valt"
+
             # Install rayvn.pkg with version metadata
             sed '/^projectVersion=/d; /^projectReleaseDate=/d; /^projectFlake=/d; /^projectBuildRev=/d; /^projectNixpkgsRev=/d' \
                 rayvn.pkg > "$out/share/valt/rayvn.pkg"
@@ -119,16 +140,18 @@ EOF
           # patchShebangs rewrites #!/usr/bin/env bash to the non-interactive
           # bash, which lacks builtins like compgen. Restore the shebangs so
           # they resolve via PATH, where the wrapper provides bash-interactive.
+          # rayvn-bash is not shipped by the rayvn package, so it is replaced the same way.
           postFixup = ''
             for f in "$out/bin/.valt-wrapped" "$out/bin/.valt-pinentry-wrapped" "$out/share/valt/lib/"*.sh; do
               if [ -f "$f" ]; then
                 sed -i "1s|^#\\!.*/bin/bash.*|#!/usr/bin/env bash|" "$f"
+                sed -i "1s|^#\\!/usr/bin/env rayvn-bash$|#!/usr/bin/env bash|" "$f"
               fi
             done
           '';
 
           meta = with pkgs.lib; {
-            description = "Public key file encryption using rage/age";
+            description = "Public key file encryption using age";
             homepage = "https://github.com/phoggy/valt";
             license = licenses.gpl3Only;
             platforms = platforms.unix;
@@ -156,7 +179,7 @@ EOF
             cp lib/*.sh "$out/share/valt/lib/"
 
             mkdir -p "$out/share/valt/etc"
-            cp etc/decrypt "$out/share/valt/etc/"
+            cp -r etc/* "$out/share/valt/etc/"
 
             # Install rayvn.pkg with version metadata
             sed '/^projectVersion=/d; /^projectReleaseDate=/d; /^projectFlake=/d; /^projectBuildRev=/d; /^projectNixpkgsRev=/d' \
@@ -174,10 +197,10 @@ EOF
             # Wrap with minimal deps for recovery.
             # Include $out/bin for rayvn.up project root resolution.
             wrapProgram "$out/bin/valt" \
-              --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath [ pkgs.bash rayvnPkg pkgs.rage ]}"
+              --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath recoverDeps}"
 
             wrapProgram "$out/bin/valt-pinentry" \
-              --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath [ pkgs.bash rayvnPkg ]}"
+              --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath recoverDeps}"
 
             runHook postInstall
           '';
@@ -186,6 +209,7 @@ EOF
             for f in "$out/bin/.valt-wrapped" "$out/bin/.valt-pinentry-wrapped" "$out/share/valt/lib/"*.sh; do
               if [ -f "$f" ]; then
                 sed -i "1s|^#\\!.*/bin/bash.*|#!/usr/bin/env bash|" "$f"
+                sed -i "1s|^#\\!/usr/bin/env rayvn-bash$|#!/usr/bin/env bash|" "$f"
               fi
             done
           '';
