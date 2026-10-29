@@ -15,13 +15,61 @@ _valt() {
         command)
             local -a commands=(
                 'decrypt:Decrypt an encrypted file, or verify and extract a secure archive (.valt). You will be prompted'
+                'encrypt:Encrypt a single file to FILE.age and sign it with your private key (FILE.age.minisig). Your own'
                 'keys:Generate an age key pair, with the private key encrypted by a passphrase, plus a PDF paper key as backup'
                 'paper:Generate the paper key PDF for an existing key pair, personalized from the key.info file. The PDF is written'
+                'archive:'
             )
             _describe 'command' commands
             ;;
         args)
             case $words[1] in
+                archive)
+                    _arguments -C \
+                        '1: :->subcommand' \
+                        '*::arg:->args'
+                    case $state in
+                        subcommand)
+                            local -a subcommands=(
+                                'create:Create a signed, encrypted secure archive (.valt) from files and directories.'
+                                'extract:Verify and extract a secure archive (.valt). Same as '\''valt decrypt ARCHIVE'\''.'
+                                'verify:Verify both signatures of a secure archive (.valt) without extracting it.'
+                            )
+                            _describe 'subcommand' subcommands
+                            ;;
+                        args)
+                            case $words[1] in
+                                create)
+                                    _arguments \
+                                    '(--force -f)'{--force,-f}'[Overwrite an existing archive.]' \
+                                    '(--help -h)'{--help,-h}'[Print this help message.]' \
+                                    '(--identity -i)'{--identity,-i}'[Your private key file, used to sign and to find your public key (the .pub file next to it); default: valt.key in the valt config directory.]:identity:_files' \
+                                    '(--name -n)'{--name,-n}'[The archive file name prefix (default: your user name).]:name:' \
+                                    '(--no-self)'--no-self'[Do not include your own public key as a recipient.]' \
+                                    '(--output-dir -o)'{--output-dir,-o}'[The directory to write the archive to (default: the current directory).]:output-dir:_files -/' \
+                                    '*'{--recipient,-r}'[Also encrypt to this recipient (an age public key). Can be repeated.]:recipient:' \
+                                    '*'{--recipient-file,-R}'[Also encrypt to the recipient(s) in this file, e.g. a valt .pub file. Can be repeated.]:recipient-file:_files' \
+                                    '(--user-text -u)'{--user-text,-u}'[Text to include in the archive'\''s README. Can contain '\''\\n'\''.]:user-text:' \
+                                    '(--zone -z)'{--zone,-z}'[The timezone for the timestamp in the archive name, e.g. PDT (default: UTC).]:zone:' \
+                                    '*:INPUT...:'
+                                    ;;
+                                extract)
+                                    _arguments \
+                                    '(--help -h)'{--help,-h}'[Print this help message.]' \
+                                    '(--identity -i)'{--identity,-i}'[Your private key file (default: valt.key in the valt config directory).]:identity:_files' \
+                                    '(--output-dir -o)'{--output-dir,-o}'[The existing directory to extract into (default: the current directory).]:output-dir:_files -/' \
+                                    '1:ARCHIVE:_files'
+                                    ;;
+                                verify)
+                                    _arguments \
+                                    '(--help -h)'{--help,-h}'[Print this help message.]' \
+                                    '(--identity -i)'{--identity,-i}'[Your private key file (default: valt.key in the valt config directory).]:identity:_files' \
+                                    '1:ARCHIVE:_files'
+                                    ;;
+                            esac
+                            ;;
+                    esac
+                    ;;
                 decrypt)
                     _arguments \
                     '(--force -f)'{--force,-f}'[Overwrite an existing output file.]' \
@@ -29,6 +77,21 @@ _valt() {
                     '(--identity -i)'{--identity,-i}'[The private key file (default: valt.key in the valt config directory).]:identity:_files' \
                     '(--output -o)'{--output,-o}'[For a file, the output file ('\''-'\'' for standard output; default: FILE without .age). For an archive, the existing directory to extract into (default: the current directory).]:output:' \
                     '1:FILE:_files'
+                    ;;
+                encrypt)
+                    _arguments \
+                    '(--armor -a)'{--armor,-a}'[Write PEM encoded (text) output.]' \
+                    '(--delete)'--delete'[Delete FILE after a successful --verify. This is an ordinary delete, not a secure erase.]' \
+                    '(--force -f)'{--force,-f}'[Overwrite an existing output file.]' \
+                    '(--help -h)'{--help,-h}'[Print this help message.]' \
+                    '(--identity -i)'{--identity,-i}'[Your private key file, used to sign and to find your public key (the .pub file next to it); default: valt.key in the valt config directory.]:identity:_files' \
+                    '(--no-self)'--no-self'[Do not include your own public key as a recipient.]' \
+                    '(--no-sign)'--no-sign'[Do not sign the encrypted file.]' \
+                    '(--output -o)'{--output,-o}'[The output file ('\''-'\'' for standard output, which requires --no-sign); default: FILE.age.]:output:' \
+                    '*'{--recipient,-r}'[Also encrypt to this recipient (an age public key). Can be repeated.]:recipient:' \
+                    '*'{--recipient-file,-R}'[Also encrypt to the recipient(s) in this file, e.g. a valt .pub file. Can be repeated.]:recipient-file:_files' \
+                    '(--verify)'--verify'[Decrypt the result with your private key and confirm it matches FILE.]' \
+                    '1:FILE:'
                     ;;
                 keys)
                     _arguments \

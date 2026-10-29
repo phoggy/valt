@@ -12,7 +12,9 @@ usage() {
     echo
     echo "    keys        Create a key pair with an encrypted private key and a paper key as backup."
     echo "    paper       Create or regenerate the paper key for an existing key pair."
+    echo "    encrypt     Encrypt and sign a single file."
     echo "    decrypt     Decrypt a file, or verify and extract a secure archive."
+    echo "    archive     Create, verify or extract a signed, encrypted archive of files and directories."
 # TODO    echo "    passphrase  Generate and/or evaluate passphrase strength."
 # TODO    echo "    password    Generate and/or evaluate password strength."
 # TODO    echo "    pwned       Check whether a password/phrase appears in the HaveIBeenPwned breach database."
@@ -95,6 +97,51 @@ declare -gA cliSpec=(
     # stops if it does not match. A warning is shown if there is no signature. Archives always contain
     # signatures, which are verified before extracting.
     ['decrypt']='decrypt(file --identity|-i:file --output|-o:str --force|-f --help|-h)'
+
+    # Encrypt a single file to FILE.age and sign it with your private key (FILE.age.minisig). Your own
+    # public key is always a recipient unless --no-self is given. Use 'valt archive create' for
+    # directories or multiple files.
+    #   FILE              The file to encrypt.
+    #   --identity        Your private key file, used to sign and to find your public key (the .pub file next to it); default: valt.key in the valt config directory.
+    #   --recipient       Also encrypt to this recipient (an age public key). Can be repeated.
+    #   --recipient-file  Also encrypt to the recipient(s) in this file, e.g. a valt .pub file. Can be repeated.
+    #   --no-self         Do not include your own public key as a recipient.
+    #   --no-sign         Do not sign the encrypted file.
+    #   --armor           Write PEM encoded (text) output.
+    #   --output          The output file ('-' for standard output, which requires --no-sign); default: FILE.age.
+    #   --force           Overwrite an existing output file.
+    #   --verify          Decrypt the result with your private key and confirm it matches FILE.
+    #   --delete          Delete FILE after a successful --verify. This is an ordinary delete, not a secure erase.
+    ['encrypt']='encrypt(str --identity|-i:file --recipient|-r:str+ --recipient-file|-R:file+ --no-self --no-sign --armor|-a --output|-o:str --force|-f --verify --delete --help|-h)'
+
+    # Create a signed, encrypted secure archive (.valt) from files and directories.
+    # A public companion (.valt.pub) that is safe to share is also created. Your own public key is
+    # always a recipient unless --no-self is given. You will be prompted for the passphrase that
+    # protects your private key.
+    #   INPUT...          Files and directories to add. '-C DIR' changes to DIR before processing the inputs that follow it; an '@' prefixed path is a tar archive whose contents are added.
+    #   --identity        Your private key file, used to sign and to find your public key (the .pub file next to it); default: valt.key in the valt config directory.
+    #   --recipient       Also encrypt to this recipient (an age public key). Can be repeated.
+    #   --recipient-file  Also encrypt to the recipient(s) in this file, e.g. a valt .pub file. Can be repeated.
+    #   --no-self         Do not include your own public key as a recipient.
+    #   --name            The archive file name prefix (default: your user name).
+    #   --zone            The timezone for the timestamp in the archive name, e.g. PDT (default: UTC).
+    #   --user-text       Text to include in the archive's README. Can contain '\n'.
+    #   --output-dir      The directory to write the archive to (default: the current directory).
+    #   --force           Overwrite an existing archive.
+    ['archive create']='archiveCreate(--identity|-i:file --recipient|-r:str+ --recipient-file|-R:file+ --no-self --name|-n:str --zone|-z:str --user-text|-u:str --output-dir|-o:dir --force|-f --help|-h *)'
+
+    # Verify both signatures of a secure archive (.valt) without extracting it.
+    # The inner signature is checked after decrypting, so you will be prompted for the passphrase that
+    # protects your private key.
+    #   ARCHIVE     The secure archive (.valt).
+    #   --identity  Your private key file (default: valt.key in the valt config directory).
+    ['archive verify']='archiveVerify(file --identity|-i:file --help|-h)'
+
+    # Verify and extract a secure archive (.valt). Same as 'valt decrypt ARCHIVE'.
+    #   ARCHIVE       The secure archive (.valt).
+    #   --identity    Your private key file (default: valt.key in the valt config directory).
+    #   --output-dir  The existing directory to extract into (default: the current directory).
+    ['archive extract']='archiveExtract(file --identity|-i:file --output-dir|-o:dir --help|-h)'
 )
 
 ARGS_PARSER_BEGIN="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 🚫 BEGIN generated code: DO NOT EDIT 🚫 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -103,12 +150,184 @@ parseCommand() {
     _opts=()
     _args=()
     parseCommonOptions valt "$@"; shift $?
-    case "$1" in
-        decrypt) shift; parseDecryptArgs "$@"; (( _opts['help'] )) && decryptCmdUsage || decryptCmd ;;
-        keys) shift; parseKeysArgs "$@"; (( _opts['help'] )) && keysCmdUsage || keysCmd ;;
-        paper) shift; parsePaperArgs "$@"; (( _opts['help'] )) && paperCmdUsage || paperCmd ;;
-        *) usage "unknown command: $1" ;;
+    case "$1 ${2:-}" in
+        "archive create") shift 2; parseArchiveCreateArgs "$@"; (( _opts['help'] )) && archiveCreateCmdUsage || archiveCreateCmd ;;
+        "archive extract") shift 2; parseArchiveExtractArgs "$@"; (( _opts['help'] )) && archiveExtractCmdUsage || archiveExtractCmd ;;
+        "archive verify") shift 2; parseArchiveVerifyArgs "$@"; (( _opts['help'] )) && archiveVerifyCmdUsage || archiveVerifyCmd ;;
+        *)
+            case "$1" in
+                decrypt) shift; parseDecryptArgs "$@"; (( _opts['help'] )) && decryptCmdUsage || decryptCmd ;;
+                encrypt) shift; parseEncryptArgs "$@"; (( _opts['help'] )) && encryptCmdUsage || encryptCmd ;;
+                keys) shift; parseKeysArgs "$@"; (( _opts['help'] )) && keysCmdUsage || keysCmd ;;
+                paper) shift; parsePaperArgs "$@"; (( _opts['help'] )) && paperCmdUsage || paperCmd ;;
+                archive)
+                    case "${2:-}" in
+                        -h | --help) archiveCmdUsage ;;
+                        *) archiveCmdUsage "archive requires a subcommand: create, extract, verify" ;;
+                    esac
+                    ;;
+                *) usage "unknown command: $1" ;;
+            esac
+            ;;
     esac
+}
+
+archiveCmdUsage() {
+    echo
+    show "Usage:" bold blue "valt archive" "SUBCOMMAND [OPTIONS]"
+    echo
+    echo "Subcommands:"
+    echo
+    option "create" "Create a signed, encrypted secure archive (.valt) from files and directories." 13
+    option "extract" "Verify and extract a secure archive (.valt). Same as 'valt decrypt ARCHIVE'." 13
+    option "verify" "Verify both signatures of a secure archive (.valt) without extracting it." 13
+    echo
+    echo "Use 'valt archive SUBCOMMAND --help' for details on a specific subcommand."
+    bye "$@"
+}
+
+parseArchiveCreateArgs() {
+    declare -g _optListRecipient=()
+    declare -g _optListRecipientFile=()
+    local _prevFailHandler="${_failHandler}"
+    declare -g _failHandler=archiveCreateCmdUsage
+    local _value
+    while (( $# > 0 )); do
+        case "$1" in
+            --force | -f) _opts+=(['force']="1"); shift ;;
+            --force=*) fail "--force does not accept a value" ;;
+            --help | -h) _opts+=(['help']="1"); shift ;;
+            --help=*) fail "--help does not accept a value" ;;
+            --identity | -i) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-self|--force)$ ) ]] && fail "missing value for --identity"; assertFile "$2"; _opts+=(['identity']="$2"); shift 2 ;;
+            --identity=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --identity"; assertFile "${_value}"; _opts+=(['identity']="${_value}"); shift ;;
+            --name | -n) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-self|--force)$ ) ]] && fail "missing value for --name"; _opts+=(['name']="$2"); shift 2 ;;
+            --name=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --name"; _opts+=(['name']="${_value}"); shift ;;
+            --no-self) _opts+=(['no-self']="1"); shift ;;
+            --no-self=*) fail "--no-self does not accept a value" ;;
+            --output-dir | -o) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-self|--force)$ ) ]] && fail "missing value for --output-dir"; assertDirectory "$2"; _opts+=(['output-dir']="$2"); shift 2 ;;
+            --output-dir=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --output-dir"; assertDirectory "${_value}"; _opts+=(['output-dir']="${_value}"); shift ;;
+            --recipient | -r) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-self|--force)$ ) ]] && fail "missing value for --recipient"; _optListRecipient+=("$2"); _opts+=(['recipient']="1"); shift 2 ;;
+            --recipient=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --recipient"; _optListRecipient+=("${_value}"); _opts+=(['recipient']="1"); shift ;;
+            --recipient-file | -R) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-self|--force)$ ) ]] && fail "missing value for --recipient-file"; assertFile "$2"; _optListRecipientFile+=("$2"); _opts+=(['recipient-file']="1"); shift 2 ;;
+            --recipient-file=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --recipient-file"; assertFile "${_value}"; _optListRecipientFile+=("${_value}"); _opts+=(['recipient-file']="1"); shift ;;
+            --user-text | -u) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-self|--force)$ ) ]] && fail "missing value for --user-text"; _opts+=(['user-text']="$2"); shift 2 ;;
+            --user-text=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --user-text"; _opts+=(['user-text']="${_value}"); shift ;;
+            --zone | -z) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-self|--force)$ ) ]] && fail "missing value for --zone"; _opts+=(['zone']="$2"); shift 2 ;;
+            --zone=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --zone"; _opts+=(['zone']="${_value}"); shift ;;
+            --) shift; _args+=("$@"); break ;;
+            *) _args+=("$1"); shift ;;
+        esac
+    done
+    declare -g _failHandler="${_prevFailHandler}"
+}
+
+archiveCreateCmdUsage() {
+    echo
+    show bold "Create a signed, encrypted secure archive (.valt) from files and directories. A public companion"
+    show bold "(.valt.pub) that is safe to share is also created. Your own public key is always a recipient unless"
+    show bold "--no-self is given. You will be prompted for the passphrase that protects your private key."
+    echo
+    show "Usage:" bold blue "valt archive create" "[INPUT...] [--force] [--identity IDENTITY] [--name NAME] [--no-self]"
+    echo "                           [--output-dir OUTPUT-DIR] [--recipient RECIPIENT]... [--recipient-file"
+    echo "                           RECIPIENT-FILE]... [--user-text USER-TEXT] [--zone ZONE]"
+    echo
+    option "INPUT..." "Files and directories to add. '-C DIR' changes to DIR" 41
+    option "" "before processing the inputs that follow it; an '@'" 41
+    option "" "prefixed path is a tar archive whose contents are added." 41
+    option "--identity, -i IDENTITY" "Your private key file, used to sign and to find your public" 41
+    option "" "key (the .pub file next to it); default: valt.key in the" 41
+    option "" "valt config directory." 41
+    option "--recipient, -r RECIPIENT" "Also encrypt to this recipient (an age public key). Can be" 41
+    option "" "repeated." 41
+    option "--recipient-file, -R RECIPIENT-FILE" "Also encrypt to the recipient(s) in this file, e.g. a valt" 41
+    option "" ".pub file. Can be repeated." 41
+    option "--no-self" "Do not include your own public key as a recipient." 41
+    option "--name, -n NAME" "The archive file name prefix (default: your user name)." 41
+    option "--zone, -z ZONE" "The timezone for the timestamp in the archive name, e.g." 41
+    option "" "PDT (default: UTC)." 41
+    option "--user-text, -u USER-TEXT" "Text to include in the archive's README. Can contain '\\n'." 41
+    option "--output-dir, -o OUTPUT-DIR" "The directory to write the archive to (default: the current" 41
+    option "" "directory)." 41
+    option "--force, -f" "Overwrite an existing archive." 41
+    option "--help, -h" "Print this help message." 41
+    declare -F archiveCreateCmdUsageExtra > /dev/null && archiveCreateCmdUsageExtra
+    bye "$@"
+}
+
+parseArchiveExtractArgs() {
+    local _prevFailHandler="${_failHandler}"
+    declare -g _failHandler=archiveExtractCmdUsage
+    local _argIndex=0 _value
+    while (( $# > 0 )); do
+        case "$1" in
+            --help | -h) _opts+=(['help']="1"); shift ;;
+            --help=*) fail "--help does not accept a value" ;;
+            --identity | -i) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--output-dir|--identity|-o|-h|-i|--help)$ ) ]] && fail "missing value for --identity"; assertFile "$2"; _opts+=(['identity']="$2"); shift 2 ;;
+            --identity=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --identity"; assertFile "${_value}"; _opts+=(['identity']="${_value}"); shift ;;
+            --output-dir | -o) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--output-dir|--identity|-o|-h|-i|--help)$ ) ]] && fail "missing value for --output-dir"; assertDirectory "$2"; _opts+=(['output-dir']="$2"); shift 2 ;;
+            --output-dir=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --output-dir"; assertDirectory "${_value}"; _opts+=(['output-dir']="${_value}"); shift ;;
+            --) shift
+                while (( $# > 0 )); do
+                    (( _argIndex == 0 )) && assertFile "$1" || unknownArg "$1"
+                    _args+=("$1"); (( _argIndex++ )); shift
+                done ;;
+            *) (( _argIndex == 0 )) && assertFile "$1" || unknownArg "$1"; _args+=("$1"); (( _argIndex++ )); shift ;;
+        esac
+    done
+    (( _opts['help'] || _argIndex >= 1 )) || { local -a _missingArgs=("ARCHIVE"); _missingArgs=("${_missingArgs[@]:${_argIndex}}"); (( ${#_missingArgs[@]} == 1 )) && fail "missing required argument: ${_missingArgs[0]}" || fail "missing required arguments: ${_missingArgs[*]}"; }
+    declare -g _failHandler="${_prevFailHandler}"
+}
+
+archiveExtractCmdUsage() {
+    echo
+    show bold "Verify and extract a secure archive (.valt). Same as 'valt decrypt ARCHIVE'."
+    echo
+    show "Usage:" bold blue "valt archive extract" "ARCHIVE [--identity IDENTITY] [--output-dir OUTPUT-DIR]"
+    echo
+    option "ARCHIVE" "The secure archive (.valt)." 33
+    option "--identity, -i IDENTITY" "Your private key file (default: valt.key in the valt config" 33
+    option "" "directory)." 33
+    option "--output-dir, -o OUTPUT-DIR" "The existing directory to extract into (default: the current" 33
+    option "" "directory)." 33
+    option "--help, -h" "Print this help message." 33
+    declare -F archiveExtractCmdUsageExtra > /dev/null && archiveExtractCmdUsageExtra
+    bye "$@"
+}
+
+parseArchiveVerifyArgs() {
+    local _prevFailHandler="${_failHandler}"
+    declare -g _failHandler=archiveVerifyCmdUsage
+    local _argIndex=0 _value
+    while (( $# > 0 )); do
+        case "$1" in
+            --help | -h) _opts+=(['help']="1"); shift ;;
+            --help=*) fail "--help does not accept a value" ;;
+            --identity | -i) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--identity|-h|-i|--help)$ ) ]] && fail "missing value for --identity"; assertFile "$2"; _opts+=(['identity']="$2"); shift 2 ;;
+            --identity=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --identity"; assertFile "${_value}"; _opts+=(['identity']="${_value}"); shift ;;
+            --) shift
+                while (( $# > 0 )); do
+                    (( _argIndex == 0 )) && assertFile "$1" || unknownArg "$1"
+                    _args+=("$1"); (( _argIndex++ )); shift
+                done ;;
+            *) (( _argIndex == 0 )) && assertFile "$1" || unknownArg "$1"; _args+=("$1"); (( _argIndex++ )); shift ;;
+        esac
+    done
+    (( _opts['help'] || _argIndex >= 1 )) || { local -a _missingArgs=("ARCHIVE"); _missingArgs=("${_missingArgs[@]:${_argIndex}}"); (( ${#_missingArgs[@]} == 1 )) && fail "missing required argument: ${_missingArgs[0]}" || fail "missing required arguments: ${_missingArgs[*]}"; }
+    declare -g _failHandler="${_prevFailHandler}"
+}
+
+archiveVerifyCmdUsage() {
+    echo
+    show bold "Verify both signatures of a secure archive (.valt) without extracting it. The inner signature is"
+    show bold "checked after decrypting, so you will be prompted for the passphrase that protects your private key."
+    echo
+    show "Usage:" bold blue "valt archive verify" "ARCHIVE [--identity IDENTITY]"
+    echo
+    option "ARCHIVE" "The secure archive (.valt)." 29
+    option "--identity, -i IDENTITY" "Your private key file (default: valt.key in the valt config directory)." 29
+    option "--help, -h" "Print this help message." 29
+    declare -F archiveVerifyCmdUsageExtra > /dev/null && archiveVerifyCmdUsageExtra
+    bye "$@"
 }
 
 parseDecryptArgs() {
@@ -156,6 +375,81 @@ decryptCmdUsage() {
     echo "stops if it does not match. A warning is shown if there is no signature. Archives always contain"
     echo "signatures, which are verified before extracting."
     declare -F decryptCmdUsageExtra > /dev/null && decryptCmdUsageExtra
+    bye "$@"
+}
+
+parseEncryptArgs() {
+    declare -g _optListRecipient=()
+    declare -g _optListRecipientFile=()
+    local _prevFailHandler="${_failHandler}"
+    declare -g _failHandler=encryptCmdUsage
+    local _argIndex=0 _value
+    while (( $# > 0 )); do
+        case "$1" in
+            --armor | -a) _opts+=(['armor']="1"); shift ;;
+            --armor=*) fail "--armor does not accept a value" ;;
+            --delete) _opts+=(['delete']="1"); shift ;;
+            --delete=*) fail "--delete does not accept a value" ;;
+            --force | -f) _opts+=(['force']="1"); shift ;;
+            --force=*) fail "--force does not accept a value" ;;
+            --help | -h) _opts+=(['help']="1"); shift ;;
+            --help=*) fail "--help does not accept a value" ;;
+            --identity | -i) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--armor|--output|--recipient|--identity|--recipient-file|-r|-f|-a|-o|-h|-i|-R|--no-sign|--help|--delete|--no-self|--force|--verify)$ ) ]] && fail "missing value for --identity"; assertFile "$2"; _opts+=(['identity']="$2"); shift 2 ;;
+            --identity=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --identity"; assertFile "${_value}"; _opts+=(['identity']="${_value}"); shift ;;
+            --no-self) _opts+=(['no-self']="1"); shift ;;
+            --no-self=*) fail "--no-self does not accept a value" ;;
+            --no-sign) _opts+=(['no-sign']="1"); shift ;;
+            --no-sign=*) fail "--no-sign does not accept a value" ;;
+            --output | -o) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--armor|--output|--recipient|--identity|--recipient-file|-r|-f|-a|-o|-h|-i|-R|--no-sign|--help|--delete|--no-self|--force|--verify)$ ) ]] && fail "missing value for --output"; _opts+=(['output']="$2"); shift 2 ;;
+            --output=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --output"; _opts+=(['output']="${_value}"); shift ;;
+            --recipient | -r) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--armor|--output|--recipient|--identity|--recipient-file|-r|-f|-a|-o|-h|-i|-R|--no-sign|--help|--delete|--no-self|--force|--verify)$ ) ]] && fail "missing value for --recipient"; _optListRecipient+=("$2"); _opts+=(['recipient']="1"); shift 2 ;;
+            --recipient=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --recipient"; _optListRecipient+=("${_value}"); _opts+=(['recipient']="1"); shift ;;
+            --recipient-file | -R) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--armor|--output|--recipient|--identity|--recipient-file|-r|-f|-a|-o|-h|-i|-R|--no-sign|--help|--delete|--no-self|--force|--verify)$ ) ]] && fail "missing value for --recipient-file"; assertFile "$2"; _optListRecipientFile+=("$2"); _opts+=(['recipient-file']="1"); shift 2 ;;
+            --recipient-file=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --recipient-file"; assertFile "${_value}"; _optListRecipientFile+=("${_value}"); _opts+=(['recipient-file']="1"); shift ;;
+            --verify) _opts+=(['verify']="1"); shift ;;
+            --verify=*) fail "--verify does not accept a value" ;;
+            --) shift
+                while (( $# > 0 )); do
+                    (( _argIndex == 0 )) || unknownArg "$1"
+                    _args+=("$1"); (( _argIndex++ )); shift
+                done ;;
+            *) (( _argIndex == 0 )) || unknownArg "$1"; _args+=("$1"); (( _argIndex++ )); shift ;;
+        esac
+    done
+    (( _opts['help'] || _argIndex >= 1 )) || { local -a _missingArgs=("FILE"); _missingArgs=("${_missingArgs[@]:${_argIndex}}"); (( ${#_missingArgs[@]} == 1 )) && fail "missing required argument: ${_missingArgs[0]}" || fail "missing required arguments: ${_missingArgs[*]}"; }
+    declare -g _failHandler="${_prevFailHandler}"
+}
+
+encryptCmdUsage() {
+    echo
+    show bold "Encrypt a single file to FILE.age and sign it with your private key (FILE.age.minisig). Your own"
+    show bold "public key is always a recipient unless --no-self is given. Use 'valt archive create' for"
+    show bold "directories or multiple files."
+    echo
+    show "Usage:" bold blue "valt encrypt" "FILE [--armor] [--delete] [--force] [--identity IDENTITY] [--no-self]"
+    echo "                    [--no-sign] [--output OUTPUT] [--recipient RECIPIENT]... [--recipient-file"
+    echo "                    RECIPIENT-FILE]... [--verify]"
+    echo
+    option "FILE" "The file to encrypt." 41
+    option "--identity, -i IDENTITY" "Your private key file, used to sign and to find your public" 41
+    option "" "key (the .pub file next to it); default: valt.key in the" 41
+    option "" "valt config directory." 41
+    option "--recipient, -r RECIPIENT" "Also encrypt to this recipient (an age public key). Can be" 41
+    option "" "repeated." 41
+    option "--recipient-file, -R RECIPIENT-FILE" "Also encrypt to the recipient(s) in this file, e.g. a valt" 41
+    option "" ".pub file. Can be repeated." 41
+    option "--no-self" "Do not include your own public key as a recipient." 41
+    option "--no-sign" "Do not sign the encrypted file." 41
+    option "--armor, -a" "Write PEM encoded (text) output." 41
+    option "--output, -o OUTPUT" "The output file ('-' for standard output, which requires" 41
+    option "" "--no-sign); default: FILE.age." 41
+    option "--force, -f" "Overwrite an existing output file." 41
+    option "--verify" "Decrypt the result with your private key and confirm it" 41
+    option "" "matches FILE." 41
+    option "--delete" "Delete FILE after a successful --verify. This is an" 41
+    option "" "ordinary delete, not a secure erase." 41
+    option "--help, -h" "Print this help message." 41
+    declare -F encryptCmdUsageExtra > /dev/null && encryptCmdUsageExtra
     bye "$@"
 }
 
@@ -336,14 +630,109 @@ paperCmd() {
 decryptCmd() {
     require 'valt/paper-keys'
     local file="${_args[0]}"
-    local keyFile="${_opts['identity']:-${valtConfigDir}/valt.${valtPrivateKeySuffix}}"
+    local keyFile; keyFile="${ identityKeyFile; }"
     assertFile "${keyFile}" "private key file"
 
     if [[ ${file} == *.valt ]]; then
-        extractArchive "${file}" "${keyFile}"
+        extractArchive "${file}" "${keyFile}" "${_opts['output']:-${PWD}}"
     else
         decryptFile "${file}" "${keyFile}"
     fi
+    remindPaperKey "${keyFile}"
+}
+
+encryptCmd() {
+    require 'valt/paper-keys'
+    local file="${_args[0]}"
+    [[ -d ${file} ]] && encryptCmdUsage "${file} is a directory; use 'valt archive create' for directories and multiple files."
+    assertFile "${file}"
+    (( _opts['delete'] && ! _opts['verify'] )) && encryptCmdUsage "--delete requires --verify."
+    (( _opts['verify'] && _opts['no-self'] )) && encryptCmdUsage "--verify cannot be combined with --no-self, since your key could not decrypt the file."
+
+    local output="${_opts['output']:-${file}.${_ageFileExtension}}"
+    local sign=1
+    (( _opts['no-sign'] )) && sign=0
+    if [[ ${output} == '-' ]]; then
+        (( sign )) && encryptCmdUsage "Signing requires an output file; use --no-sign with '--output -'."
+        (( _opts['verify'] )) && encryptCmdUsage "--verify requires an output file."
+    else
+        assertCanWrite "${output}"
+        (( sign )) && assertCanWrite "${output}.${_signatureFileSuffix}"
+    fi
+
+    local keyFile; keyFile="${ identityKeyFile; }"
+    local -a recipientArgs=()
+    addRecipientArgs recipientArgs "${keyFile}" encryptCmdUsage
+
+    # Signing and verification both decrypt the private key, so ask for its passphrase once.
+    # Shadow with a local so that it goes out of scope when we return.
+
+    local rayvnTest_ValtKeyPassphrase="${rayvnTest_ValtKeyPassphrase}"
+    if (( sign || _opts['verify'] )); then
+        assertFile "${keyFile}" "private key file"
+        _prepareKey "${keyFile}"
+    fi
+
+    local -a encryptArgs=("${file}" "${recipientArgs[@]}")
+    (( _opts['armor'] )) && encryptArgs+=(--armor)
+    if [[ ${output} == '-' ]]; then
+        encrypt "${encryptArgs[@]}" || fail
+        return 0
+    fi
+    encrypt "${encryptArgs[@]}" -o "${output}" || fail
+    show "Encrypted" cyan "${ tildePath "${file}"; }" "to" bold "${ tildePath "${output}"; }"
+
+    if (( sign )); then
+        signFile "${keyFile}" "${output}"
+        show "Signed" bold "${ tildePath "${output}"; }" "with" cyan "${ tildePath "${keyFile}"; }"
+    fi
+    (( _opts['verify'] )) && verifyEncryptedFile "${file}" "${output}" "${keyFile}"
+    if (( _opts['delete'] )); then
+        rm "${file}" || fail
+        show "Deleted" bold "${ tildePath "${file}"; }"
+    fi
+    if (( sign || _opts['verify'] )); then
+        remindPaperKey "${keyFile}"
+    fi
+}
+
+archiveCreateCmd() {
+    require 'valt/paper-keys' 'valt/archive'
+    (( ${#_args[@]} )) || archiveCreateCmdUsage "missing required argument: INPUT..."
+    local keyFile; keyFile="${ identityKeyFile; }"
+    assertFile "${keyFile}" "private key file"
+    local -a recipientArgs=()
+    addRecipientArgs recipientArgs "${keyFile}" archiveCreateCmdUsage
+
+    local -a args=("${_args[@]}" -i "${keyFile}" "${recipientArgs[@]}")
+    [[ -n ${_opts['name']} ]] && args+=(-n "${_opts['name']}")
+    [[ -n ${_opts['zone']} ]] && args+=(-z "${_opts['zone']}")
+    [[ -n ${_opts['user-text']} ]] && args+=(-u "${_opts['user-text']}")
+    [[ -n ${_opts['output-dir']} ]] && args+=(-o "${_opts['output-dir']}")
+    (( _opts['force'] )) && args+=(-f)
+
+    local archive; archive="${ newSecureArchive "${args[@]}"; }" || fail
+    show "Created secure archive" bold "${ tildePath "${archive}"; }"
+    show "Public companion (safe to share):" cyan "${ tildePath "${archive}.pub"; }"
+    remindPaperKey "${keyFile}"
+}
+
+archiveVerifyCmd() {
+    require 'valt/paper-keys' 'valt/archive'
+    local archive="${_args[0]}"
+    local keyFile; keyFile="${ identityKeyFile; }"
+    assertFile "${keyFile}" "private key file"
+    show "Verifying secure archive" cyan "${ tildePath "${archive}"; }"
+    verifySecureArchive "${archive}" -i "${keyFile}" || fail
+    show "Signatures verified for" bold "${ tildePath "${archive}"; }"
+    remindPaperKey "${keyFile}"
+}
+
+archiveExtractCmd() {
+    require 'valt/paper-keys'
+    local keyFile; keyFile="${ identityKeyFile; }"
+    assertFile "${keyFile}" "private key file"
+    extractArchive "${_args[0]}" "${keyFile}" "${_opts['output-dir']:-${PWD}}"
     remindPaperKey "${keyFile}"
 }
 
@@ -406,9 +795,7 @@ decryptFile() {
             || decryptCmdUsage "Cannot derive an output file name from '${file}'; use --output."
         output="${file%.${_ageFileExtension}}"
     fi
-    if [[ ${output} != '-' && -e ${output} ]] && (( ! _opts['force'] )); then
-        fail "${output} already exists; use --force to overwrite."
-    fi
+    [[ ${output} == '-' ]] || assertCanWrite "${output}"
 
     verifySignatureIfPresent "${file}" "${keyFile}"
 
@@ -436,15 +823,58 @@ verifySignatureIfPresent() {
     fi
 }
 
-# Verifies and extracts a secure archive.
+# Verifies and extracts a secure archive into destDir.
 
 extractArchive() {
-    local file="$1" keyFile="$2"
-    local destDir="${_opts['output']:-${PWD}}"
+    local file="$1" keyFile="$2" destDir="$3"
     require 'valt/archive'
     show "Verifying and extracting secure archive" cyan "${ tildePath "${file}"; }"
     extractSecureArchive "${file}" -i "${keyFile}" -o "${destDir}" || fail
     show "Extracted to" bold "${ tildePath "${destDir}"; }"
+}
+
+# Outputs the private key file from --identity, defaulting to valt.key in the valt config directory.
+
+identityKeyFile() {
+    echo "${_opts['identity']:-${valtConfigDir}/valt.${valtPrivateKeySuffix}}"
+}
+
+# Adds -r/-R recipient args from the --recipient, --recipient-file and --no-self options. Unless --no-self is
+# given, the public key next to keyFile is included. Calls usageFunction if there would be no recipients.
+
+addRecipientArgs() {
+    local -n recipientArgsRef=$1
+    local keyFile="$2" usageFunction="$3"
+    if (( ! _opts['no-self'] )); then
+        local publicKeyFile="${keyFile%.${valtPrivateKeySuffix}}.${valtPublicKeySuffix}"
+        [[ -f "${publicKeyFile}" ]] || fail "No public key found at ${ tildePath "${publicKeyFile}"; }; create one with" \
+                                            "'valt keys', or use --no-self with --recipient or --recipient-file."
+        recipientArgsRef+=(-R "${publicKeyFile}")
+    fi
+    local recipient
+    for recipient in "${_optListRecipient[@]}"; do recipientArgsRef+=(-r "${recipient}"); done
+    for recipient in "${_optListRecipientFile[@]}"; do recipientArgsRef+=(-R "${recipient}"); done
+    (( ${#recipientArgsRef[@]} )) || ${usageFunction} "--no-self requires at least one --recipient or --recipient-file."
+}
+
+# Fails if file exists, unless --force was given.
+
+assertCanWrite() {
+    [[ -e "$1" ]] || return 0
+    (( _opts['force'] )) || fail "${ tildePath "$1"; } already exists; use --force to overwrite."
+}
+
+# Decrypts encryptedFile with keyFile and fails unless the result matches originalFile.
+
+verifyEncryptedFile() {
+    local originalFile="$1" encryptedFile="$2" keyFile="$3"
+    local workDir; makeSecureTempDir workDir
+    decrypt -i "${keyFile}" -o "${workDir}/decrypted" "${encryptedFile}" || fail
+    local originalHash; originalHash="${ sha256sum < "${originalFile}"; }"
+    local decryptedHash; decryptedHash="${ sha256sum < "${workDir}/decrypted"; }"
+    [[ ${originalHash} == "${decryptedHash}" ]] \
+        || fail "Verification failed: ${ tildePath "${encryptedFile}"; } does not decrypt to ${ tildePath "${originalFile}"; }."
+    show "Verified" bold "${ tildePath "${encryptedFile}"; }" "decrypts to match" cyan "${ tildePath "${originalFile}"; }"
 }
 
 # Explains how to generate the paper key for privateKeyFile once key.info is complete.
