@@ -1,5 +1,5 @@
 title: valt
-description: Encrypted file archives using age encryption
+description: Public key encryption for files and archives, using age and minisign
 theme: just-the-docs
 color_scheme: dark
 url: https://rayvn.ink
@@ -12,7 +12,7 @@ nav_external_links:
     url: /rayvn
 
 exclude:
-  - api/
+  - "*.iml"
 
 sass:
   quiet_deps: true
