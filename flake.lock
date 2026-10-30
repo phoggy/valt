@@ -127,11 +127,11 @@
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1793313151,
-        "narHash": "sha256-nxWtll1lHjx/qJuObYFj6xRfsKLnayD36B6+XNqkjxk=",
+        "lastModified": 1793322988,
+        "narHash": "sha256-L4O4NnC32wNNGfV2lghtSmAZ5NSssKhRN6ULAilmwiI=",
         "owner": "phoggy",
         "repo": "rayvn",
-        "rev": "d9e6be0508b219e98a6c82f8a63572a91ad191b5",
+        "rev": "6a3b6b32bb610f33b11692490783c8fd7b69334c",
         "type": "github"
       },
       "original": {
