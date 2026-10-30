@@ -248,11 +248,12 @@
         <h3>Decode QR Code</h3>
 
         <p>The QR code contains binary values so the usual phone camera decoding will likely not work. Instead, take a photo
-            and move it to your computer. Use <code>qrtool</code> to convert the image:
+            and move it to your computer. Use <code>qrtool</code> to convert the image (PNG, JPEG, etc.) to a key file:
             <ol>
-                <li><code>brew install qrtool; qrtool decode -t svg IMAGE-FILE</code> or</li>
-                <li><code>nix run nixpkgs#qrtool -- decode -t svg IMAGE-FILE</code></li>
+                <li><code>nix run github:phoggy/valt#qrtool -- decode IMAGE-FILE &gt; KEY-FILE</code> or</li>
+                <li><code>brew install qrtool; qrtool decode IMAGE-FILE &gt; KEY-FILE</code></li>
             </ol>
+            The result should match the checksum shown in the next method.
 
         <h3>Scan PEM Text</h3>
 

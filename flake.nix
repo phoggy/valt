@@ -204,6 +204,9 @@ EOF
             wrapProgram "$out/bin/valt-pinentry" \
               --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath recoverDeps}"
 
+            # For decoding the paper key QR code (see etc/key-doc-template.html).
+            ln -s "${pkgs.qrtool}/bin/qrtool" "$out/bin/qrtool"
+
             runHook postInstall
           '';
 
@@ -243,6 +246,10 @@ EOF
           recover = {
             type = "app";
             program = "${valtRecover}/bin/valt";
+          };
+          qrtool = {
+            type = "app";
+            program = "${valtRecover}/bin/qrtool";
           };
         };
 
