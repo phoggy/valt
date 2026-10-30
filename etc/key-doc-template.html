@@ -180,13 +180,18 @@
                 it supports post-quantum (<code>-pq</code>) keys.</li>
         </ul>
 
-        <h2>What You May Find</h2>
+        <h2>Identifying Your File</h2>
+
+        <p>The end of the file name tells you what kind of file you have. File browsers often hide it; running
+            <code>ls</code> in a terminal shows full names.</p>
 
         <ul>
-            <li><strong>An encrypted file</strong> ending in <code>.age</code>, possibly with a matching
-                <code>.age.minisig</code> signature file next to it. Keep the two together.</li>
-            <li><strong>A secure archive</strong> ending in <code>.valt</code>, containing any number of files and directories.
-                You may also find a matching <code>.valt.pub</code> file; it contains no secrets and is not needed.</li>
+            <li><strong><code>.age</code></strong>: a single encrypted file. A file with the same name plus
+                <code>.minisig</code> may be next to it; keep the two in the same directory so the signature can be
+                checked.</li>
+            <li><strong><code>.valt</code></strong>: a secure archive, which can contain any number of files and directories.
+                A file with the same name plus <code>.pub</code> may be next to it; it contains no secrets and can be
+                ignored.</li>
         </ul>
 
         <h2>Decrypting With The Recovery Tool</h2>
