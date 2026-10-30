@@ -111,6 +111,15 @@ code {
     break-before: page;
 }
 
+/* Let content flow across pages (e.g. any number of contacts) without orphaned headings or split blocks */
+h1, h2, h3, h4, h5 {
+    break-after: avoid;
+}
+
+p, li, .callout {
+    break-inside: avoid;
+}
+
 .passphrase-box {
     font-family: var(--font-family-code);
     font-size: 18px;
