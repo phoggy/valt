@@ -77,6 +77,14 @@ pre {
     margin: 1em 0;
 }
 
+/* The armored key must fit on one page, since it may be scanned or typed in */
+pre.armored-key {
+    line-height: 1.2;
+    padding: 0.75em 1em;
+    margin: 0;
+    break-inside: avoid;
+}
+
 code {
     font-family: var(--font-family-code);
 }
@@ -116,6 +124,12 @@ code {
 
 .notes {
     font-family: var(--font-family-human);
+}
+
+/* Faint ruled lines for handwritten notes */
+.note-line {
+    height: 0.36in;
+    border-bottom: 1px solid #d8d8d8;
 }
 
 .finding-help {
