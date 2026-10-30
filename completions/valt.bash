@@ -15,7 +15,7 @@ __valtComplete() {
     fi
 
     if (( cword == 1 )); then
-        COMPREPLY=($(compgen -W "decrypt encrypt keys paper archive -v --version -h --help" -- "${cur}"))
+        COMPREPLY=($(compgen -W "decrypt encrypt keys paper passphrase password pwned archive -v --version -h --help" -- "${cur}"))
         return
     fi
 
@@ -91,6 +91,23 @@ __valtComplete() {
                     esac
                     local _relIdx=$(( cword - 2 ))
                     (( _relIdx == 0 )) && { COMPREPLY=($(compgen -f -- "${cur}")); return; }
+                    ;;
+                passphrase)
+                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--check --count --help --separator --threat-level --use-case --words -c -h -n -s -t -u -w" -- "${cur}")); return; }
+                    case "${prev}" in
+                        --threat-level|-t) COMPREPLY=($(compgen -W "casual motivated professional nation-state" -- "${cur}")); return ;;
+                        --use-case|-u) COMPREPLY=($(compgen -W "file account" -- "${cur}")); return ;;
+                    esac
+                    ;;
+                password)
+                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--check --count --help --max --min --threat-level --use-case -c -h -n -t -u" -- "${cur}")); return; }
+                    case "${prev}" in
+                        --threat-level|-t) COMPREPLY=($(compgen -W "casual motivated professional nation-state" -- "${cur}")); return ;;
+                        --use-case|-u) COMPREPLY=($(compgen -W "account file" -- "${cur}")); return ;;
+                    esac
+                    ;;
+                pwned)
+                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--help -h" -- "${cur}")); return; }
                     ;;
             esac
             ;;

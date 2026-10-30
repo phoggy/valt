@@ -93,6 +93,9 @@ nix run github:phoggy/valt#recover -- decrypt FILE -i KEY_FILE
 | `valt archive create INPUT...` | Create a signed, encrypted archive of files and directories. |
 | `valt archive verify ARCHIVE` | Verify both signatures of a secure archive without extracting it. |
 | `valt archive extract ARCHIVE` | Verify and extract a secure archive. |
+| `valt passphrase` | Generate random passphrases, or check the strength of one (`--check`). |
+| `valt password` | Generate random passwords, or check the strength of one (`--check`). |
+| `valt pwned` | Check whether a password or passphrase appears in a known data breach. |
 
 Use `valt COMMAND --help` for details. Keys default to `valt.key` and `valt.pub` in the valt
 config directory; most commands take `-i KEY_FILE` to use another.

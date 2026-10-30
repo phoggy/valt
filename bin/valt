@@ -15,9 +15,9 @@ usage() {
     echo "    encrypt     Encrypt and sign a single file."
     echo "    decrypt     Decrypt a file, or verify and extract a secure archive."
     echo "    archive     Create, verify or extract a signed, encrypted archive of files and directories."
-# TODO    echo "    passphrase  Generate and/or evaluate passphrase strength."
-# TODO    echo "    password    Generate and/or evaluate password strength."
-# TODO    echo "    pwned       Check whether a password/phrase appears in the HaveIBeenPwned breach database."
+    echo "    passphrase  Generate random passphrases, or check the strength of one you enter."
+    echo "    password    Generate random passwords, or check the strength of one you enter."
+    echo "    pwned       Check whether a password or passphrase appears in a known data breach."
     echo
     echo "Use COMMAND --help for additional details."
     echo
@@ -142,6 +142,39 @@ declare -gA cliSpec=(
     #   --identity    Your private key file (default: valt.key in the valt config directory).
     #   --output-dir  The existing directory to extract into (default: the current directory).
     ['archive extract']='archiveExtract(file --identity|-i:file --output-dir|-o:dir --help|-h)'
+
+    # Generate random passphrases, or check the strength of one you enter. Passphrases are made of
+    # words chosen at random from a list of 17,576, so they are much easier to remember than random
+    # passwords of similar strength.
+    #   --words         The number of words in each passphrase.
+    #   --count         The number of passphrases to generate.
+    #   --separator     The text between words (default: a space).
+    #   --check         Instead of generating, prompt for a passphrase and report its strength and whether it appears in a known breach. Reads from standard input if it is not a terminal.
+    #   --use-case      What the passphrase protects: 'file' (an encrypted file or private key, open to unlimited offline guessing) or 'account' (an online account).
+    #   --threat-level  How capable an attacker to judge strength against.
+    #
+    # With --check, the exit status is 0 if the passphrase appears safe to use, or 1 if not.
+    ['passphrase']='passphrase(--words|-w:+int=5 --count|-n:+int=1 --separator|-s:str --check|-c --use-case|-u:file|account=file --threat-level|-t:casual|motivated|professional|nation-state=professional --help|-h)'
+
+    # Generate random passwords, or check the strength of one you enter. Passwords use letters,
+    # digits and symbols, with a random length between --min and --max.
+    #   --min           The minimum length.
+    #   --max           The maximum length.
+    #   --count         The number of passwords to generate.
+    #   --check         Instead of generating, prompt for a password and report its strength and whether it appears in a known breach. Reads from standard input if it is not a terminal.
+    #   --use-case      What the password protects: 'account' (an online account) or 'file' (an encrypted file or private key, open to unlimited offline guessing).
+    #   --threat-level  How capable an attacker to judge strength against.
+    #
+    # With --check, the exit status is 0 if the password appears safe to use, or 1 if not.
+    ['password']='password(--min:+int=24 --max:+int=32 --count|-n:+int=1 --check|-c --use-case|-u:account|file=account --threat-level|-t:casual|motivated|professional|nation-state=professional --help|-h)'
+
+    # Check whether a password or passphrase appears in a known data breach, using the HaveIBeenPwned
+    # database. You will be prompted for it; it is read from standard input if that is not a terminal.
+    #
+    # Only the first 5 characters of a SHA-1 hash of the password are sent, so neither the password
+    # nor its full hash leaves this computer (see https://haveibeenpwned.com/API/v3#PwnedPasswords).
+    # The exit status is 0 if it was not found, or 1 if it was.
+    ['pwned']='pwned(--help|-h)'
 )
 
 ARGS_PARSER_BEGIN="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 🚫 BEGIN generated code: DO NOT EDIT 🚫 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -160,6 +193,9 @@ parseCommand() {
                 encrypt) shift; parseEncryptArgs "$@"; (( _opts['help'] )) && encryptCmdUsage || encryptCmd ;;
                 keys) shift; parseKeysArgs "$@"; (( _opts['help'] )) && keysCmdUsage || keysCmd ;;
                 paper) shift; parsePaperArgs "$@"; (( _opts['help'] )) && paperCmdUsage || paperCmd ;;
+                passphrase) shift; parsePassphraseArgs "$@"; (( _opts['help'] )) && passphraseCmdUsage || passphraseCmd ;;
+                password) shift; parsePasswordArgs "$@"; (( _opts['help'] )) && passwordCmdUsage || passwordCmd ;;
+                pwned) shift; parsePwnedArgs "$@"; (( _opts['help'] )) && pwnedCmdUsage || pwnedCmd ;;
                 archive)
                     case "${2:-}" in
                         -h | --help) archiveCmdUsage ;;
@@ -582,6 +618,147 @@ paperCmdUsage() {
     bye "$@"
 }
 
+parsePassphraseArgs() {
+    _opts+=(['count']="1" ['threat-level']="professional" ['use-case']="file" ['words']="5")
+    local _prevFailHandler="${_failHandler}"
+    declare -g _failHandler=passphraseCmdUsage
+    local _value
+    while (( $# > 0 )); do
+        case "$1" in
+            --check | -c) _opts+=(['check']="1"); shift ;;
+            --check=*) fail "--check does not accept a value" ;;
+            --count | -n) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--count|--threat-level|--use-case|--check|-w|-t|-u|-s|-c|-n|-h|--help|--words|--separator)$ ) ]] && fail "missing value for --count"; assertPositiveInt "$2"; _opts+=(['count']="$2"); shift 2 ;;
+            --count=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --count"; assertPositiveInt "${_value}"; _opts+=(['count']="${_value}"); shift ;;
+            --help | -h) _opts+=(['help']="1"); shift ;;
+            --help=*) fail "--help does not accept a value" ;;
+            --separator | -s) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--count|--threat-level|--use-case|--check|-w|-t|-u|-s|-c|-n|-h|--help|--words|--separator)$ ) ]] && fail "missing value for --separator"; _opts+=(['separator']="$2"); shift 2 ;;
+            --separator=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --separator"; _opts+=(['separator']="${_value}"); shift ;;
+            --threat-level | -t) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--count|--threat-level|--use-case|--check|-w|-t|-u|-s|-c|-n|-h|--help|--words|--separator)$ ) ]] && fail "missing value for --threat-level"; [[ "|casual|motivated|professional|nation-state|" == *"|$2|"* ]] || fail "$2 must be one of: casual|motivated|professional|nation-state"; _opts+=(['threat-level']="$2"); shift 2 ;;
+            --threat-level=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --threat-level"; [[ "|casual|motivated|professional|nation-state|" == *"|${_value}|"* ]] || fail "${_value} must be one of: casual|motivated|professional|nation-state"; _opts+=(['threat-level']="${_value}"); shift ;;
+            --use-case | -u) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--count|--threat-level|--use-case|--check|-w|-t|-u|-s|-c|-n|-h|--help|--words|--separator)$ ) ]] && fail "missing value for --use-case"; [[ "|file|account|" == *"|$2|"* ]] || fail "$2 must be one of: file|account"; _opts+=(['use-case']="$2"); shift 2 ;;
+            --use-case=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --use-case"; [[ "|file|account|" == *"|${_value}|"* ]] || fail "${_value} must be one of: file|account"; _opts+=(['use-case']="${_value}"); shift ;;
+            --words | -w) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--count|--threat-level|--use-case|--check|-w|-t|-u|-s|-c|-n|-h|--help|--words|--separator)$ ) ]] && fail "missing value for --words"; assertPositiveInt "$2"; _opts+=(['words']="$2"); shift 2 ;;
+            --words=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --words"; assertPositiveInt "${_value}"; _opts+=(['words']="${_value}"); shift ;;
+            --) shift; (( $# == 0 )) || unknownArg "$1" ;;
+            *) unknownArg "$1" ;;
+        esac
+    done
+    declare -g _failHandler="${_prevFailHandler}"
+}
+
+passphraseCmdUsage() {
+    echo
+    show bold "Generate random passphrases, or check the strength of one you enter. Passphrases are made of words"
+    show bold "chosen at random from a list of 17,576, so they are much easier to remember than random passwords of"
+    show bold "similar strength."
+    echo
+    show "Usage:" bold blue "valt passphrase" "[--check] [--count COUNT] [--separator SEPARATOR] [--threat-level"
+    echo "                       THREAT-LEVEL] [--use-case file|account] [--words WORDS]"
+    echo
+    option "--words, -w WORDS" "The number of words in each passphrase. (default: 5)" 37
+    option "--count, -n COUNT" "The number of passphrases to generate. (default: 1)" 37
+    option "--separator, -s SEPARATOR" "The text between words (default: a space)." 37
+    option "--check, -c" "Instead of generating, prompt for a passphrase and report its" 37
+    option "" "strength and whether it appears in a known breach. Reads from" 37
+    option "" "standard input if it is not a terminal." 37
+    option "--use-case, -u file|account" "What the passphrase protects: 'file' (an encrypted file or" 37
+    option "" "private key, open to unlimited offline guessing) or 'account'" 37
+    option "" "(an online account). (default: file)" 37
+    option "--threat-level, -t THREAT-LEVEL" "How capable an attacker to judge strength against. One of:" 37
+    option "" "casual, motivated, professional, nation-state. (default:" 37
+    option "" "professional)" 37
+    option "--help, -h" "Print this help message." 37
+    echo
+    echo "With --check, the exit status is 0 if the passphrase appears safe to use, or 1 if not."
+    declare -F passphraseCmdUsageExtra > /dev/null && passphraseCmdUsageExtra
+    bye "$@"
+}
+
+parsePasswordArgs() {
+    _opts+=(['count']="1" ['max']="32" ['min']="24" ['threat-level']="professional" ['use-case']="account")
+    local _prevFailHandler="${_failHandler}"
+    declare -g _failHandler=passwordCmdUsage
+    local _value
+    while (( $# > 0 )); do
+        case "$1" in
+            --check | -c) _opts+=(['check']="1"); shift ;;
+            --check=*) fail "--check does not accept a value" ;;
+            --count | -n) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--min|--count|--threat-level|--use-case|--check|-t|-u|-c|-n|-h|--help|--max)$ ) ]] && fail "missing value for --count"; assertPositiveInt "$2"; _opts+=(['count']="$2"); shift 2 ;;
+            --count=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --count"; assertPositiveInt "${_value}"; _opts+=(['count']="${_value}"); shift ;;
+            --help | -h) _opts+=(['help']="1"); shift ;;
+            --help=*) fail "--help does not accept a value" ;;
+            --max) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--min|--count|--threat-level|--use-case|--check|-t|-u|-c|-n|-h|--help|--max)$ ) ]] && fail "missing value for --max"; assertPositiveInt "$2"; _opts+=(['max']="$2"); shift 2 ;;
+            --max=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --max"; assertPositiveInt "${_value}"; _opts+=(['max']="${_value}"); shift ;;
+            --min) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--min|--count|--threat-level|--use-case|--check|-t|-u|-c|-n|-h|--help|--max)$ ) ]] && fail "missing value for --min"; assertPositiveInt "$2"; _opts+=(['min']="$2"); shift 2 ;;
+            --min=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --min"; assertPositiveInt "${_value}"; _opts+=(['min']="${_value}"); shift ;;
+            --threat-level | -t) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--min|--count|--threat-level|--use-case|--check|-t|-u|-c|-n|-h|--help|--max)$ ) ]] && fail "missing value for --threat-level"; [[ "|casual|motivated|professional|nation-state|" == *"|$2|"* ]] || fail "$2 must be one of: casual|motivated|professional|nation-state"; _opts+=(['threat-level']="$2"); shift 2 ;;
+            --threat-level=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --threat-level"; [[ "|casual|motivated|professional|nation-state|" == *"|${_value}|"* ]] || fail "${_value} must be one of: casual|motivated|professional|nation-state"; _opts+=(['threat-level']="${_value}"); shift ;;
+            --use-case | -u) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--min|--count|--threat-level|--use-case|--check|-t|-u|-c|-n|-h|--help|--max)$ ) ]] && fail "missing value for --use-case"; [[ "|account|file|" == *"|$2|"* ]] || fail "$2 must be one of: account|file"; _opts+=(['use-case']="$2"); shift 2 ;;
+            --use-case=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --use-case"; [[ "|account|file|" == *"|${_value}|"* ]] || fail "${_value} must be one of: account|file"; _opts+=(['use-case']="${_value}"); shift ;;
+            --) shift; (( $# == 0 )) || unknownArg "$1" ;;
+            *) unknownArg "$1" ;;
+        esac
+    done
+    declare -g _failHandler="${_prevFailHandler}"
+}
+
+passwordCmdUsage() {
+    echo
+    show bold "Generate random passwords, or check the strength of one you enter. Passwords use letters, digits and"
+    show bold "symbols, with a random length between --min and --max."
+    echo
+    show "Usage:" bold blue "valt password" "[--check] [--count COUNT] [--max MAX] [--min MIN] [--threat-level THREAT-LEVEL]"
+    echo "                     [--use-case account|file]"
+    echo
+    option "--min MIN" "The minimum length. (default: 24)" 37
+    option "--max MAX" "The maximum length. (default: 32)" 37
+    option "--count, -n COUNT" "The number of passwords to generate. (default: 1)" 37
+    option "--check, -c" "Instead of generating, prompt for a password and report its" 37
+    option "" "strength and whether it appears in a known breach. Reads from" 37
+    option "" "standard input if it is not a terminal." 37
+    option "--use-case, -u account|file" "What the password protects: 'account' (an online account) or" 37
+    option "" "'file' (an encrypted file or private key, open to unlimited" 37
+    option "" "offline guessing). (default: account)" 37
+    option "--threat-level, -t THREAT-LEVEL" "How capable an attacker to judge strength against. One of:" 37
+    option "" "casual, motivated, professional, nation-state. (default:" 37
+    option "" "professional)" 37
+    option "--help, -h" "Print this help message." 37
+    echo
+    echo "With --check, the exit status is 0 if the password appears safe to use, or 1 if not."
+    declare -F passwordCmdUsageExtra > /dev/null && passwordCmdUsageExtra
+    bye "$@"
+}
+
+parsePwnedArgs() {
+    local _prevFailHandler="${_failHandler}"
+    declare -g _failHandler=pwnedCmdUsage
+    while (( $# > 0 )); do
+        case "$1" in
+            --help | -h) _opts+=(['help']="1"); shift ;;
+            --help=*) fail "--help does not accept a value" ;;
+            --) shift; (( $# == 0 )) || unknownArg "$1" ;;
+            *) unknownArg "$1" ;;
+        esac
+    done
+    declare -g _failHandler="${_prevFailHandler}"
+}
+
+pwnedCmdUsage() {
+    echo
+    show bold "Check whether a password or passphrase appears in a known data breach, using the HaveIBeenPwned"
+    show bold "database. You will be prompted for it; it is read from standard input if that is not a terminal."
+    echo
+    show "Usage:" bold blue "valt pwned"
+    echo
+    option "--help, -h" "Print this help message." 16
+    echo
+    echo "Only the first 5 characters of a SHA-1 hash of the password are sent, so neither the password"
+    echo "nor its full hash leaves this computer (see https://haveibeenpwned.com/API/v3#PwnedPasswords)."
+    echo "The exit status is 0 if it was not found, or 1 if it was."
+    declare -F pwnedCmdUsageExtra > /dev/null && pwnedCmdUsageExtra
+    bye "$@"
+}
+
 ARGS_PARSER_END="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 🚫 END generated code: DO NOT EDIT 🚫 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 SECTION="--+-+-----+-++(-++(---++++(---+( COMMANDS )+---)++++---)++-)++-+------+-+--"
@@ -731,7 +908,78 @@ archiveExtractCmd() {
     extractArchive "${_args[0]}" "${keyFile}" "${_opts['output-dir']:-${PWD}}"
 }
 
+passphraseCmd() {
+    require 'valt/password'
+    (( _opts['check'] )) && { checkSecretStrength passphrase; return; }
+    local phrase i
+    for (( i = 0; i < _opts['count']; i++ )); do
+        if [[ -n ${_opts['separator']+set} ]]; then
+            generatePassphrase phrase "${_opts['words']}" "${_opts['separator']}"
+        else
+            generatePassphrase phrase "${_opts['words']}"
+        fi
+        [[ -n ${phrase} ]] || fail "failed to generate a passphrase"
+        echo "${phrase}"
+    done
+}
+
+passwordCmd() {
+    require 'valt/password'
+    (( _opts['check'] )) && { checkSecretStrength password; return; }
+    (( _opts['min'] <= _opts['max'] )) || passwordCmdUsage "--min must not be greater than --max."
+    local password i
+    for (( i = 0; i < _opts['count']; i++ )); do
+        generatePassword password "${_opts['min']}" "${_opts['max']}"
+        echo "${password}"
+    done
+}
+
+pwnedCmd() {
+    require 'valt/pwned'
+    local secret apiError breachCount
+    readSecret "Enter password or passphrase" secret
+    hasNotBeenPwned secret apiError breachCount
+    case $? in
+        0) show success "Not found in any known breach." ;;
+        1) fail "Unable to check for breaches: ${ _curlErrorMessage "${apiError}"; }" ;;
+        2)
+            local plural='es'; (( breachCount == 1 )) && plural=''
+            show error "Found in ${ printf "%'d" "${breachCount}"; } breach${plural}." "Do not use it."
+            return 1
+            ;;
+    esac
+}
+
 SECTION="--+-+-----+-++(-++(---++++(---+( SHARED FUNCTIONS )+---)++++---)++-)++-+------+-+--"
+
+# Prompts for a password or passphrase (kind), then shows its strength report. Returns 1 if it is unsafe to use.
+
+checkSecretStrength() {
+    local kind="$1"
+    local secret score line
+    local -a report=()
+    readSecret "Enter ${kind}" secret
+    passwordStrength secret "${_opts['use-case']}" "${_opts['threat-level']}" score report
+    local result=$?
+    echo
+    for line in "${report[@]}"; do
+        echo "${line}"
+    done
+    return ${result}
+}
+
+# Reads a secret into the named var: with a hidden prompt on a terminal, otherwise one line from standard input.
+
+readSecret() {
+    local prompt="$1"
+    local -n secretRef=$2
+    if [[ -t 0 ]]; then
+        readPassword "${prompt}" secretRef || fail
+    else
+        IFS= read -r secretRef || [[ -n ${secretRef} ]] || fail "no input"
+    fi
+    [[ -n ${secretRef} ]] || fail "cancelled"
+}
 
 createKeys() {
     local name="$1" outputDir="$2" publicKeyFile="$3" privateKeyFile="$4" verify=$5

@@ -18,7 +18,7 @@ hasNotBeenPwned() {
     local -n passRef=$1
     local -n apiErrorRef=$2; apiErrorRef=0
     local -n breachCountRef=$3; breachCountRef=0
-    local hash; hash=${ echo -n "${passRef}" | shasum | cut -d' ' -f1 | tr '[:lower:]' '[:upper:]'; }
+    local hash; hash=${ printf '%s' "${passRef}" | sha1sum | cut -d' ' -f1 | tr '[:lower:]' '[:upper:]'; }
     local prefix=${hash:0:5}
     local suffix=${hash:5}
     local results; results=${ curl -m 10 -s -H 'Add-Padding: true' "${_pwnedPasswordsApiUrl}/range/${prefix}"; }
@@ -72,6 +72,7 @@ _curlErrorMessage() {
 }
 
 _init_valt_pwned() {
-    declare -grx _pwnedPasswordsApiUrl='https://api.pwnedpasswords.com'
+    # rayvnTest_PwnedApiUrl lets tests use a local (e.g. file://) copy of the range API.
+    declare -grx _pwnedPasswordsApiUrl="${rayvnTest_PwnedApiUrl:-https://api.pwnedpasswords.com}"
 }
 

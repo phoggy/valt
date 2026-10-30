@@ -18,6 +18,9 @@ _valt() {
                 'encrypt:Encrypt a single file to FILE.age and sign it with your private key (FILE.age.minisig). Your own'
                 'keys:Generate an age key pair, with the private key encrypted by a passphrase, plus a PDF paper key as backup'
                 'paper:Generate the paper key PDF for an existing key pair, personalized from the key.info file. The PDF is written'
+                'passphrase:Generate random passphrases, or check the strength of one you enter. Passphrases are made of'
+                'password:Generate random passwords, or check the strength of one you enter. Passwords use letters,'
+                'pwned:Check whether a password or passphrase appears in a known data breach, using the HaveIBeenPwned'
                 'archive:'
             )
             _describe 'command' commands
@@ -115,6 +118,30 @@ _valt() {
                     '(--name -n)'{--name,-n}'[Use the NAME.key file in the valt config directory, e.g. bob -> bob.key.]:name:' \
                     '(--template -t)'{--template,-t}'[HTML template file to use instead of the default.]:template:_files' \
                     '1:KEY_FILE:_files'
+                    ;;
+                passphrase)
+                    _arguments \
+                    '(--check -c)'{--check,-c}'[Instead of generating, prompt for a passphrase and report its strength and whether it appears in a known breach. Reads from standard input if it is not a terminal.]' \
+                    '(--count -n)'{--count,-n}'[The number of passphrases to generate.]:count:' \
+                    '(--help -h)'{--help,-h}'[Print this help message.]' \
+                    '(--separator -s)'{--separator,-s}'[The text between words (default: a space).]:separator:' \
+                    '(--threat-level -t)'{--threat-level,-t}'[How capable an attacker to judge strength against.]:threat-level:(casual motivated professional nation-state)' \
+                    '(--use-case -u)'{--use-case,-u}'[What the passphrase protects: '\''file'\'' (an encrypted file or private key, open to unlimited offline guessing) or '\''account'\'' (an online account).]:use-case:(file account)' \
+                    '(--words -w)'{--words,-w}'[The number of words in each passphrase.]:words:'
+                    ;;
+                password)
+                    _arguments \
+                    '(--check -c)'{--check,-c}'[Instead of generating, prompt for a password and report its strength and whether it appears in a known breach. Reads from standard input if it is not a terminal.]' \
+                    '(--count -n)'{--count,-n}'[The number of passwords to generate.]:count:' \
+                    '(--help -h)'{--help,-h}'[Print this help message.]' \
+                    '(--max)'--max'[The maximum length.]:max:' \
+                    '(--min)'--min'[The minimum length.]:min:' \
+                    '(--threat-level -t)'{--threat-level,-t}'[How capable an attacker to judge strength against.]:threat-level:(casual motivated professional nation-state)' \
+                    '(--use-case -u)'{--use-case,-u}'[What the password protects: '\''account'\'' (an online account) or '\''file'\'' (an encrypted file or private key, open to unlimited offline guessing).]:use-case:(account file)'
+                    ;;
+                pwned)
+                    _arguments \
+                    '(--help -h)'{--help,-h}'[Print this help message.]'
                     ;;
             esac
             ;;
