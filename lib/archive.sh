@@ -279,7 +279,7 @@ extractSecureArchive() {
     if [[ -z ${rayvnTest_ValtKeyPassphrase} ]]; then
         local path; path="${ tildePath "${keyFile}"; }"
         local prompt; prompt="${ show "Enter passphrase for" blue "${path}"; }"
-        readPassword "${prompt}" rayvnTest_ValtKeyPassphrase 30 false || fail
+        readPassword "${prompt}" rayvnTest_ValtKeyPassphrase || fail
         cursorUpOneAndEraseLine
     fi
 

@@ -486,7 +486,7 @@ _prepareKey() {
     if [[ -z ${rayvnTest_ValtKeyPassphrase} ]]; then
         local _path; _path="${ tildePath "${_key}"; }"
         local _prompt; _prompt="${ show "Enter passphrase for" blue "${_path}"; }"
-        readPassword "${_prompt}" rayvnTest_ValtKeyPassphrase 30 false || fail
+        readPassword "${_prompt}" rayvnTest_ValtKeyPassphrase || fail
         cursorUpOneAndEraseLine
     fi
 }
@@ -521,18 +521,19 @@ _maybeOfferPassphraseAdvice() {
     if (( ! skipKeyPassphraseAdvice )); then
         _readAdviceCount
         if (( _adviceCount <= 1 )); then
-            local choiceIndex
+            local choiceIndex phrase i
             _showPrivateKeyPassphraseAdvice
             confirm "Do you already have a strong, memorable passphrase?" no yes choiceIndex || bye
             if (( choiceIndex == 0 )); then
-                show nl "Ok, here a some randomly generated ones to choose from:" nl
-                for i in {1..10}; do
-                    generatePassphrase
+                show nl "Ok, here are some randomly generated ones to choose from:" nl
+                for (( i = 0; i < 10; i++ )); do
+                    generatePassphrase phrase
+                    show "  " bold cyan "${phrase}"
                 done
                 echo
                 confirm "Does one of these work for you?" yep nope choiceIndex || bye
                 if (( choiceIndex == 1 )); then
-                    show "Ok. If you want to do this later, run:" primary "valt pass"
+                    show "Ok. If you want to do this later, run:" primary "valt passphrase"
                     _setAdviceCount 1
                     bye
                 fi
@@ -546,16 +547,16 @@ _maybeOfferPassphraseAdvice() {
 
 _showPrivateKeyPassphraseAdvice() {
     echo "Normally you will need only a single key pair for all your file encryption needs. Your new private key will itself"
-    echo "be encrypted so that it can be safely stored anywhere: the password you enter here will be" italic "required" "to use it."
+    show "be encrypted so that it can be safely stored anywhere: the password you enter here will be" italic "required" "to use it."
     echo "You'll be prompted to enter it twice for verification during key generation."
     echo
-    echo "Rather than a typical password, a multi word 'passphrase' is a" italic "much" "better choice since it is far easier to"
-    echo "remember. Just as with a password manager, the idea is that you remember" bold "one" "secret that gives you access to a"
+    show "Rather than a typical password, a multi word 'passphrase' is a" italic "much" "better choice since it is far easier to"
+    show "remember. Just as with a password manager, the idea is that you remember" bold "one" "secret that gives you access to"
     show "all of your encrypted data. Since human memory" bold italic "is" "fallible, it is extremely important that you keep"
     show "copies on paper somewhere secure (e.g. a safe-deposit box, home safe, trusted family or friend) in case you forget or"
     show "become incapacitated. Your private key (valt.key) can be printed and stored along with it."
     echo
-    echo "If you use a password manager (" italic "strongly recommended" glue "), definitely store the keys and password in it!"
+    show "If you use a password manager (" glue italic "strongly recommended" glue "), definitely store the keys and password in it!"
     echo
     echo "When you create a key pair, valt will generate a document containing your private key along with instructions for use."
     echo "This document is intended to be the 'paper copy' that you store somewhere secure. It will contain your passphrase, "

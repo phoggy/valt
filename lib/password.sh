@@ -12,22 +12,23 @@
 #   [maxLength] (int)       Maximum password length (default: 32).
 
 generatePassword() {
-    local -n resultVarRef=$1
-    local -i minLength="${2:-24}"
-    local -i maxLength="${3:-32}"
-    local -i passwordLength=$(( ${minLength} + ( ${RANDOM} % ( ${maxLength} - ${minLength} ) ) ))
-    local charSet=( a b c d e f g h i j k l m n o p q r s t u v w x y z A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \
-                    0 1 2 3 4 5 6 7 8 9 '!' '@' '#' '$' '%' '^' '&' '*' )
-    local -i charSetLen=${#charSet[@]}
-    local -i i
-    local -i index
-    local password=''
+    local -n _passwordRef=$1
+    local -i _minLength="${2:-24}"
+    local -i _maxLength="${3:-32}"
+    local -i _extraLength=0
+    (( _maxLength > _minLength )) && randomInteger _extraLength $(( _maxLength - _minLength ))
+    local -i _passwordLength=$(( _minLength + _extraLength ))
+    local _charSet=( a b c d e f g h i j k l m n o p q r s t u v w x y z A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \
+                     0 1 2 3 4 5 6 7 8 9 '!' '@' '#' '$' '%' '^' '&' '*' )
+    local -i _charSetLen=${#_charSet[@]}
+    local -i _i _index
+    local _password=''
 
-    for (( i = 0; i < ${passwordLength}; i++ )); do
-        randomInteger index ${charSetLen}
-        password+=${charSet[${index}]}
+    for (( _i = 0; _i < ${_passwordLength}; _i++ )); do
+        randomInteger _index $(( _charSetLen - 1 ))
+        _password+=${_charSet[${_index}]}
     done
-    resultVarRef="${password}"
+    _passwordRef="${_password}"
 }
 
 # ◇ Generates a random passphrase using the Orchard Street Long word list (17,576 words) via phraze.
@@ -39,12 +40,12 @@ generatePassword() {
 #   [separator] (string)    String placed between words (default: ' ').
 
 generatePassphrase() {
-    local -n resultVarRef=$1
-    local -i wordCount="${2:-5}"
-    local separator="${3:- }"
-    local list='l' # Use Orchard Street Long List (17,576 words)
-    local phrase; phrase="${ phraze  --list "${list}" --sep "${separator}" --words "${wordCount}"; }"
-    resultVarRef="${phrase}"
+    local -n _phraseRef=$1
+    local -i _wordCount="${2:-5}"
+    local _separator="${3:- }"
+    local _list='l' # Use Orchard Street Long List (17,576 words)
+    local _phrase; _phrase="${ phraze --list "${_list}" --sep "${_separator}" --words "${_wordCount}"; }"
+    _phraseRef="${_phrase}"
 }
 
 # ◇ Interactively prompts for a password twice and stores the verified result in resultVarRef.

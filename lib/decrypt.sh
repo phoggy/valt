@@ -103,7 +103,7 @@ _age() {
                 cursorUpOneAndEraseLine
                 cursorUpOneAndEraseLine
             else
-                readPassword "${prompt}" phraze 30 false || fail
+                readPassword "${prompt}" phraze || fail
                 cursorUpOneAndEraseLine
             fi
         fi

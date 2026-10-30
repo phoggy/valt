@@ -156,7 +156,7 @@ getPin() {
         p1="${rayvnTest_ValtKeyPassphrase}"
     else
         describe "${description}"
-        readPassword "${mainPrompt}" p1 ${timeout} true || { respond "${cancelledError}"; return; }
+        readPassword "${mainPrompt}" p1 '' '' ${timeout} || { respond "${cancelledError}"; return; }
         if [[ ${p1} == '' ]]; then
             respond "${emptyPinError}"
             return
@@ -165,7 +165,7 @@ getPin() {
             local retries=3
             while (( retries > 0 )); do
                 log "calling readPassword ${confirmPrompt}"
-                readPassword "   ${confirmPrompt}" p2 ${timeout} false  || { respond "${cancelledError}"; return; }
+                readPassword "   ${confirmPrompt}" p2 '' '' ${timeout} || { respond "${cancelledError}"; return; }
                 if [[ ${p2} == '' ]]; then
                     respond "${emptyPinError}"
                     return
