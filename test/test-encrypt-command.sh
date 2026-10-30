@@ -5,6 +5,7 @@ main() {
 
     # encrypt
     testEncryptDefaults
+    testEncryptRemindsPaperKey
     testEncryptRecipientBeforeFile
     testEncryptRecipientFiles
     testEncryptNoSelf
@@ -82,6 +83,12 @@ testEncryptDefaults() {
     assertEqual 0 $? "valt decrypt must succeed: ${output}"
     [[ ${output} != *"No signature found"* ]] || fail "signed file must not warn about a missing signature"
     assertEqual 'secret content' "${ cat "${file}"; }"
+}
+
+testEncryptRemindsPaperKey() {
+    local file; newPlainFile file
+    local output; output="${ valt encrypt -i "${keyFile}" "${file}" 2>&1; }"
+    assertContains "No paper key backup exists" "${output}"
 }
 
 testEncryptRecipientBeforeFile() {

@@ -12,7 +12,7 @@ main() {
     testDecryptRequiresOutputForOtherNames
     testDecryptVerifiesSignature
     testDecryptFailsOnForeignSignature
-    testDecryptRemindsPaperKey
+    testDecryptDoesNotRemindPaperKey
 
     # Archives
     testDecryptExtractsArchive
@@ -111,10 +111,12 @@ testDecryptFailsOnForeignSignature() {
     assertFileDoesNotExist "${file%.age}"
 }
 
-testDecryptRemindsPaperKey() {
+# Decrypting is what heirs do (often via the recover package, which cannot run 'valt paper'), so no reminder.
+
+testDecryptDoesNotRemindPaperKey() {
     local file; newEncryptedFile file
     local output; output="${ valt decrypt -i "${keyFile}" "${file}" 2>&1; }"
-    assertContains "No paper key backup exists" "${output}"
+    [[ ${output} != *"No paper key backup exists"* ]] || fail "decrypt must not remind about the paper key"
 }
 
 testDecryptExtractsArchive() {

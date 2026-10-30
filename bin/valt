@@ -628,7 +628,6 @@ paperCmd() {
 }
 
 decryptCmd() {
-    require 'valt/paper-keys'
     local file="${_args[0]}"
     local keyFile; keyFile="${ identityKeyFile; }"
     assertFile "${keyFile}" "private key file"
@@ -638,7 +637,6 @@ decryptCmd() {
     else
         decryptFile "${file}" "${keyFile}"
     fi
-    remindPaperKey "${keyFile}"
 }
 
 encryptCmd() {
@@ -718,22 +716,19 @@ archiveCreateCmd() {
 }
 
 archiveVerifyCmd() {
-    require 'valt/paper-keys' 'valt/archive'
+    require 'valt/archive'
     local archive="${_args[0]}"
     local keyFile; keyFile="${ identityKeyFile; }"
     assertFile "${keyFile}" "private key file"
     show "Verifying secure archive" cyan "${ tildePath "${archive}"; }"
     verifySecureArchive "${archive}" -i "${keyFile}" || fail
     show "Signatures verified for" bold "${ tildePath "${archive}"; }"
-    remindPaperKey "${keyFile}"
 }
 
 archiveExtractCmd() {
-    require 'valt/paper-keys'
     local keyFile; keyFile="${ identityKeyFile; }"
     assertFile "${keyFile}" "private key file"
     extractArchive "${_args[0]}" "${keyFile}" "${_opts['output-dir']:-${PWD}}"
-    remindPaperKey "${keyFile}"
 }
 
 SECTION="--+-+-----+-++(-++(---++++(---+( SHARED FUNCTIONS )+---)++++---)++-)++-+------+-+--"

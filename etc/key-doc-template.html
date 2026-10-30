@@ -165,32 +165,67 @@
         <p>The passphrase used when the key was created is likely printed on the Passphrase page of this document, but it may be
             stored separately. In the latter case, there may be hints on where to find it in the Notes section.</p>
 
-        <p>You need a command line tool that performs <a href="https://github.com/C2SP/C2SP/blob/main/age.md">age file
-            encryption and decryption</a>:</p>
+        <p>You need one of the following:</p>
 
         <ul>
-            <li><a href="https://github.com/FiloSottile/age">age 1.3.0+ </a></li>
-            <li>Another implementation chosen from <a href="https://github.com/FiloSottile/age">here</a>, so long as it supports
-                the -pq option with the keygen command.</li>
-            <li>The code used to create this document, as it is a fancy convenience wrapper around <code>age</code>. Source and
-                instructions can be found at <a href="https://github.com/phoggy/valt">github.com/phoggy/valt</a>.</li>
+            <li><a href="https://nixos.org/download/">Nix</a>, which can download and run the valt recovery tool for you
+                (recommended).</li>
+            <li><code>valt</code>, the tool used to create this document. Source and instructions can be found at
+                <a href="https://github.com/phoggy/valt">github.com/phoggy/valt</a>.</li>
+            <li>A command line tool that performs <a href="https://github.com/C2SP/C2SP/blob/main/age.md">age file
+                encryption and decryption</a>, such as <a href="https://github.com/FiloSottile/age">age 1.3.0+</a>, plus
+                <code>tar</code>, which is included with macOS and Linux. Another age implementation will work, so long as
+                it supports post-quantum (<code>-pq</code>) keys.</li>
         </ul>
 
-        <h2>Decrypting A File</h2>
+        <h2>What You May Find</h2>
 
-        <p>If you have <a href="https://nixos.org/download/">Nix</a> installed, the simplest way to decrypt is:</p>
+        <ul>
+            <li><strong>An encrypted file</strong> ending in <code>.age</code>, possibly with a matching
+                <code>.age.minisig</code> signature file next to it. Keep the two together.</li>
+            <li><strong>A secure archive</strong> ending in <code>.valt</code>, containing any number of files and directories.
+                You may also find a matching <code>.valt.pub</code> file; it contains no secrets and is not needed.</li>
+        </ul>
 
-        <pre><code>nix run github:phoggy/valt#recover -- decrypt -i KEY_FILE ENCRYPTED_FILE</code></pre>
+        <h2>Decrypting With The Recovery Tool</h2>
 
-        <p>This downloads and runs the recovery tool automatically — no other software needs to be installed.</p>
+        <p>If you have Nix installed, open a terminal, change to the directory containing the encrypted file or archive, and
+            run:</p>
 
-        <p>If you installed <code>age</code>:</p>
+        <pre><code>nix run github:phoggy/valt#recover -- decrypt FILE -i KEY_FILE</code></pre>
 
-        <pre><code>rage -d -i YOUR_KEY_FILE -o DECRYPTED_FILE ENCRYPTED_FILE</code></pre>
+        <p>This downloads and runs the recovery tool automatically; no other software needs to be installed. If Nix reports
+            that flakes are not enabled, add <code>--extra-experimental-features 'nix-command flakes'</code> immediately after
+            <code>nix</code>.</p>
 
-        <p>If you installed <code>valt</code>:</p>
+        <p>If you installed <code>valt</code>, the equivalent is:</p>
 
-        <pre><code>valt decrypt -i YOUR_KEY_FILE -o DECRYPTED_FILE ENCRYPTED_FILE</code></pre>
+        <pre><code>valt decrypt FILE -i KEY_FILE</code></pre>
+
+        <p>Replace <code>FILE</code> with the <code>.age</code> or <code>.valt</code> file and <code>KEY_FILE</code> with the
+            private key file. You will be prompted for the passphrase that protects the private key.</p>
+
+        <ul>
+            <li>An encrypted file is decrypted next to the original, without the <code>.age</code> suffix. If a signature file
+                is present it is checked first, and decryption stops if the file has been tampered with.</li>
+            <li>A secure archive is verified and its contents are extracted into the current directory. Use
+                <code>-o DIRECTORY</code> to extract somewhere else.</li>
+        </ul>
+
+        <h2>Decrypting Manually</h2>
+
+        <p>For an encrypted file, using <code>age</code>:</p>
+
+        <pre><code>age -d -i KEY_FILE -o DECRYPTED_FILE FILE.age</code></pre>
+
+        <p>This skips the signature check, which requires valt.</p>
+
+        <p>For a secure archive, first unpack it, which needs no key:</p>
+
+        <pre><code>tar xJf FILE.valt</code></pre>
+
+        <p>Then follow the instructions in the <code>README.txt</code> file it contains. They use <code>age</code> to decrypt,
+            <code>tar</code> to unpack, and optionally <code>minisign</code> to confirm nothing has been tampered with.</p>
 
         <p>In all cases you will be prompted to enter the passphrase that protects the private key.</p>
 
