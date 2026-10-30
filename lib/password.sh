@@ -49,7 +49,8 @@ generatePassphrase() {
 }
 
 # ◇ Interactively prompts for a password twice and stores the verified result in resultVarRef.
-#   Fails if the entries do not match or the first entry is empty.
+#   Fails if the entries do not match or the first entry is empty. Returns 1 if the strength test (when requested)
+#   finds the first entry unsafe, after showing why.
 #
 # · ARGS
 #
@@ -68,7 +69,7 @@ readConfirmedPassword() {
     local _testThreatLevel="${4:-}"
     local _timeout="${5:-30}"
     local _confirmPrompt; _confirmPrompt="${ padString "Confirm" ${#_prompt} before; }"
-    readPassword "${_prompt}" _p1 "${_testUseCase}" "${_testThreatLevel}" "${_timeout}" || fail
+    readPassword "${_prompt}" _p1 "${_testUseCase}" "${_testThreatLevel}" "${_timeout}" || return 1
     [[ ${_p1} == '' ]] && fail "cancelled" > ${terminal}
     readPassword "${_confirmPrompt}" _p2 '' '' "${_timeout}" || fail
     [[ ${_p1} == "${_p2}" ]] || fail "entries do not match" > ${terminal}

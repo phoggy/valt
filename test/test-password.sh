@@ -6,6 +6,7 @@ main() {
     testReadPasswordDefaultsToNoStrengthCheck
     testReadPasswordChecksStrengthForUseCase
     testReadPasswordCallersUseCurrentSignature
+    testReadConfirmedPasswordReturnsOnWeak
     testGeneratePassphrase
     testGeneratePassword
 
@@ -25,13 +26,14 @@ init() {
     declare -g typedPassword='typed-passphrase'
     declare -gi strengthChecks=0
     declare -g strengthUseCase=''
+    declare -gi strengthResult=0
     secureRequest() { local -n _typedRef=$2; _typedRef="${typedPassword}"; }
     cursorUpToColumn() { :; }
     passwordStrength() {
         (( strengthChecks++ ))
         strengthUseCase="$2"
         local -n _reportRef=$5; _reportRef=('ok')
-        return 0
+        return ${strengthResult}
     }
 }
 
@@ -50,6 +52,17 @@ testReadPasswordChecksStrengthForUseCase() {
     assertEqual "${typedPassword}" "${password}"
     assertEqual 1 "${strengthChecks}" "strength must be checked once"
     assertEqual 'file' "${strengthUseCase}"
+}
+
+# A weak first entry must return 1 to the caller (which decides what to do), not exit.
+
+testReadConfirmedPasswordReturnsOnWeak() {
+    strengthResult=1
+    local password result
+    readConfirmedPassword "Enter passphrase" password file > /dev/null 2>&1; result=$?
+    strengthResult=0
+    assertEqual 1 "${result}" "a weak passphrase must return 1"
+    assertEqual '' "${password}" "a weak passphrase must not be returned"
 }
 
 # The third argument was once the timeout; passing one there is treated as an unknown use case.

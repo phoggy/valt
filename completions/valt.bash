@@ -74,7 +74,7 @@ __valtComplete() {
                     local _relIdx=$(( cword - 2 ))
                     ;;
                 keys)
-                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--css --force --help --key-info --name --no-advice --no-pdf --no-verify --output-dir --quick --template -c -f -h -k -n -o -q -t" -- "${cur}")); return; }
+                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--allow-weak-passphrase --css --force --help --key-info --name --no-advice --no-pdf --no-verify --output-dir --quick --template -c -f -h -k -n -o -q -t" -- "${cur}")); return; }
                     case "${prev}" in
                         --css|-c) COMPREPLY=($(compgen -f -- "${cur}")); return ;;
                         --key-info|-k) COMPREPLY=($(compgen -f -- "${cur}")); return ;;

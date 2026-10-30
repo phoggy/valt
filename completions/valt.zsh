@@ -98,8 +98,9 @@ _valt() {
                     ;;
                 keys)
                     _arguments \
+                    '(--allow-weak-passphrase)'--allow-weak-passphrase'[Accept a passphrase that fails the strength and breach check. Not recommended: the passphrase is all that protects the private key.]' \
                     '(--css -c)'{--css,-c}'[CSS file with style overrides to apply for PDF generation.]:css:_files' \
-                    '(--force -f)'{--force,-f}'[Overwrite existing key files.]' \
+                    '(--force -f)'{--force,-f}'[Replace existing key files, once the new ones have been created.]' \
                     '(--help -h)'{--help,-h}'[Print this help message.]' \
                     '(--key-info -k)'{--key-info,-k}'[Key info file to use instead of the default for PDF generation.]:key-info:_files' \
                     '(--name -n)'{--name,-n}'[Name to use for key files, e.g. bob -> bob.pub, bob.key.]:name:' \

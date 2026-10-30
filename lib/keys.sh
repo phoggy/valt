@@ -94,6 +94,12 @@
 #   newValtKeys                      # creates valt.pub and valt.key files in the ~/.config/valt/ directory.
 #   newValtKeys - - pubFile keyFile  # same as above but assigns key paths to pubFile keyFile vars.
 #   newValtKeys frodo                # creates frodo.pub and frodo.key in the ~/.config/valt/ directory.
+#
+# · ENV VARS
+#
+#   allowWeakKeyPassphrase   When set and non-zero, accepts a passphrase that fails the strength and breach check (default:
+#                            the passphrase is rejected, since it is all that protects the private key).
+#   skipKeyPassphraseAdvice  When set and non-zero, skips the passphrase advice.
 
 newValtKeys() {
     local keyName="${1:--}"
@@ -175,7 +181,11 @@ newValtKeys() {
 
     # Encrypt the private key directly to the key file
 
-    printf "%s\n" "${plainPrivate[@]}" | _age --encrypt --passphrase --confirm > "${_keyFile}" || fail
+    # The passphrase must be strong unless allowWeakKeyPassphrase is set
+
+    local -a strengthArgs=(--check-strength)
+    (( allowWeakKeyPassphrase )) && strengthArgs=()
+    printf "%s\n" "${plainPrivate[@]}" | _age --encrypt --passphrase --confirm "${strengthArgs[@]}" > "${_keyFile}" || { rm -f "${_keyFile}"; fail; }
     chmod 600 "${_keyFile}" 2> /dev/null
 
     # Write public key

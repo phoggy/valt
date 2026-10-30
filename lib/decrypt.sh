@@ -60,6 +60,19 @@ PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/encrypt' PRIVA
 
 _init_valt_decrypt() {
     require 'valt/password' 'rayvn/terminal'
+    declare -gr _weakPassphraseMessage="Passphrase rejected as unsafe to protect a private key. Generate a strong one with 'valt passphrase', or see 'valt keys --help'."
+}
+
+# Fails, showing the strength report, if the passphrase in the named var is unsafe for protecting a file.
+
+_assertPassphraseStrength() {
+    local _apsScore _apsLine
+    local -a _apsReport=()
+    passwordStrength "$1" file '' _apsScore _apsReport && return 0
+    for _apsLine in "${_apsReport[@]}"; do
+        echo "${_apsLine}" > "${terminalErr}"
+    done
+    fail "${_weakPassphraseMessage}"
 }
 
 # TODO: return 1 instead of fail so caller could recover? Requires change / replace assertCommand!
@@ -68,6 +81,7 @@ _age() {
     local ageArgs=()
     local requiresPassphrase=0
     local confirmPassphrase=0
+    local checkStrength=0
     local passphraseFor=
     local keyFile
 
@@ -77,6 +91,7 @@ _age() {
             --passphrase-for) shift; assertFile "$1"; requiresPassphrase=1 passphraseFor="$1" ;;
             --passphrase) requiresPassphrase=1 ;;
             --confirm) confirmPassphrase=1 ;;
+            --check-strength) checkStrength=1 ;;
             *) ageArgs+=("$1") ;;
         esac
         shift
@@ -91,6 +106,7 @@ _age() {
         local phraze
         if [[ -n ${rayvnTest_ValtKeyPassphrase} ]]; then
             phraze="${rayvnTest_ValtKeyPassphrase}"
+            (( checkStrength && rayvnTest_CheckKeyPassphraseStrength )) && _assertPassphraseStrength phraze
         else
             local prompt="Enter passphrase"
             if [[ -n "${passphraseFor}" ]]; then
@@ -98,7 +114,11 @@ _age() {
                 prompt+="${ show " for" blue "${path}"; }"
             fi
 
-            if (( confirmPassphrase )); then
+            if (( confirmPassphrase && checkStrength )); then
+                readConfirmedPassword "${prompt}" phraze file || fail "${_weakPassphraseMessage}"
+                cursorUpOneAndEraseLine
+                cursorUpOneAndEraseLine
+            elif (( confirmPassphrase )); then
                 readConfirmedPassword "${prompt}" phraze || fail
                 cursorUpOneAndEraseLine
                 cursorUpOneAndEraseLine
@@ -127,7 +147,7 @@ _age() {
         fi
 
         exec {passFd}<&- # close the fd
-        eraseVars phrase
+        eraseVars phraze
 
     else
         assertCommand --transform _ageError age ${operation} "${ageArgs[@]}"

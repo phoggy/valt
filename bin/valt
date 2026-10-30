@@ -45,7 +45,8 @@ declare -gA cliSpec=(
     # documentation. A strong passphrase is highly encouraged; advice and an opportunity to generate one will be offered.
     #   --name        Name to use for key files, e.g. bob -> bob.pub, bob.key.
     #   --output-dir  Directory for the key files (default: the valt config directory).
-    #   --force       Overwrite existing key files.
+    #   --force       Replace existing key files, once the new ones have been created.
+    #   --allow-weak-passphrase  Accept a passphrase that fails the strength and breach check. Not recommended: the passphrase is all that protects the private key.
     #   --no-verify   Do not verify keys.
     #   --no-advice   Do not show passphrase advice.
     #   --quick       Same as --no-advice --no-verify.
@@ -70,7 +71,7 @@ declare -gA cliSpec=(
     # default template and primary CSS file can be found in the valt 'etc' directory. Template
     # substitutions are performed with variables defined in the key.info file. Note that keys prefixed
     # with an underscore are reserved for system use.
-    ['keys']='keys(--name|-n:str=valt --output-dir|-o:dir --force|-f --no-verify --no-advice --quick|-q --no-pdf --key-info|-k:file --template|-t:file --css|-c:file --help|-h)'
+    ['keys']='keys(--name|-n:str=valt --output-dir|-o:dir --force|-f --allow-weak-passphrase --no-verify --no-advice --quick|-q --no-pdf --key-info|-k:file --template|-t:file --css|-c:file --help|-h)'
 
     # Generate the paper key PDF for an existing key pair, personalized from the key.info file. The PDF is written
     # next to the key and replaces any existing one, so this can be re-run whenever key.info changes. The passphrase
@@ -496,15 +497,17 @@ parseKeysArgs() {
     local _value
     while (( $# > 0 )); do
         case "$1" in
-            --css | -c) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --css"; assertFile "$2"; _opts+=(['css']="$2"); shift 2 ;;
+            --allow-weak-passphrase) _opts+=(['allow-weak-passphrase']="1"); shift ;;
+            --allow-weak-passphrase=*) fail "--allow-weak-passphrase does not accept a value" ;;
+            --css | -c) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--allow-weak-passphrase|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --css"; assertFile "$2"; _opts+=(['css']="$2"); shift 2 ;;
             --css=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --css"; assertFile "${_value}"; _opts+=(['css']="${_value}"); shift ;;
             --force | -f) _opts+=(['force']="1"); shift ;;
             --force=*) fail "--force does not accept a value" ;;
             --help | -h) _opts+=(['help']="1"); shift ;;
             --help=*) fail "--help does not accept a value" ;;
-            --key-info | -k) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --key-info"; assertFile "$2"; _opts+=(['key-info']="$2"); shift 2 ;;
+            --key-info | -k) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--allow-weak-passphrase|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --key-info"; assertFile "$2"; _opts+=(['key-info']="$2"); shift 2 ;;
             --key-info=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --key-info"; assertFile "${_value}"; _opts+=(['key-info']="${_value}"); shift ;;
-            --name | -n) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --name"; _opts+=(['name']="$2"); shift 2 ;;
+            --name | -n) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--allow-weak-passphrase|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --name"; _opts+=(['name']="$2"); shift 2 ;;
             --name=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --name"; _opts+=(['name']="${_value}"); shift ;;
             --no-advice) _opts+=(['no-advice']="1"); shift ;;
             --no-advice=*) fail "--no-advice does not accept a value" ;;
@@ -512,11 +515,11 @@ parseKeysArgs() {
             --no-pdf=*) fail "--no-pdf does not accept a value" ;;
             --no-verify) _opts+=(['no-verify']="1"); shift ;;
             --no-verify=*) fail "--no-verify does not accept a value" ;;
-            --output-dir | -o) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --output-dir"; assertDirectory "$2"; _opts+=(['output-dir']="$2"); shift 2 ;;
+            --output-dir | -o) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--allow-weak-passphrase|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --output-dir"; assertDirectory "$2"; _opts+=(['output-dir']="$2"); shift 2 ;;
             --output-dir=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --output-dir"; assertDirectory "${_value}"; _opts+=(['output-dir']="${_value}"); shift ;;
             --quick | -q) _opts+=(['quick']="1"); shift ;;
             --quick=*) fail "--quick does not accept a value" ;;
-            --template | -t) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --template"; assertFile "$2"; _opts+=(['template']="$2"); shift 2 ;;
+            --template | -t) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--allow-weak-passphrase|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --template"; assertFile "$2"; _opts+=(['template']="$2"); shift 2 ;;
             --template=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --template"; assertFile "${_value}"; _opts+=(['template']="${_value}"); shift ;;
             --) shift; (( $# == 0 )) || unknownArg "$1" ;;
             *) unknownArg "$1" ;;
@@ -531,13 +534,16 @@ keysCmdUsage() {
     show bold "backup documentation. A strong passphrase is highly encouraged; advice and an opportunity to"
     show bold "generate one will be offered."
     echo
-    show "Usage:" bold blue "valt keys" "[--css CSS] [--force] [--key-info KEY-INFO] [--name NAME] [--no-advice] [--no-pdf]"
-    echo "                 [--no-verify] [--output-dir OUTPUT-DIR] [--quick] [--template TEMPLATE]"
+    show "Usage:" bold blue "valt keys" "[--allow-weak-passphrase] [--css CSS] [--force] [--key-info KEY-INFO] [--name NAME]"
+    echo "                 [--no-advice] [--no-pdf] [--no-verify] [--output-dir OUTPUT-DIR] [--quick]"
+    echo "                 [--template TEMPLATE]"
     echo
     option "--name, -n NAME" "Name to use for key files, e.g. bob -> bob.pub, bob.key. (default:" 33
     option "" "valt)" 33
     option "--output-dir, -o OUTPUT-DIR" "Directory for the key files (default: the valt config directory)." 33
-    option "--force, -f" "Overwrite existing key files." 33
+    option "--force, -f" "Replace existing key files, once the new ones have been created." 33
+    option "--allow-weak-passphrase" "Accept a passphrase that fails the strength and breach check. Not" 33
+    option "" "recommended: the passphrase is all that protects the private key." 33
     option "--no-verify" "Do not verify keys." 33
     option "--no-advice" "Do not show passphrase advice." 33
     option "--quick, -q" "Same as --no-advice --no-verify." 33
@@ -773,15 +779,14 @@ keysCmd() {
     local verify=1
     (( _opts['no-verify'] || _opts['quick'] )) && verify=0
     (( _opts['no-advice'] || _opts['quick'] )) && declare -gx skipKeyPassphraseAdvice=1
+    (( _opts['allow-weak-passphrase'] )) && declare -gx allowWeakKeyPassphrase=1
 
-    if (( _opts['force'] )); then
-        rm -f "${publicKeyFile}" "${privateKeyFile}"
-    else
+    if (( ! _opts['force'] )); then
         assertFileDoesNotExist "${privateKeyFile}"
         assertFileDoesNotExist "${publicKeyFile}"
     fi
 
-    createKeys "${name}" "${outputDir}" "${publicKeyFile}" "${privateKeyFile}" ${verify}
+    createKeys "${name}" "${outputDir}" "${publicKeyFile}" "${privateKeyFile}" ${verify} "${_opts['force']:-0}"
 
     (( _opts['no-pdf'] )) && return 0
     if isKeyInfoComplete "${_opts['key-info']}"; then
@@ -982,11 +987,21 @@ readSecret() {
 }
 
 createKeys() {
-    local name="$1" outputDir="$2" publicKeyFile="$3" privateKeyFile="$4" verify=$5
+    local name="$1" outputDir="$2" publicKeyFile="$3" privateKeyFile="$4" verify=$5 replace=$6
     echo
     header -u "Generating Keys"
 
-    newValtKeys "${name}" "${outputDir}" || fail
+    # When replacing, create the new keys elsewhere first, so that a failure (e.g. a rejected passphrase) leaves the
+    # existing keys in place.
+
+    if (( replace )); then
+        local stagingDir; stagingDir="${ makeTempDir; }"
+        newValtKeys "${name}" "${stagingDir}" || fail
+        mv -f "${stagingDir}/${name}.${valtPublicKeySuffix}" "${publicKeyFile}" || fail
+        mv -f "${stagingDir}/${name}.${valtPrivateKeySuffix}" "${privateKeyFile}" || fail
+    else
+        newValtKeys "${name}" "${outputDir}" || fail
+    fi
     echo
     show "Public key (aka 'recipient') file:" cyan "${ tildePath "${publicKeyFile}"; }" "(includes public signing key)"
     show "Private key (aka 'identity') file:" cyan "${ tildePath "${privateKeyFile}"; }" "(includes public key and both signing keys)"
