@@ -1,27 +1,36 @@
-<button id="theme-toggle" class="btn"></button>
-
+{% comment %} Shared rayvn site file, synced by 'rayvn pages': edit rayvn/etc/pages/_includes/nav_footer_custom.html, not the copy in a site. {% endcomment %}
+<div class="nav-footer-row">
+  <button class="theme-toggle btn" onclick="window._rayvnToggle()">☀️ Light</button>
+  {% if site.attribution %}<span class="attribution">{{ site.attribution }}</span>{% endif %}
+</div>
 <script>
-  (function () {
-    function init() {
-      var btn = document.getElementById('theme-toggle');
-      if (!btn || typeof jtd === 'undefined') return;
+(function () {
+  var KEY = 'rayvn-color-scheme';
 
-      function updateLabel() {
-        btn.textContent = jtd.getTheme() === 'dark' ? '☀️ Light mode' : '🌙 Dark mode';
-      }
+  function _darkLink()  { return document.querySelector('link[href*="just-the-docs-default.css"]'); }
+  function _lightLink() { return document.getElementById('jtd-light-stylesheet'); }
+  function _isLight()   { var l = _lightLink(); return l && l.media !== 'not all'; }
 
-      btn.addEventListener('click', function () {
-        jtd.setTheme(jtd.getTheme() === 'dark' ? 'light' : 'dark');
-        updateLabel();
-      });
+  window._rayvnSync = function () {
+    var isLight = _isLight();
+    document.querySelectorAll('.theme-toggle').forEach(function (b) {
+      b.textContent = isLight ? '🌙 Dark' : '☀️ Light';
+    });
+  };
 
-      updateLabel();
-    }
+  window._rayvnToggle = function () {
+    var goLight = !_isLight();
+    var dark = _darkLink(), light = _lightLink();
+    if (dark)  dark.media  = goLight ? 'not all' : '';
+    if (light) light.media = goLight ? ''         : 'not all';
+    localStorage.setItem(KEY, goLight ? 'light' : 'dark');
+    window._rayvnSync();
+  };
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init);
-    } else {
-      init();
-    }
-  })();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', window._rayvnSync);
+  } else {
+    window._rayvnSync();
+  }
+})();
 </script>
