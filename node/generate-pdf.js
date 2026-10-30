@@ -44,30 +44,34 @@ async function generatePDF(htmlFile, outputFile, footerTemplate) {
         ]
     });
 
-    const page = await browser.newPage();
-    await page.goto(`file://${absoluteHtmlFile}`, { waitUntil: 'networkidle0' });
+    try {
+        const page = await browser.newPage();
+        await page.goto(`file://${absoluteHtmlFile}`, { waitUntil: 'networkidle0' });
 
-    const pdfOptions = {
-        path: absoluteOutputFile,
-        format: 'Letter',
-        printBackground: true,
-        displayHeaderFooter: false
-    };
-
-    if (footerTemplate) {
-        pdfOptions.displayHeaderFooter = true;
-        pdfOptions.headerTemplate = '<div></div>'; // Empty header template
-        pdfOptions.footerTemplate = footerTemplate;
-        pdfOptions.margin = {
-            top: '1cm',
-            right: '1cm',
-            bottom: '2cm',
-            left: '1cm'
+        const pdfOptions = {
+            path: absoluteOutputFile,
+            format: 'Letter',
+            printBackground: true,
+            displayHeaderFooter: false
         };
-    }
 
-    await page.pdf(pdfOptions);
-    await browser.close();
+        if (footerTemplate) {
+            pdfOptions.displayHeaderFooter = true;
+            pdfOptions.headerTemplate = '<div></div>'; // Empty header template
+            pdfOptions.footerTemplate = footerTemplate;
+            pdfOptions.margin = {
+                top: '1cm',
+                right: '1cm',
+                bottom: '2cm',
+                left: '1cm'
+            };
+        }
+
+        await page.pdf(pdfOptions);
+    } finally {
+        // Always close, otherwise the browser keeps the process alive after an error.
+        await browser.close();
+    }
     console.log(`PDF generated: ${absoluteOutputFile}`);
 }
 
@@ -81,6 +85,9 @@ if (!htmlFile || !outputFile) {
     process.exit(1);
 }
 
-generatePDF(htmlFile, outputFile, footerTemplate).catch(console.error);
+generatePDF(htmlFile, outputFile, footerTemplate).catch((error) => {
+    console.error(error);
+    process.exit(1);
+});
 
 

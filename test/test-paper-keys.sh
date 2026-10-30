@@ -22,6 +22,7 @@ main() {
     # paper command
     testPaperGeneratesPdf
     testPaperReplacesPdf
+    testPaperRelativePaths
     testPaperUsesTemplate
     testPaperIncompleteKeyInfo
     testPaperRejectsNameAndKeyFile
@@ -174,6 +175,14 @@ testPaperReplacesPdf() {
     local output; output="${ valt paper -k "${completedInfoFile}" "${paperTestKey}" 2>&1; }"
     assertEqual 0 $? "paper must succeed: ${output}"
     assertContains "previous paper key was replaced" "${output}"
+}
+
+testPaperRelativePaths() {
+    local key; newKeyCopy key
+    cp "${completedInfoFile}" "${ dirName "${key}"; }/relative.info" || fail
+    local output; output="${ cd "${ dirName "${key}"; }" && valt paper -k relative.info "${ baseName "${key}"; }" 2>&1; }"
+    assertEqual 0 $? "paper with relative paths must succeed: ${output}"
+    assertFile "${ _paperKeyFile "${key}"; }"
 }
 
 testPaperUsesTemplate() {

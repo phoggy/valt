@@ -289,7 +289,7 @@ _createQRCodeSvg() {
 }
 
 _generateFooterTemplate() {
-    local footerClass; footerClass="${ awk '
+    local footerClass; footerClass="${ gawk '
         /^[[:space:]]*\.footer[[:space:]]*\{/ {
             print
             brace_count = 1
@@ -321,7 +321,7 @@ _generateFooterTemplate() {
 		    <span> ${author} Private Key</span>
 		    <span> ${ date '+%B %e, %Y'; }</span>
 		    <span class="page-info"> <span class="pageNumber"> </span> <span class="totalPages"> </span> </span>
-		< /div>
+		</div>
 	EOF
     # lint-skip-end
 }

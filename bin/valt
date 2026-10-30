@@ -762,7 +762,15 @@ createKeys() {
 # Generates the paper key for privateKeyFile using the key-info, template and css options.
 
 generatePaperKey() {
-    local privateKeyFile="$1"
+    local privateKeyFile keyInfoFile='' cssFile='' templateFile=''
+
+    # newPaperKey changes to a work directory, so resolve all paths first.
+
+    setFileVar privateKeyFile "$1" "private key file"
+    [[ -n ${_opts['key-info']} ]] && setFileVar keyInfoFile "${_opts['key-info']}" "key info file"
+    [[ -n ${_opts['css']} ]] && setFileVar cssFile "${_opts['css']}" "css file"
+    [[ -n ${_opts['template']} ]] && setFileVar templateFile "${_opts['template']}" "template file"
+
     local existingPdf; existingPdf="${ _paperKeyFile "${privateKeyFile}"; }"
     local replacing=0
     [[ -f "${existingPdf}" ]] && replacing=1
@@ -771,7 +779,7 @@ generatePaperKey() {
     header -u "Generating Paper Key"
 
     local paperKeyFile
-    newPaperKey "${privateKeyFile}" paperKeyFile "${_opts['key-info']}" "${_opts['css']}" "${_opts['template']}"
+    newPaperKey "${privateKeyFile}" paperKeyFile "${keyInfoFile}" "${cssFile}" "${templateFile}"
 
     echo
     show "Paper key file:" cyan "${ tildePath "${paperKeyFile}"; }"
