@@ -88,7 +88,7 @@
 
         valt = pkgs.stdenv.mkDerivation {
           pname = "valt";
-          version = "0.1.0";
+          version = "0.1.1";
           src = self;
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
@@ -169,7 +169,7 @@ EOF
         # Minimal recovery package with just decryption deps
         valtRecover = pkgs.stdenv.mkDerivation {
           pname = "valt-recover";
-          version = "0.1.0";
+          version = "0.1.1";
           src = self;
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
