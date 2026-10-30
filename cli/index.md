@@ -268,7 +268,8 @@ Usage: valt passphrase [--check] [--count COUNT] [--separator SEPARATOR] [--thre
                                      professional)
     --help, -h                       Print this help message.
 
-With --check, the exit status is 0 if the passphrase appears safe to use, or 1 if not.
+With --check, the exit status is 0 if the passphrase appears safe to use, 1 if not, or 2 if it is
+strong enough but known breaches could not be checked (e.g. when offline).
 ```
 
 ### valt password
@@ -294,7 +295,8 @@ Usage: valt password [--check] [--count COUNT] [--max MAX] [--min MIN] [--threat
                                      professional)
     --help, -h                       Print this help message.
 
-With --check, the exit status is 0 if the password appears safe to use, or 1 if not.
+With --check, the exit status is 0 if the password appears safe to use, 1 if not, or 2 if it is
+strong enough but known breaches could not be checked (e.g. when offline).
 ```
 
 ### valt pwned
