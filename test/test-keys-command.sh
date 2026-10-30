@@ -6,6 +6,8 @@ main() {
     testWeakPassphraseRejected
     testWeakPassphraseAllowed
     testStrongPassphraseAccepted
+    testStrongPassphraseAcceptedOffline
+    testWeakPassphraseRejectedOffline
     testForceKeepsKeysWhenRejected
     testForceReplacesKeys
 
@@ -74,6 +76,25 @@ testStrongPassphraseAccepted() {
     local output; output="${ valtKeys "${strongPassphrase}" "${dir}"; }"
     assertEqual 0 $? "a strong passphrase must be accepted: ${output}"
     assertFile "${dir}/test.key"
+}
+
+# When the breach check cannot run, a strong passphrase is accepted with a warning; a weak one is still rejected.
+
+testStrongPassphraseAcceptedOffline() {
+    local dir; dir="${ makeTempDir; }"
+    local -x rayvnTest_PwnedApiUrl="file://${fakeApiDir}/missing"
+    local output; output="${ valtKeys "${strongPassphrase}" "${dir}"; }"
+    assertEqual 0 $? "a strong passphrase must be accepted when breaches cannot be checked: ${output}"
+    assertContains "unable to check for breaches" "${output}"
+    assertFile "${dir}/test.key"
+}
+
+testWeakPassphraseRejectedOffline() {
+    local dir; dir="${ makeTempDir; }"
+    local -x rayvnTest_PwnedApiUrl="file://${fakeApiDir}/missing"
+    local output; output="${ valtKeys "${weakPassphrase}" "${dir}"; }"
+    assertContains "Passphrase rejected" "${output}"
+    assertFileDoesNotExist "${dir}/test.key"
 }
 
 testForceKeepsKeysWhenRejected() {

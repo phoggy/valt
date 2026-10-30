@@ -8,6 +8,7 @@ main() {
     testPassphraseOptions
     testPassphraseCheckWeak
     testPassphraseCheckStrong
+    testPassphraseCheckUnchecked
 
     # password
     testPasswordOptions
@@ -84,6 +85,13 @@ testPassphraseCheckStrong() {
     assertEqual 0 $? "a strong, unbreached passphrase must pass the check: ${output}"
     assertContains "no known breaches" "${output}"
     assertContains "file attacker" "${output}"
+}
+
+testPassphraseCheckUnchecked() {
+    local phrase; phrase="${ valt passphrase -w 6 2> /dev/null; }"
+    local output; output="${ echo "${phrase}" | rayvnTest_PwnedApiUrl="file://${fakeApiDir}/missing" valt passphrase --check 2>&1; }"
+    assertEqual 2 $? "a strong passphrase that cannot be checked for breaches must exit 2: ${output}"
+    assertContains "but unable to check for breaches" "${output}"
 }
 
 # ---- password ----

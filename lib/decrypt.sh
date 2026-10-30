@@ -63,12 +63,17 @@ _init_valt_decrypt() {
     declare -gr _weakPassphraseMessage="Passphrase rejected as unsafe to protect a private key. Generate a strong one with 'valt passphrase', or see 'valt keys --help'."
 }
 
-# Fails, showing the strength report, if the passphrase in the named var is unsafe for protecting a file.
+# Fails, showing the strength report, if the passphrase in the named var is unsafe for protecting a file. Only warns if it
+# is strong enough but known breaches could not be checked.
 
 _assertPassphraseStrength() {
     local _apsScore _apsLine
     local -a _apsReport=()
-    passwordStrength "$1" file '' _apsScore _apsReport && return 0
+    passwordStrength "$1" file '' _apsScore _apsReport
+    case $? in
+        0) return 0 ;;
+        2) echo "${_apsReport[0]}" > "${terminalErr}"; return 0 ;;
+    esac
     for _apsLine in "${_apsReport[@]}"; do
         echo "${_apsLine}" > "${terminalErr}"
     done
@@ -116,8 +121,6 @@ _age() {
 
             if (( confirmPassphrase && checkStrength )); then
                 readConfirmedPassword "${prompt}" phraze file || fail "${_weakPassphraseMessage}"
-                cursorUpOneAndEraseLine
-                cursorUpOneAndEraseLine
             elif (( confirmPassphrase )); then
                 readConfirmedPassword "${prompt}" phraze || fail
                 cursorUpOneAndEraseLine

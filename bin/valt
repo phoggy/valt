@@ -154,7 +154,8 @@ declare -gA cliSpec=(
     #   --use-case      What the passphrase protects: 'file' (an encrypted file or private key, open to unlimited offline guessing) or 'account' (an online account).
     #   --threat-level  How capable an attacker to judge strength against.
     #
-    # With --check, the exit status is 0 if the passphrase appears safe to use, or 1 if not.
+    # With --check, the exit status is 0 if the passphrase appears safe to use, 1 if not, or 2 if it is
+    # strong enough but known breaches could not be checked (e.g. when offline).
     ['passphrase']='passphrase(--words|-w:+int=5 --count|-n:+int=1 --separator|-s:str --check|-c --use-case|-u:file|account=file --threat-level|-t:casual|motivated|professional|nation-state=professional --help|-h)'
 
     # Generate random passwords, or check the strength of one you enter. Passwords use letters,
@@ -166,7 +167,8 @@ declare -gA cliSpec=(
     #   --use-case      What the password protects: 'account' (an online account) or 'file' (an encrypted file or private key, open to unlimited offline guessing).
     #   --threat-level  How capable an attacker to judge strength against.
     #
-    # With --check, the exit status is 0 if the password appears safe to use, or 1 if not.
+    # With --check, the exit status is 0 if the password appears safe to use, 1 if not, or 2 if it is
+    # strong enough but known breaches could not be checked (e.g. when offline).
     ['password']='password(--min:+int=24 --max:+int=32 --count|-n:+int=1 --check|-c --use-case|-u:account|file=account --threat-level|-t:casual|motivated|professional|nation-state=professional --help|-h)'
 
     # Check whether a password or passphrase appears in a known data breach, using the HaveIBeenPwned
@@ -675,7 +677,8 @@ passphraseCmdUsage() {
     option "" "professional)" 37
     option "--help, -h" "Print this help message." 37
     echo
-    echo "With --check, the exit status is 0 if the passphrase appears safe to use, or 1 if not."
+    echo "With --check, the exit status is 0 if the passphrase appears safe to use, 1 if not, or 2 if it is"
+    echo "strong enough but known breaches could not be checked (e.g. when offline)."
     declare -F passphraseCmdUsageExtra > /dev/null && passphraseCmdUsageExtra
     bye "$@"
 }
@@ -730,7 +733,8 @@ passwordCmdUsage() {
     option "" "professional)" 37
     option "--help, -h" "Print this help message." 37
     echo
-    echo "With --check, the exit status is 0 if the password appears safe to use, or 1 if not."
+    echo "With --check, the exit status is 0 if the password appears safe to use, 1 if not, or 2 if it is"
+    echo "strong enough but known breaches could not be checked (e.g. when offline)."
     declare -F passwordCmdUsageExtra > /dev/null && passwordCmdUsageExtra
     bye "$@"
 }
