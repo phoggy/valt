@@ -150,12 +150,10 @@ EOF
           # patchShebangs rewrites #!/usr/bin/env bash to the non-interactive
           # bash, which lacks builtins like compgen. Restore the shebangs so
           # they resolve via PATH, where the wrapper provides bash-interactive.
-          # rayvn-bash is not shipped by the rayvn package, so it is replaced the same way.
           postFixup = ''
             for f in "$out/bin/.valt-wrapped" "$out/bin/.valt-pinentry-wrapped" "$out/share/valt/lib/"*.sh; do
               if [ -f "$f" ]; then
                 sed -i "1s|^#\\!.*/bin/bash.*|#!/usr/bin/env bash|" "$f"
-                sed -i "1s|^#\\!/usr/bin/env rayvn-bash$|#!/usr/bin/env bash|" "$f"
               fi
             done
           '';
@@ -222,7 +220,6 @@ EOF
             for f in "$out/bin/.valt-wrapped" "$out/bin/.valt-pinentry-wrapped" "$out/share/valt/lib/"*.sh; do
               if [ -f "$f" ]; then
                 sed -i "1s|^#\\!.*/bin/bash.*|#!/usr/bin/env bash|" "$f"
-                sed -i "1s|^#\\!/usr/bin/env rayvn-bash$|#!/usr/bin/env bash|" "$f"
               fi
             done
           '';
