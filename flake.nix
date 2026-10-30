@@ -2,10 +2,18 @@
   description = "valt - Public key file encryption";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
     flake-utils.url = "github:numtide/flake-utils";
-    rayvn.url = "github:phoggy/rayvn";
-    mrld.url = "github:phoggy/mrld";
+    rayvn = {
+      url = "github:phoggy/rayvn";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "flake-utils";
+    };
+    mrld = {
+      url = "github:phoggy/mrld";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "flake-utils";
+    };
   };
 
   outputs = { self, nixpkgs, flake-utils, rayvn, mrld }:
