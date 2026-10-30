@@ -41,6 +41,7 @@
           pkgs.age
           pkgs.gawk
           pkgs.gnused
+          pkgs.gnugrep
           pkgs.coreutils
           pkgs.gnutar
           pkgs.xz
@@ -66,6 +67,7 @@
           pkgs.minisign
           pkgs.gawk
           pkgs.gnused
+          pkgs.gnugrep
           pkgs.coreutils
           pkgs.gnutar
           pkgs.xz
