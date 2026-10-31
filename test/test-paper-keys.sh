@@ -245,7 +245,7 @@ testValtHelp() {
 
 testKeysHelp() {
     local output; output="${ valt keys --help 2>&1; }"
-    assertContains "--quick, -q" "${output}"
+    assertContains "-q, --quick" "${output}"
     assertContains "Same as --no-advice --no-verify." "${output}"
 }
 

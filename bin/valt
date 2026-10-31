@@ -283,30 +283,29 @@ archiveCreateCmdUsage() {
     show bold "(.valt.pub) that is safe to share is also created. Your own public key is always a recipient unless"
     show bold "--no-self is given. You will be prompted for the passphrase that protects your private key."
     echo
-    show "Usage:" bold blue "valt archive create" "[INPUT...] [--force] [--identity IDENTITY] [--name NAME] [--no-self]"
-    echo "                           [--output-dir OUTPUT-DIR] [--recipient RECIPIENT]... [--recipient-file"
-    echo "                           RECIPIENT-FILE]... [--user-text USER-TEXT] [--zone ZONE]"
+    show "Usage:" bold blue "valt archive create" "[INPUT...] [-f] [-i IDENTITY] [-n NAME] [--no-self] [-o OUTPUT-DIR]"
+    echo "                           [-r RECIPIENT]... [-R RECIPIENT-FILE]... [-u USER-TEXT] [-z ZONE]"
     echo
     option "INPUT..." "Files and directories to add. '-C DIR' changes to DIR" 41
     option "" "before processing the inputs that follow it; an '@'" 41
     option "" "prefixed path is a tar archive whose contents are added." 41
-    option "--identity, -i IDENTITY" "Your private key file, used to sign and to find your public" 41
+    option "-i, --identity IDENTITY" "Your private key file, used to sign and to find your public" 41
     option "" "key (the .pub file next to it); default: valt.key in the" 41
     option "" "valt config directory." 41
-    option "--recipient, -r RECIPIENT" "Also encrypt to this recipient (an age public key). Can be" 41
+    option "-r, --recipient RECIPIENT" "Also encrypt to this recipient (an age public key). Can be" 41
     option "" "repeated." 41
-    option "--recipient-file, -R RECIPIENT-FILE" "Also encrypt to the recipient(s) in this file, e.g. a valt" 41
+    option "-R, --recipient-file RECIPIENT-FILE" "Also encrypt to the recipient(s) in this file, e.g. a valt" 41
     option "" ".pub file. Can be repeated." 41
     option "--no-self" "Do not include your own public key as a recipient." 41
-    option "--name, -n NAME" "The archive file name prefix (default: your user name)." 41
-    option "--zone, -z ZONE" "The time zone for the timestamp in the archive name:" 41
+    option "-n, --name NAME" "The archive file name prefix (default: your user name)." 41
+    option "-z, --zone ZONE" "The time zone for the timestamp in the archive name:" 41
     option "" "'local' (the system time zone), 'UTC', or a name such as" 41
     option "" "'America/Los_Angeles' (default: local)." 41
-    option "--user-text, -u USER-TEXT" "Text to include in the archive's README. Can contain '\\n'." 41
-    option "--output-dir, -o OUTPUT-DIR" "The directory to write the archive to (default: the current" 41
+    option "-u, --user-text USER-TEXT" "Text to include in the archive's README. Can contain '\\n'." 41
+    option "-o, --output-dir OUTPUT-DIR" "The directory to write the archive to (default: the current" 41
     option "" "directory)." 41
-    option "--force, -f" "Overwrite an existing archive." 41
-    option "--help, -h" "Print this help message." 41
+    option "-f, --force" "Overwrite an existing archive." 41
+    option "-h, --help" "Print this help message." 41
     declare -F archiveCreateCmdUsageExtra > /dev/null && archiveCreateCmdUsageExtra
     bye "$@"
 }
@@ -339,14 +338,14 @@ archiveExtractCmdUsage() {
     echo
     show bold "Verify and extract a secure archive (.valt). Same as 'valt decrypt ARCHIVE'."
     echo
-    show "Usage:" bold blue "valt archive extract" "ARCHIVE [--identity IDENTITY] [--output-dir OUTPUT-DIR]"
+    show "Usage:" bold blue "valt archive extract" "ARCHIVE [-i IDENTITY] [-o OUTPUT-DIR]"
     echo
     option "ARCHIVE" "The secure archive (.valt)." 33
-    option "--identity, -i IDENTITY" "Your private key file (default: valt.key in the valt config" 33
+    option "-i, --identity IDENTITY" "Your private key file (default: valt.key in the valt config" 33
     option "" "directory)." 33
-    option "--output-dir, -o OUTPUT-DIR" "The existing directory to extract into (default: the current" 33
+    option "-o, --output-dir OUTPUT-DIR" "The existing directory to extract into (default: the current" 33
     option "" "directory)." 33
-    option "--help, -h" "Print this help message." 33
+    option "-h, --help" "Print this help message." 33
     declare -F archiveExtractCmdUsageExtra > /dev/null && archiveExtractCmdUsageExtra
     bye "$@"
 }
@@ -378,11 +377,11 @@ archiveVerifyCmdUsage() {
     show bold "Verify both signatures of a secure archive (.valt) without extracting it. The inner signature is"
     show bold "checked after decrypting, so you will be prompted for the passphrase that protects your private key."
     echo
-    show "Usage:" bold blue "valt archive verify" "ARCHIVE [--identity IDENTITY]"
+    show "Usage:" bold blue "valt archive verify" "ARCHIVE [-i IDENTITY]"
     echo
     option "ARCHIVE" "The secure archive (.valt)." 29
-    option "--identity, -i IDENTITY" "Your private key file (default: valt.key in the valt config directory)." 29
-    option "--help, -h" "Print this help message." 29
+    option "-i, --identity IDENTITY" "Your private key file (default: valt.key in the valt config directory)." 29
+    option "-h, --help" "Print this help message." 29
     declare -F archiveVerifyCmdUsageExtra > /dev/null && archiveVerifyCmdUsageExtra
     bye "$@"
 }
@@ -418,15 +417,15 @@ decryptCmdUsage() {
     show bold "Decrypt an encrypted file, or verify and extract a secure archive (.valt). You will be prompted for"
     show bold "the passphrase that protects the private key."
     echo
-    show "Usage:" bold blue "valt decrypt" "FILE [--force] [--identity IDENTITY] [--output OUTPUT]"
+    show "Usage:" bold blue "valt decrypt" "FILE [-f] [-i IDENTITY] [-o OUTPUT]"
     echo
     option "FILE" "The encrypted file (.age) or secure archive (.valt)." 29
-    option "--identity, -i IDENTITY" "The private key file (default: valt.key in the valt config directory)." 29
-    option "--output, -o OUTPUT" "For a file, the output file ('-' for standard output; default: FILE" 29
+    option "-i, --identity IDENTITY" "The private key file (default: valt.key in the valt config directory)." 29
+    option "-o, --output OUTPUT" "For a file, the output file ('-' for standard output; default: FILE" 29
     option "" "without .age). For an archive, the existing directory to extract into" 29
     option "" "(default: the current directory)." 29
-    option "--force, -f" "Overwrite an existing output file." 29
-    option "--help, -h" "Print this help message." 29
+    option "-f, --force" "Overwrite an existing output file." 29
+    option "-h, --help" "Print this help message." 29
     echo
     echo "If a signature file (FILE.minisig) is present, it is verified before decrypting and decryption"
     echo "stops if it does not match. A warning is shown if there is no signature. Archives always contain"
@@ -483,29 +482,28 @@ encryptCmdUsage() {
     show bold "public key is always a recipient unless --no-self is given. Use 'valt archive create' for"
     show bold "directories or multiple files."
     echo
-    show "Usage:" bold blue "valt encrypt" "FILE [--armor] [--delete] [--force] [--identity IDENTITY] [--no-self]"
-    echo "                    [--no-sign] [--output OUTPUT] [--recipient RECIPIENT]... [--recipient-file"
-    echo "                    RECIPIENT-FILE]... [--verify]"
+    show "Usage:" bold blue "valt encrypt" "FILE [-a] [--delete] [-f] [-i IDENTITY] [--no-self] [--no-sign] [-o OUTPUT]"
+    echo "                    [-r RECIPIENT]... [-R RECIPIENT-FILE]... [--verify]"
     echo
     option "FILE" "The file to encrypt." 41
-    option "--identity, -i IDENTITY" "Your private key file, used to sign and to find your public" 41
+    option "-i, --identity IDENTITY" "Your private key file, used to sign and to find your public" 41
     option "" "key (the .pub file next to it); default: valt.key in the" 41
     option "" "valt config directory." 41
-    option "--recipient, -r RECIPIENT" "Also encrypt to this recipient (an age public key). Can be" 41
+    option "-r, --recipient RECIPIENT" "Also encrypt to this recipient (an age public key). Can be" 41
     option "" "repeated." 41
-    option "--recipient-file, -R RECIPIENT-FILE" "Also encrypt to the recipient(s) in this file, e.g. a valt" 41
+    option "-R, --recipient-file RECIPIENT-FILE" "Also encrypt to the recipient(s) in this file, e.g. a valt" 41
     option "" ".pub file. Can be repeated." 41
     option "--no-self" "Do not include your own public key as a recipient." 41
     option "--no-sign" "Do not sign the encrypted file." 41
-    option "--armor, -a" "Write PEM encoded (text) output." 41
-    option "--output, -o OUTPUT" "The output file ('-' for standard output, which requires" 41
+    option "-a, --armor" "Write PEM encoded (text) output." 41
+    option "-o, --output OUTPUT" "The output file ('-' for standard output, which requires" 41
     option "" "--no-sign); default: FILE.age." 41
-    option "--force, -f" "Overwrite an existing output file." 41
+    option "-f, --force" "Overwrite an existing output file." 41
     option "--verify" "Decrypt the result with your private key and confirm it" 41
     option "" "matches FILE." 41
     option "--delete" "Delete FILE after a successful --verify. This is an" 41
     option "" "ordinary delete, not a secure erase." 41
-    option "--help, -h" "Print this help message." 41
+    option "-h, --help" "Print this help message." 41
     declare -F encryptCmdUsageExtra > /dev/null && encryptCmdUsageExtra
     bye "$@"
 }
@@ -554,25 +552,24 @@ keysCmdUsage() {
     show bold "backup documentation. A strong passphrase is highly encouraged; advice and an opportunity to"
     show bold "generate one will be offered."
     echo
-    show "Usage:" bold blue "valt keys" "[--allow-weak-passphrase] [--css CSS] [--force] [--key-info KEY-INFO] [--name NAME]"
-    echo "                 [--no-advice] [--no-pdf] [--no-verify] [--output-dir OUTPUT-DIR] [--quick]"
-    echo "                 [--template TEMPLATE]"
+    show "Usage:" bold blue "valt keys" "[--allow-weak-passphrase] [-c CSS] [-f] [-k KEY-INFO] [-n NAME] [--no-advice]"
+    echo "                 [--no-pdf] [--no-verify] [-o OUTPUT-DIR] [-q] [-t TEMPLATE]"
     echo
-    option "--name, -n NAME" "Name to use for key files, e.g. bob -> bob.pub, bob.key. (default:" 33
+    option "-n, --name NAME" "Name to use for key files, e.g. bob -> bob.pub, bob.key. (default:" 33
     option "" "valt)" 33
-    option "--output-dir, -o OUTPUT-DIR" "Directory for the key files (default: the valt config directory)." 33
-    option "--force, -f" "Replace existing key files, once the new ones have been created." 33
+    option "-o, --output-dir OUTPUT-DIR" "Directory for the key files (default: the valt config directory)." 33
+    option "-f, --force" "Replace existing key files, once the new ones have been created." 33
     option "--allow-weak-passphrase" "Accept a passphrase that fails the strength and breach check. Not" 33
     option "" "recommended: the passphrase is all that protects the private key." 33
     option "--no-verify" "Do not verify keys." 33
     option "--no-advice" "Do not show passphrase advice." 33
-    option "--quick, -q" "Same as --no-advice --no-verify." 33
+    option "-q, --quick" "Same as --no-advice --no-verify." 33
     option "--no-pdf" "Do not generate the paper key PDF." 33
-    option "--key-info, -k KEY-INFO" "Key info file to use instead of the default for PDF generation." 33
-    option "--template, -t TEMPLATE" "HTML template file to use instead of the default for PDF" 33
+    option "-k, --key-info KEY-INFO" "Key info file to use instead of the default for PDF generation." 33
+    option "-t, --template TEMPLATE" "HTML template file to use instead of the default for PDF" 33
     option "" "generation." 33
-    option "--css, -c CSS" "CSS file with style overrides to apply for PDF generation." 33
-    option "--help, -h" "Print this help message." 33
+    option "-c, --css CSS" "CSS file with style overrides to apply for PDF generation." 33
+    option "-h, --help" "Print this help message." 33
     echo
     echo "The PDF contains your keys, also in encrypted form, to serve as a backup for you and/or your"
     echo "successors, along with detailed usage instructions. Keys are represented as a QR code and again in"
@@ -627,15 +624,15 @@ paperCmdUsage() {
     show bold "written next to the key and replaces any existing one, so this can be re-run whenever key.info"
     show bold "changes. The passphrase is not required, since the private key is included in its encrypted form."
     echo
-    show "Usage:" bold blue "valt paper" "[KEY_FILE] [--css CSS] [--key-info KEY-INFO] [--name NAME] [--template TEMPLATE]"
+    show "Usage:" bold blue "valt paper" "[KEY_FILE] [-c CSS] [-k KEY-INFO] [-n NAME] [-t TEMPLATE]"
     echo
     option "KEY_FILE" "The private key file (default: valt.key in the valt config directory)." 29
-    option "--name, -n NAME" "Use the NAME.key file in the valt config directory, e.g. bob ->" 29
+    option "-n, --name NAME" "Use the NAME.key file in the valt config directory, e.g. bob ->" 29
     option "" "bob.key." 29
-    option "--key-info, -k KEY-INFO" "Key info file to use instead of the default." 29
-    option "--template, -t TEMPLATE" "HTML template file to use instead of the default." 29
-    option "--css, -c CSS" "CSS file with style overrides to apply." 29
-    option "--help, -h" "Print this help message." 29
+    option "-k, --key-info KEY-INFO" "Key info file to use instead of the default." 29
+    option "-t, --template TEMPLATE" "HTML template file to use instead of the default." 29
+    option "-c, --css CSS" "CSS file with style overrides to apply." 29
+    option "-h, --help" "Print this help message." 29
     echo
     echo "Please ensure that you print at least one copy of the PDF file and write your passphrase on the"
     echo "last page (or leave the passphrase blank and add instructions on where to find it in the Notes"
@@ -678,22 +675,21 @@ passphraseCmdUsage() {
     show bold "chosen at random from a list of 17,576, so they are much easier to remember than random passwords of"
     show bold "similar strength."
     echo
-    show "Usage:" bold blue "valt passphrase" "[--check] [--count COUNT] [--separator SEPARATOR] [--threat-level"
-    echo "                       THREAT-LEVEL] [--use-case file|account] [--words WORDS]"
+    show "Usage:" bold blue "valt passphrase" "[-c] [-n COUNT] [-s SEPARATOR] [-t THREAT-LEVEL] [-u file|account] [-w WORDS]"
     echo
-    option "--words, -w WORDS" "The number of words in each passphrase. (default: 5)" 37
-    option "--count, -n COUNT" "The number of passphrases to generate. (default: 1)" 37
-    option "--separator, -s SEPARATOR" "The text between words (default: a space)." 37
-    option "--check, -c" "Instead of generating, prompt for a passphrase and report its" 37
+    option "-w, --words WORDS" "The number of words in each passphrase. (default: 5)" 37
+    option "-n, --count COUNT" "The number of passphrases to generate. (default: 1)" 37
+    option "-s, --separator SEPARATOR" "The text between words (default: a space)." 37
+    option "-c, --check" "Instead of generating, prompt for a passphrase and report its" 37
     option "" "strength and whether it appears in a known breach. Reads from" 37
     option "" "standard input if it is not a terminal." 37
-    option "--use-case, -u file|account" "What the passphrase protects: 'file' (an encrypted file or" 37
+    option "-u, --use-case file|account" "What the passphrase protects: 'file' (an encrypted file or" 37
     option "" "private key, open to unlimited offline guessing) or 'account'" 37
     option "" "(an online account). (default: file)" 37
-    option "--threat-level, -t THREAT-LEVEL" "How capable an attacker to judge strength against. One of:" 37
+    option "-t, --threat-level THREAT-LEVEL" "How capable an attacker to judge strength against. One of:" 37
     option "" "casual, motivated, professional, nation-state. (default:" 37
     option "" "professional)" 37
-    option "--help, -h" "Print this help message." 37
+    option "-h, --help" "Print this help message." 37
     echo
     echo "With --check, the exit status is 0 if the passphrase appears safe to use, 1 if not, or 2 if it is"
     echo "strong enough but known breaches could not be checked (e.g. when offline)."
@@ -734,22 +730,21 @@ passwordCmdUsage() {
     show bold "Generate random passwords, or check the strength of one you enter. Passwords use letters, digits and"
     show bold "symbols, with a random length between --min and --max."
     echo
-    show "Usage:" bold blue "valt password" "[--check] [--count COUNT] [--max MAX] [--min MIN] [--threat-level THREAT-LEVEL]"
-    echo "                     [--use-case account|file]"
+    show "Usage:" bold blue "valt password" "[-c] [-n COUNT] [--max MAX] [--min MIN] [-t THREAT-LEVEL] [-u account|file]"
     echo
     option "--min MIN" "The minimum length. (default: 24)" 37
     option "--max MAX" "The maximum length. (default: 32)" 37
-    option "--count, -n COUNT" "The number of passwords to generate. (default: 1)" 37
-    option "--check, -c" "Instead of generating, prompt for a password and report its" 37
+    option "-n, --count COUNT" "The number of passwords to generate. (default: 1)" 37
+    option "-c, --check" "Instead of generating, prompt for a password and report its" 37
     option "" "strength and whether it appears in a known breach. Reads from" 37
     option "" "standard input if it is not a terminal." 37
-    option "--use-case, -u account|file" "What the password protects: 'account' (an online account) or" 37
+    option "-u, --use-case account|file" "What the password protects: 'account' (an online account) or" 37
     option "" "'file' (an encrypted file or private key, open to unlimited" 37
     option "" "offline guessing). (default: account)" 37
-    option "--threat-level, -t THREAT-LEVEL" "How capable an attacker to judge strength against. One of:" 37
+    option "-t, --threat-level THREAT-LEVEL" "How capable an attacker to judge strength against. One of:" 37
     option "" "casual, motivated, professional, nation-state. (default:" 37
     option "" "professional)" 37
-    option "--help, -h" "Print this help message." 37
+    option "-h, --help" "Print this help message." 37
     echo
     echo "With --check, the exit status is 0 if the password appears safe to use, 1 if not, or 2 if it is"
     echo "strong enough but known breaches could not be checked (e.g. when offline)."
@@ -778,7 +773,7 @@ pwnedCmdUsage() {
     echo
     show "Usage:" bold blue "valt pwned"
     echo
-    option "--help, -h" "Print this help message." 16
+    option "-h, --help" "Print this help message." 16
     echo
     echo "Only the first 5 characters of a SHA-1 hash of the password are sent, so neither the password"
     echo "nor its full hash leaves this computer (see https://haveibeenpwned.com/API/v3#PwnedPasswords)."
@@ -809,12 +804,12 @@ verifyCmdUsage() {
     show bold "Verify a key pair, and optionally files encrypted or archived with it. You will be prompted for the"
     show bold "passphrase that protects the private key, once."
     echo
-    show "Usage:" bold blue "valt verify" "[FILE...] [--identity IDENTITY]"
+    show "Usage:" bold blue "valt verify" "[FILE...] [-i IDENTITY]"
     echo
     option "FILE..." "Public keys (.pub) to check against the private key, and encrypted" 29
     option "" "files (e.g. .age) and secure archives (.valt) to verify." 29
-    option "--identity, -i IDENTITY" "The private key file (default: valt.key in the valt config directory)." 29
-    option "--help, -h" "Print this help message." 29
+    option "-i, --identity IDENTITY" "The private key file (default: valt.key in the valt config directory)." 29
+    option "-h, --help" "Print this help message." 29
     echo
     echo "The private key must decrypt with its passphrase. Each public key must match it: the keys it"
     echo "contains must be the private key's, a file encrypted to it must decrypt with the private key,"
