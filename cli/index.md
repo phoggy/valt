@@ -18,15 +18,16 @@ Usage: valt COMMAND [OPTIONS]
 
 Commands
 
-    keys        Create a key pair with an encrypted private key and a paper key as backup.
-    paper       Create or regenerate the paper key for an existing key pair.
-    encrypt     Encrypt and sign a single file.
-    decrypt     Decrypt a file, or verify and extract a secure archive.
-    archive     Create, verify or extract a signed, encrypted archive of files and directories.
-    verify      Verify a key pair, and optionally files encrypted or archived with it.
-    passphrase  Generate random passphrases, or check the strength of one you enter.
-    password    Generate random passwords, or check the strength of one you enter.
-    pwned       Check whether a password or passphrase appears in a known data breach.
+    keys         Create a key pair with an encrypted private key and a paper key as backup.
+    paper        Create or regenerate the paper key for an existing key pair.
+    encrypt      Encrypt and sign a single file.
+    decrypt      Decrypt a file, or verify and extract a secure archive.
+    archive      Create, verify or extract a signed, encrypted archive of files and directories.
+    verify       Verify a key pair, and optionally files encrypted or archived with it.
+    default-key  Show or set the default private key file, used when no key is given.
+    passphrase   Generate random passphrases, or check the strength of one you enter.
+    password     Generate random passwords, or check the strength of one you enter.
+    pwned        Check whether a password or passphrase appears in a known data breach.
 
 Use COMMAND --help for additional details.
 
@@ -43,6 +44,11 @@ Debug Options
     --debug-out      Enable debug, write output to the current terminal.
     --debug-tty TTY  Enable debug, write output to the specified TTY (e.g., /dev/ttys001).
     --debug-tty .    Enable debug, write output to the TTY path read from the '~/.debug.tty' file
+
+Environment Variables
+
+    RAYVN_PROMPT_TIMEOUT  Default prompt timeout seconds (default: 30).
+    VALT_KEY_FILE         The default private key file; overrides the 'valt default-key' setting.
 ```
 
 ## Shell Completions
@@ -105,7 +111,8 @@ changes. The passphrase is not required, since the private key is included in it
 
 Usage: valt paper [KEY_FILE] [-c CSS] [-k KEY-INFO] [-n NAME] [-t TEMPLATE]
 
-    KEY_FILE                 The private key file (default: valt.key in the valt config directory).
+    KEY_FILE                 The private key file (default: the default key; see 'valt
+                             default-key').
     -n, --name NAME          Use the NAME.key file in the valt config directory, e.g. bob ->
                              bob.key.
     -k, --key-info KEY-INFO  Key info file to use instead of the default.
@@ -128,7 +135,8 @@ Usage: valt verify [FILE...] [-i IDENTITY]
 
     FILE...                  Public keys (.pub) to check against the private key, and encrypted
                              files (e.g. .age) and secure archives (.valt) to verify.
-    -i, --identity IDENTITY  The private key file (default: valt.key in the valt config directory).
+    -i, --identity IDENTITY  The private key file (default: the default key; see 'valt
+                             default-key').
     -h, --help               Print this help message.
 
 The private key must decrypt with its passphrase. Each public key must match it: the keys it
@@ -139,6 +147,22 @@ file next to the private key is used, if there is one.
 Each encrypted file must decrypt with the private key (nothing is written), and its signature
 (FILE.minisig) must verify if it has one; a warning is shown if it does not. Each secure
 archive must have both of its signatures verify, as with 'valt archive verify'.
+```
+
+### valt default-key
+
+```
+Show or set the default private key file, used by any command when no key is given.
+
+Usage: valt defaultKey [KEY_FILE] [--clear]
+
+    KEY_FILE    The valt private key file to use by default.
+    --clear     Remove the setting, so that the built-in default is used.
+    -h, --help  Print this help message.
+
+With no arguments, shows the default key and where it comes from. The default is, in order:
+the VALT_KEY_FILE environment variable, the setting made here (stored in valt.conf in the
+valt config directory), or valt.key in the valt config directory.
 ```
 
 ## Files
@@ -155,8 +179,8 @@ Usage: valt encrypt FILE [-a] [--delete] [-f] [-i IDENTITY] [--no-self] [--no-si
 
     FILE                                 The file to encrypt.
     -i, --identity IDENTITY              Your private key file, used to sign and to find your public
-                                         key (the .pub file next to it); default: valt.key in the
-                                         valt config directory.
+                                         key (the .pub file next to it); default: the default key
+                                         (see 'valt default-key').
     -r, --recipient RECIPIENT            Also encrypt to this recipient (an age public key). Can be
                                          repeated.
     -R, --recipient-file RECIPIENT-FILE  Also encrypt to the recipient(s) in this file, e.g. a valt
@@ -183,7 +207,8 @@ the passphrase that protects the private key.
 Usage: valt decrypt FILE [-f] [-i IDENTITY] [-o OUTPUT]
 
     FILE                     The encrypted file (.age) or secure archive (.valt).
-    -i, --identity IDENTITY  The private key file (default: valt.key in the valt config directory).
+    -i, --identity IDENTITY  The private key file (default: the default key; see 'valt
+                             default-key').
     -o, --output OUTPUT      For a file, the output file ('-' for standard output; default: FILE
                              without .age). For an archive, the existing directory to extract into
                              (default: the current directory).
@@ -215,8 +240,8 @@ Usage: valt archive create [INPUT...] [-f] [-i IDENTITY] [-n NAME] [--no-self] [
                                          before processing the inputs that follow it; an '@'
                                          prefixed path is a tar archive whose contents are added.
     -i, --identity IDENTITY              Your private key file, used to sign and to find your public
-                                         key (the .pub file next to it); default: valt.key in the
-                                         valt config directory.
+                                         key (the .pub file next to it); default: the default key
+                                         (see 'valt default-key').
     -r, --recipient RECIPIENT            Also encrypt to this recipient (an age public key). Can be
                                          repeated.
     -R, --recipient-file RECIPIENT-FILE  Also encrypt to the recipient(s) in this file, e.g. a valt
@@ -242,7 +267,8 @@ checked after decrypting, so you will be prompted for the passphrase that protec
 Usage: valt archive verify ARCHIVE [-i IDENTITY]
 
     ARCHIVE                  The secure archive (.valt).
-    -i, --identity IDENTITY  Your private key file (default: valt.key in the valt config directory).
+    -i, --identity IDENTITY  Your private key file (default: the default key; see 'valt
+                             default-key').
     -h, --help               Print this help message.
 ```
 
@@ -254,8 +280,8 @@ Verify and extract a secure archive (.valt). Same as 'valt decrypt ARCHIVE'.
 Usage: valt archive extract ARCHIVE [-i IDENTITY] [-o OUTPUT-DIR]
 
     ARCHIVE                      The secure archive (.valt).
-    -i, --identity IDENTITY      Your private key file (default: valt.key in the valt config
-                                 directory).
+    -i, --identity IDENTITY      Your private key file (default: the default key; see 'valt
+                                 default-key').
     -o, --output-dir OUTPUT-DIR  The existing directory to extract into (default: the current
                                  directory).
     -h, --help                   Print this help message.
