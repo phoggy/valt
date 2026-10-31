@@ -59,25 +59,24 @@ Generate an age key pair, with the private key encrypted by a passphrase, plus a
 backup documentation. A strong passphrase is highly encouraged; advice and an opportunity to
 generate one will be offered.
 
-Usage: valt keys [--allow-weak-passphrase] [--css CSS] [--force] [--key-info KEY-INFO] [--name NAME]
-                 [--no-advice] [--no-pdf] [--no-verify] [--output-dir OUTPUT-DIR] [--quick]
-                 [--template TEMPLATE]
+Usage: valt keys [--allow-weak-passphrase] [-c CSS] [-f] [-k KEY-INFO] [-n NAME] [--no-advice]
+                 [--no-pdf] [--no-verify] [-o OUTPUT-DIR] [-q] [-t TEMPLATE]
 
-    --name, -n NAME              Name to use for key files, e.g. bob -> bob.pub, bob.key. (default:
+    -n, --name NAME              Name to use for key files, e.g. bob -> bob.pub, bob.key. (default:
                                  valt)
-    --output-dir, -o OUTPUT-DIR  Directory for the key files (default: the valt config directory).
-    --force, -f                  Replace existing key files, once the new ones have been created.
+    -o, --output-dir OUTPUT-DIR  Directory for the key files (default: the valt config directory).
+    -f, --force                  Replace existing key files, once the new ones have been created.
     --allow-weak-passphrase      Accept a passphrase that fails the strength and breach check. Not
                                  recommended: the passphrase is all that protects the private key.
     --no-verify                  Do not verify keys.
     --no-advice                  Do not show passphrase advice.
-    --quick, -q                  Same as --no-advice --no-verify.
+    -q, --quick                  Same as --no-advice --no-verify.
     --no-pdf                     Do not generate the paper key PDF.
-    --key-info, -k KEY-INFO      Key info file to use instead of the default for PDF generation.
-    --template, -t TEMPLATE      HTML template file to use instead of the default for PDF
+    -k, --key-info KEY-INFO      Key info file to use instead of the default for PDF generation.
+    -t, --template TEMPLATE      HTML template file to use instead of the default for PDF
                                  generation.
-    --css, -c CSS                CSS file with style overrides to apply for PDF generation.
-    --help, -h                   Print this help message.
+    -c, --css CSS                CSS file with style overrides to apply for PDF generation.
+    -h, --help                   Print this help message.
 
 The PDF contains your keys, also in encrypted form, to serve as a backup for you and/or your
 successors, along with detailed usage instructions. Keys are represented as a QR code and again in
@@ -104,15 +103,15 @@ Generate the paper key PDF for an existing key pair, personalized from the key.i
 written next to the key and replaces any existing one, so this can be re-run whenever key.info
 changes. The passphrase is not required, since the private key is included in its encrypted form.
 
-Usage: valt paper [KEY_FILE] [--css CSS] [--key-info KEY-INFO] [--name NAME] [--template TEMPLATE]
+Usage: valt paper [KEY_FILE] [-c CSS] [-k KEY-INFO] [-n NAME] [-t TEMPLATE]
 
     KEY_FILE                 The private key file (default: valt.key in the valt config directory).
-    --name, -n NAME          Use the NAME.key file in the valt config directory, e.g. bob ->
+    -n, --name NAME          Use the NAME.key file in the valt config directory, e.g. bob ->
                              bob.key.
-    --key-info, -k KEY-INFO  Key info file to use instead of the default.
-    --template, -t TEMPLATE  HTML template file to use instead of the default.
-    --css, -c CSS            CSS file with style overrides to apply.
-    --help, -h               Print this help message.
+    -k, --key-info KEY-INFO  Key info file to use instead of the default.
+    -t, --template TEMPLATE  HTML template file to use instead of the default.
+    -c, --css CSS            CSS file with style overrides to apply.
+    -h, --help               Print this help message.
 
 Please ensure that you print at least one copy of the PDF file and write your passphrase on the
 last page (or leave the passphrase blank and add instructions on where to find it in the Notes
@@ -125,12 +124,12 @@ section). See 'valt keys --help' for document customization details.
 Verify a key pair, and optionally files encrypted or archived with it. You will be prompted for the
 passphrase that protects the private key, once.
 
-Usage: valt verify [FILE...] [--identity IDENTITY]
+Usage: valt verify [FILE...] [-i IDENTITY]
 
     FILE...                  Public keys (.pub) to check against the private key, and encrypted
                              files (e.g. .age) and secure archives (.valt) to verify.
-    --identity, -i IDENTITY  The private key file (default: valt.key in the valt config directory).
-    --help, -h               Print this help message.
+    -i, --identity IDENTITY  The private key file (default: valt.key in the valt config directory).
+    -h, --help               Print this help message.
 
 The private key must decrypt with its passphrase. Each public key must match it: the keys it
 contains must be the private key's, a file encrypted to it must decrypt with the private key,
@@ -151,29 +150,28 @@ Encrypt a single file to FILE.age and sign it with your private key (FILE.age.mi
 public key is always a recipient unless --no-self is given. Use 'valt archive create' for
 directories or multiple files.
 
-Usage: valt encrypt FILE [--armor] [--delete] [--force] [--identity IDENTITY] [--no-self]
-                    [--no-sign] [--output OUTPUT] [--recipient RECIPIENT]... [--recipient-file
-                    RECIPIENT-FILE]... [--verify]
+Usage: valt encrypt FILE [-a] [--delete] [-f] [-i IDENTITY] [--no-self] [--no-sign] [-o OUTPUT]
+                    [-r RECIPIENT]... [-R RECIPIENT-FILE]... [--verify]
 
     FILE                                 The file to encrypt.
-    --identity, -i IDENTITY              Your private key file, used to sign and to find your public
+    -i, --identity IDENTITY              Your private key file, used to sign and to find your public
                                          key (the .pub file next to it); default: valt.key in the
                                          valt config directory.
-    --recipient, -r RECIPIENT            Also encrypt to this recipient (an age public key). Can be
+    -r, --recipient RECIPIENT            Also encrypt to this recipient (an age public key). Can be
                                          repeated.
-    --recipient-file, -R RECIPIENT-FILE  Also encrypt to the recipient(s) in this file, e.g. a valt
+    -R, --recipient-file RECIPIENT-FILE  Also encrypt to the recipient(s) in this file, e.g. a valt
                                          .pub file. Can be repeated.
     --no-self                            Do not include your own public key as a recipient.
     --no-sign                            Do not sign the encrypted file.
-    --armor, -a                          Write PEM encoded (text) output.
-    --output, -o OUTPUT                  The output file ('-' for standard output, which requires
+    -a, --armor                          Write PEM encoded (text) output.
+    -o, --output OUTPUT                  The output file ('-' for standard output, which requires
                                          --no-sign); default: FILE.age.
-    --force, -f                          Overwrite an existing output file.
+    -f, --force                          Overwrite an existing output file.
     --verify                             Decrypt the result with your private key and confirm it
                                          matches FILE.
     --delete                             Delete FILE after a successful --verify. This is an
                                          ordinary delete, not a secure erase.
-    --help, -h                           Print this help message.
+    -h, --help                           Print this help message.
 ```
 
 ### valt decrypt
@@ -182,15 +180,15 @@ Usage: valt encrypt FILE [--armor] [--delete] [--force] [--identity IDENTITY] [-
 Decrypt an encrypted file, or verify and extract a secure archive (.valt). You will be prompted for
 the passphrase that protects the private key.
 
-Usage: valt decrypt FILE [--force] [--identity IDENTITY] [--output OUTPUT]
+Usage: valt decrypt FILE [-f] [-i IDENTITY] [-o OUTPUT]
 
     FILE                     The encrypted file (.age) or secure archive (.valt).
-    --identity, -i IDENTITY  The private key file (default: valt.key in the valt config directory).
-    --output, -o OUTPUT      For a file, the output file ('-' for standard output; default: FILE
+    -i, --identity IDENTITY  The private key file (default: valt.key in the valt config directory).
+    -o, --output OUTPUT      For a file, the output file ('-' for standard output; default: FILE
                              without .age). For an archive, the existing directory to extract into
                              (default: the current directory).
-    --force, -f              Overwrite an existing output file.
-    --help, -h               Print this help message.
+    -f, --force              Overwrite an existing output file.
+    -h, --help               Print this help message.
 
 If a signature file (FILE.minisig) is present, it is verified before decrypting and decryption
 stops if it does not match. A warning is shown if there is no signature. Archives always contain
@@ -210,30 +208,29 @@ Create a signed, encrypted secure archive (.valt) from files and directories. A 
 (.valt.pub) that is safe to share is also created. Your own public key is always a recipient unless
 --no-self is given. You will be prompted for the passphrase that protects your private key.
 
-Usage: valt archive create [INPUT...] [--force] [--identity IDENTITY] [--name NAME] [--no-self]
-                           [--output-dir OUTPUT-DIR] [--recipient RECIPIENT]... [--recipient-file
-                           RECIPIENT-FILE]... [--user-text USER-TEXT] [--zone ZONE]
+Usage: valt archive create [INPUT...] [-f] [-i IDENTITY] [-n NAME] [--no-self] [-o OUTPUT-DIR]
+                           [-r RECIPIENT]... [-R RECIPIENT-FILE]... [-u USER-TEXT] [-z ZONE]
 
     INPUT...                             Files and directories to add. '-C DIR' changes to DIR
                                          before processing the inputs that follow it; an '@'
                                          prefixed path is a tar archive whose contents are added.
-    --identity, -i IDENTITY              Your private key file, used to sign and to find your public
+    -i, --identity IDENTITY              Your private key file, used to sign and to find your public
                                          key (the .pub file next to it); default: valt.key in the
                                          valt config directory.
-    --recipient, -r RECIPIENT            Also encrypt to this recipient (an age public key). Can be
+    -r, --recipient RECIPIENT            Also encrypt to this recipient (an age public key). Can be
                                          repeated.
-    --recipient-file, -R RECIPIENT-FILE  Also encrypt to the recipient(s) in this file, e.g. a valt
+    -R, --recipient-file RECIPIENT-FILE  Also encrypt to the recipient(s) in this file, e.g. a valt
                                          .pub file. Can be repeated.
     --no-self                            Do not include your own public key as a recipient.
-    --name, -n NAME                      The archive file name prefix (default: your user name).
-    --zone, -z ZONE                      The time zone for the timestamp in the archive name:
+    -n, --name NAME                      The archive file name prefix (default: your user name).
+    -z, --zone ZONE                      The time zone for the timestamp in the archive name:
                                          'local' (the system time zone), 'UTC', or a name such as
                                          'America/Los_Angeles' (default: local).
-    --user-text, -u USER-TEXT            Text to include in the archive's README. Can contain '\n'.
-    --output-dir, -o OUTPUT-DIR          The directory to write the archive to (default: the current
+    -u, --user-text USER-TEXT            Text to include in the archive's README. Can contain '\n'.
+    -o, --output-dir OUTPUT-DIR          The directory to write the archive to (default: the current
                                          directory).
-    --force, -f                          Overwrite an existing archive.
-    --help, -h                           Print this help message.
+    -f, --force                          Overwrite an existing archive.
+    -h, --help                           Print this help message.
 ```
 
 ### valt archive verify
@@ -242,11 +239,11 @@ Usage: valt archive create [INPUT...] [--force] [--identity IDENTITY] [--name NA
 Verify both signatures of a secure archive (.valt) without extracting it. The inner signature is
 checked after decrypting, so you will be prompted for the passphrase that protects your private key.
 
-Usage: valt archive verify ARCHIVE [--identity IDENTITY]
+Usage: valt archive verify ARCHIVE [-i IDENTITY]
 
     ARCHIVE                  The secure archive (.valt).
-    --identity, -i IDENTITY  Your private key file (default: valt.key in the valt config directory).
-    --help, -h               Print this help message.
+    -i, --identity IDENTITY  Your private key file (default: valt.key in the valt config directory).
+    -h, --help               Print this help message.
 ```
 
 ### valt archive extract
@@ -254,14 +251,14 @@ Usage: valt archive verify ARCHIVE [--identity IDENTITY]
 ```
 Verify and extract a secure archive (.valt). Same as 'valt decrypt ARCHIVE'.
 
-Usage: valt archive extract ARCHIVE [--identity IDENTITY] [--output-dir OUTPUT-DIR]
+Usage: valt archive extract ARCHIVE [-i IDENTITY] [-o OUTPUT-DIR]
 
     ARCHIVE                      The secure archive (.valt).
-    --identity, -i IDENTITY      Your private key file (default: valt.key in the valt config
+    -i, --identity IDENTITY      Your private key file (default: valt.key in the valt config
                                  directory).
-    --output-dir, -o OUTPUT-DIR  The existing directory to extract into (default: the current
+    -o, --output-dir OUTPUT-DIR  The existing directory to extract into (default: the current
                                  directory).
-    --help, -h                   Print this help message.
+    -h, --help                   Print this help message.
 ```
 
 ## Passwords
@@ -276,22 +273,21 @@ Generate random passphrases, or check the strength of one you enter. Passphrases
 chosen at random from a list of 17,576, so they are much easier to remember than random passwords of
 similar strength.
 
-Usage: valt passphrase [--check] [--count COUNT] [--separator SEPARATOR] [--threat-level
-                       THREAT-LEVEL] [--use-case file|account] [--words WORDS]
+Usage: valt passphrase [-c] [-n COUNT] [-s SEPARATOR] [-t THREAT-LEVEL] [-u file|account] [-w WORDS]
 
-    --words, -w WORDS                The number of words in each passphrase. (default: 5)
-    --count, -n COUNT                The number of passphrases to generate. (default: 1)
-    --separator, -s SEPARATOR        The text between words (default: a space).
-    --check, -c                      Instead of generating, prompt for a passphrase and report its
+    -w, --words WORDS                The number of words in each passphrase. (default: 5)
+    -n, --count COUNT                The number of passphrases to generate. (default: 1)
+    -s, --separator SEPARATOR        The text between words (default: a space).
+    -c, --check                      Instead of generating, prompt for a passphrase and report its
                                      strength and whether it appears in a known breach. Reads from
                                      standard input if it is not a terminal.
-    --use-case, -u file|account      What the passphrase protects: 'file' (an encrypted file or
+    -u, --use-case file|account      What the passphrase protects: 'file' (an encrypted file or
                                      private key, open to unlimited offline guessing) or 'account'
                                      (an online account). (default: file)
-    --threat-level, -t THREAT-LEVEL  How capable an attacker to judge strength against. One of:
+    -t, --threat-level THREAT-LEVEL  How capable an attacker to judge strength against. One of:
                                      casual, motivated, professional, nation-state. (default:
                                      professional)
-    --help, -h                       Print this help message.
+    -h, --help                       Print this help message.
 
 With --check, the exit status is 0 if the passphrase appears safe to use, 1 if not, or 2 if it is
 strong enough but known breaches could not be checked (e.g. when offline).
@@ -303,22 +299,21 @@ strong enough but known breaches could not be checked (e.g. when offline).
 Generate random passwords, or check the strength of one you enter. Passwords use letters, digits and
 symbols, with a random length between --min and --max.
 
-Usage: valt password [--check] [--count COUNT] [--max MAX] [--min MIN] [--threat-level THREAT-LEVEL]
-                     [--use-case account|file]
+Usage: valt password [-c] [-n COUNT] [--max MAX] [--min MIN] [-t THREAT-LEVEL] [-u account|file]
 
     --min MIN                        The minimum length. (default: 24)
     --max MAX                        The maximum length. (default: 32)
-    --count, -n COUNT                The number of passwords to generate. (default: 1)
-    --check, -c                      Instead of generating, prompt for a password and report its
+    -n, --count COUNT                The number of passwords to generate. (default: 1)
+    -c, --check                      Instead of generating, prompt for a password and report its
                                      strength and whether it appears in a known breach. Reads from
                                      standard input if it is not a terminal.
-    --use-case, -u account|file      What the password protects: 'account' (an online account) or
+    -u, --use-case account|file      What the password protects: 'account' (an online account) or
                                      'file' (an encrypted file or private key, open to unlimited
                                      offline guessing). (default: account)
-    --threat-level, -t THREAT-LEVEL  How capable an attacker to judge strength against. One of:
+    -t, --threat-level THREAT-LEVEL  How capable an attacker to judge strength against. One of:
                                      casual, motivated, professional, nation-state. (default:
                                      professional)
-    --help, -h                       Print this help message.
+    -h, --help                       Print this help message.
 
 With --check, the exit status is 0 if the password appears safe to use, 1 if not, or 2 if it is
 strong enough but known breaches could not be checked (e.g. when offline).
@@ -332,7 +327,7 @@ database. You will be prompted for it; it is read from standard input if that is
 
 Usage: valt pwned
 
-    --help, -h  Print this help message.
+    -h, --help  Print this help message.
 
 Only the first 5 characters of a SHA-1 hash of the password are sent, so neither the password
 nor its full hash leaves this computer (see https://haveibeenpwned.com/API/v3#PwnedPasswords).
