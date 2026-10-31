@@ -134,12 +134,13 @@ readPassword() {
         local -a _strengthReport=()
         local _strengthScore
         passwordStrength _result "${_testUseCase}" "${_testThreatLevel}" _strengthScore _strengthReport; _resultCode=$?
-        echo -n "  ⮕  ${_strengthReport[0]}"
-        echo > ${terminal} # complete the line
+        # Write to the terminal like the prompt itself, never stdout: callers may redirect stdout (e.g. to a key file)
+
+        echo "  ⮕  ${_strengthReport[0]}" > ${terminal}
         if (( _resultCode == 1 )); then
             local _line
             for _line in "${_strengthReport[@]:1}"; do
-                echo "${_line}"
+                echo "${_line}" > ${terminal}
             done
         fi
         (( _resultCode == 2 )) && _resultCode=0 # strong enough; the summary warns that breaches were not checked

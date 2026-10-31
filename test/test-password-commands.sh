@@ -13,6 +13,7 @@ main() {
     # typed passphrases (the interactive path, with only the terminal input simulated)
     testTypedStrongPassphraseAccepted
     testTypedWeakPassphraseRejected
+    testTypedKeyPassphraseMakesValidKey
 
     # password
     testPasswordOptions
@@ -115,6 +116,10 @@ testTypedStrongPassphraseAccepted() {
     local entered; readPassword "Enter passphrase" entered file > /dev/null 2>&1
     assertEqual 0 $? "a strong typed passphrase must be accepted"
     assertEqual "${phrase}" "${entered}"
+
+    # The strength report goes to the terminal, never stdout, which a caller may redirect (e.g. to a key file)
+    local stdout; stdout="${ readPassword "Enter passphrase" entered file 2> /dev/null; }"
+    assertEqual '' "${stdout}" "readPassword must not write to stdout"
     local confirmed; readConfirmedPassword "Enter passphrase" confirmed file > /dev/null 2>&1
     assertEqual 0 $? "a strong typed and confirmed passphrase must be accepted"
     assertEqual "${phrase}" "${confirmed}"
@@ -123,9 +128,29 @@ testTypedStrongPassphraseAccepted() {
 testTypedWeakPassphraseRejected() {
     addToFakeApi 'password123' 3
     typePassphrase 'password123'
+    local stdout; stdout="${ readPassword "Enter passphrase" entered file 2> /dev/null; }"
+    assertEqual '' "${stdout}" "readPassword must not write its report to stdout"
     local entered; readPassword "Enter passphrase" entered file > /dev/null 2>&1
     assertEqual 1 $? "a weak typed passphrase must be rejected"
     assertEqual '' "${entered}"
+}
+
+# Key creation with a typed (and so strength checked) passphrase must write a valid key, which then verifies.
+
+testTypedKeyPassphraseMakesValidKey() {
+    local phrase='ribbon corridor gravel unbuckle mosaic salvage'
+    addToFakeApi "${phrase}" 0
+    typePassphrase "${phrase}"
+    cursorUpOneAndEraseLine() { :; }
+    local dir; dir="${ makeTempDir; }"
+    local pub key
+    ( unset rayvnTest_ValtKeyPassphrase; skipKeyPassphraseAdvice=1; newValtKeys typed "${dir}" pub key ) > /dev/null 2>&1 \
+        || fail "key creation with a typed passphrase failed"
+    local firstLine; read -r firstLine < "${dir}/typed.key"
+    [[ ${firstLine} == 'age-encryption.org/v1' || ${firstLine} == '-----BEGIN AGE ENCRYPTED FILE-----' ]] \
+        || fail "the key file must start with the age header, not: ${firstLine}"
+    ( unset rayvnTest_ValtKeyPassphrase; verifyValtKeys "${dir}/typed.pub" "${dir}/typed.key" ) > /dev/null 2>&1 \
+        || fail "a key created with a typed passphrase must verify"
 }
 
 # ---- password ----
@@ -185,5 +210,5 @@ testPwnedNoInput() {
 }
 
 rayvnTest_ModifiableFunctions=1
-source rayvn.up 'rayvn/test' 'valt/password'
+source rayvn.up 'rayvn/test' 'valt/password' 'valt/keys'
 main "$@"
