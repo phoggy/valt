@@ -102,8 +102,8 @@ testIsKeyInfoCompleteWhenCompleted() {
 # ---- paperKeyCommand ----
 
 testPaperKeyCommandDefaultKey() {
-    local command; command="${ paperKeyCommand "${valtConfigDir}/valt.key"; }"
-    assertEqual 'valt paper' "${command}"
+    local command; command="${ paperKeyCommand "${ defaultValtKeyFile; }"; }"
+    assertEqual 'valt paper' "${command}" "the default key (wherever it is set) needs no path"
 }
 
 testPaperKeyCommandOtherKey() {

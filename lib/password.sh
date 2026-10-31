@@ -122,9 +122,10 @@ readPassword() {
 
     if (( ! _visible )); then
         secureRequest "${_prompt}" _result true < "${terminal}" || return $?
-        cursorUpToColumn 1 $(( ${#_prompt} + 12 ))  # re-position back for check
+        [[ -z ${_testUseCase} ]] && cursorUpToColumn 1 $(( ${#_prompt} + 12 ))  # back to the prompt line
     else
         _readPassword
+        [[ -n ${_testUseCase} ]] && echo > ${terminal} # end the prompt line, so the report starts below it
     fi
     [[ ${_result} == '' ]] && _cancelled=1
 
@@ -134,13 +135,14 @@ readPassword() {
         local -a _strengthReport=()
         local _strengthScore
         passwordStrength _result "${_testUseCase}" "${_testThreatLevel}" _strengthScore _strengthReport; _resultCode=$?
-        # Write to the terminal like the prompt itself, never stdout: callers may redirect stdout (e.g. to a key file)
+        # Show the summary after the prompt on its line if it fits, otherwise on the next line, indented. Write to the
+        # terminal like the prompt itself, never stdout: callers may redirect stdout (e.g. to a key file)
 
-        echo "  ⮕  ${_strengthReport[0]}" > ${terminal}
+        _showStrengthSummary "${_strengthReport[0]}"
         if (( _resultCode == 1 )); then
             local _line
             for _line in "${_strengthReport[@]:1}"; do
-                echo "${_line}" > ${terminal}
+                echo "${_line:+    }${_line}" > ${terminal}
             done
         fi
         (( _resultCode == 2 )) && _resultCode=0 # strong enough; the summary warns that breaches were not checked
@@ -271,6 +273,26 @@ PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/password' PRIV
 
 _init_valt_password() {
     require 'rayvn/prompt' 'valt/pwned'
+}
+
+# Show a strength summary after the prompt just entered (shown as '? PROMPT [hidden] '), or below it if the line is too
+# narrow. Uses readPassword's _prompt and _visible.
+
+_showStrengthSummary() {
+    local summary="$1"
+    local rows=0 cols=0
+    if (( ! _visible )); then
+        terminalSize rows cols 2> /dev/null || cols=0
+        local visiblePrompt; visiblePrompt="${ stripAnsi "${_prompt}"; }"
+        local visibleSummary; visibleSummary="${ stripAnsi "${summary}"; }"
+        local promptEnd=$(( ${#visiblePrompt} + 12 ))
+        if (( cols > 0 && promptEnd + 5 + ${#visibleSummary} <= cols )); then
+            cursorUpToColumn 1 ${promptEnd}
+            echo "  ⮕  ${summary}" > ${terminal}
+            return 0
+        fi
+    fi
+    echo "    ⮕  ${summary}" > ${terminal}
 }
 
 _readPassword() {
