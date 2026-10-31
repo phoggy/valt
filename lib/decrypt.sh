@@ -36,7 +36,7 @@ decrypt() {
     done
 
     if (( passphrase )) ; then
-        (( hasKey )) && invalidArgs "-p / --password cannot be combined with identity."
+        (( hasKey )) && invalidArgs "-p / --passphrase cannot be combined with identity."
     else
         (( hasKey )) || invalidArgs "identity required"
     fi
