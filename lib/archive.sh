@@ -237,15 +237,15 @@ verifySecureArchive() {
 }
 
 # ◇ Verify and extract the contents of a secure archive into a directory.
-#   Checks both the outer and inner signatures before extracting the payload.
+#   Checks both the outer and inner signatures before decrypting and extracting the payload.
 #
 # · USAGE
 #
-#   extractSecureArchive ARCHIVE -i PATH [-o DIR]
+#   extractSecureArchive -i PATH [-o DIR] ARCHIVE
 #
-#   ARCHIVE              Path to the .valt archive file.
-#   -i, --identity PATH  The valt.key file used to decrypt and verify signatures.
-#   -o, --output-dir     Directory to extract contents into (default: ${PWD}).
+#   ARCHIVE (file)               The secure archive file to extract.
+#   -i, --identity PATH (file)   The valt key file used to decrypt and verify signatures.
+#   -o, --output-dir DIR (dir)   Directory to extract contents into (default: ${PWD}).
 
 extractSecureArchive() {
     local archiveFile keyFile destDir="${PWD}"

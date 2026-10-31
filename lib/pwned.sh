@@ -4,15 +4,19 @@
 # Password/phrase breach testing.
 # Use via: require 'valt/pwned'
 
-# ◇ Check whether a password appears in the HaveIBeenPwned breach database (via k-anonymity API).
+# ◇ Check whether a password appears in the HaveIBeenPwned breach database via k-anonymity API.
 #
 # · ARGS
 #
-#   passwordVar (stringRef)     Name of variable containing the password.
-#   apiErrorVar (stringRef)     Name of variable to return any api error.
-#   breachCountVar (stringRef)  Name of variable to return the breach count.
+#   passRef        (stringRef)  Name of var containing the password to check.
+#   apiErrorRef    (intRef)     Name of var to receive the curl exit code (default: 0).
+#   breachCountRef (intRef)     Name of var to receive the breach count (default: 0).
 #
-# Returns 0 if not found, 1 if the API returned an error, 2 if the password has been breached.
+# · RETURNS
+#
+#   0  Password not found in breach database.
+#   1  API request failed; apiErrorRef contains the curl exit code.
+#   2  Password found; breachCountRef contains the number of times it appeared.
 
 hasNotBeenPwned() {
     local -n passRef=$1
