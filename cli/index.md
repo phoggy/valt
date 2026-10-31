@@ -202,8 +202,9 @@ Usage: valt archive create [INPUT...] [--force] [--identity IDENTITY] [--name NA
                                          .pub file. Can be repeated.
     --no-self                            Do not include your own public key as a recipient.
     --name, -n NAME                      The archive file name prefix (default: your user name).
-    --zone, -z ZONE                      The timezone for the timestamp in the archive name, e.g.
-                                         PDT (default: UTC).
+    --zone, -z ZONE                      The time zone for the timestamp in the archive name:
+                                         'local' (the system time zone), 'UTC', or a name such as
+                                         'America/Los_Angeles' (default: local).
     --user-text, -u USER-TEXT            Text to include in the archive's README. Can contain '\n'.
     --output-dir, -o OUTPUT-DIR          The directory to write the archive to (default: the current
                                          directory).
