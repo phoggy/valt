@@ -23,7 +23,7 @@ Commands
     encrypt     Encrypt and sign a single file.
     decrypt     Decrypt a file, or verify and extract a secure archive.
     archive     Create, verify or extract a signed, encrypted archive of files and directories.
-    verify      Verify a key pair, and optionally secure archives made with it.
+    verify      Verify a key pair, and optionally files encrypted or archived with it.
     passphrase  Generate random passphrases, or check the strength of one you enter.
     password    Generate random passwords, or check the strength of one you enter.
     pwned       Check whether a password or passphrase appears in a known data breach.
@@ -122,21 +122,24 @@ section). See 'valt keys --help' for document customization details.
 ### valt verify
 
 ```
-Verify a key pair, and optionally secure archives made with it. You will be prompted for the
+Verify a key pair, and optionally files encrypted or archived with it. You will be prompted for the
 passphrase that protects the private key, once.
 
 Usage: valt verify [FILE...] [--identity IDENTITY]
 
-    FILE...                  Public keys (.pub) to check against the private key, and secure
-                             archives (.valt) to verify.
+    FILE...                  Public keys (.pub) to check against the private key, and encrypted
+                             files (e.g. .age) and secure archives (.valt) to verify.
     --identity, -i IDENTITY  The private key file (default: valt.key in the valt config directory).
     --help, -h               Print this help message.
 
 The private key must decrypt with its passphrase. Each public key must match it: the keys it
 contains must be the private key's, a file encrypted to it must decrypt with the private key,
 and a signature made with the private key must verify. With no public key given, the .pub
-file next to the private key is used, if there is one. Each secure archive must have both of
-its signatures verify, as with 'valt archive verify'.
+file next to the private key is used, if there is one.
+
+Each encrypted file must decrypt with the private key (nothing is written), and its signature
+(FILE.minisig) must verify if it has one; a warning is shown if it does not. Each secure
+archive must have both of its signatures verify, as with 'valt archive verify'.
 ```
 
 ## Files
