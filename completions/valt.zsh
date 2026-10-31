@@ -21,7 +21,7 @@ _valt() {
                 'passphrase:Generate random passphrases, or check the strength of one you enter. Passphrases are made of'
                 'password:Generate random passwords, or check the strength of one you enter. Passwords use letters,'
                 'pwned:Check whether a password or passphrase appears in a known data breach, using the HaveIBeenPwned'
-                'verify:Verify a key pair, and optionally secure archives made with it. You will be prompted for the passphrase that'
+                'verify:Verify a key pair, and optionally files encrypted or archived with it. You will be prompted for the'
                 'archive:'
             )
             _describe 'command' commands

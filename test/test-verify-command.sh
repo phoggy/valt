@@ -9,6 +9,10 @@ main() {
     testVerifyWrongPassphrase
     testVerifyArchive
     testVerifyArchiveFromAnotherKey
+    testVerifySignedFile
+    testVerifyUnsignedArmoredFile
+    testVerifyFileForAnotherKey
+    testVerifyFileWithBadSignature
     testVerifyRejectsOtherFiles
 
     return 0
@@ -86,11 +90,54 @@ testVerifyArchiveFromAnotherKey() {
     [[ ${output} != *"Signatures verified"* ]] || fail "an archive signed with another key must not verify"
 }
 
-testVerifyRejectsOtherFiles() {
-    local file; file="${ makeTempFile notes.txt; }"
-    local output; output="${ valt verify -i "${keyFile}" "${file}" 2>&1; }"
-    assertContains "not a public key (.pub) or secure archive (.valt)" "${output}"
+# Creates a file encrypted to recipientFile, setting the named var to its path. Optional args are passed to encrypt.
+
+newEncryptedFile() {
+    local -n encryptedRef=$1
+    local recipientFile="$2" name="$3"; shift 3
+    local dir; dir="${ makeTempDir; }"
+    echo 'secret content' > "${dir}/plain.txt"
+    encrypt "${dir}/plain.txt" -R "${recipientFile}" "$@" -o "${dir}/${name}" || fail
+    encryptedRef="${dir}/${name}"
 }
 
-source rayvn.up 'rayvn/test' 'valt/keys' 'valt/archive'
+testVerifySignedFile() {
+    local file; newEncryptedFile file "${pubFile}" secret.txt.age
+    signFile "${keyFile}" "${file}"
+    local output; output="${ valt verify -i "${keyFile}" "${file}" 2>&1; }"
+    assertEqual 0 $? "verify of a signed file must succeed: ${output}"
+    assertContains "decrypts with the private key, and its signature verifies" "${output}"
+}
+
+testVerifyUnsignedArmoredFile() {
+    local file; newEncryptedFile file "${pubFile}" secret.enc --armor
+    local output; output="${ valt verify -i "${keyFile}" "${file}" 2>&1; }"
+    assertEqual 0 $? "verify of an unsigned file must succeed: ${output}"
+    assertContains "No signature found" "${output}"
+    assertContains "secret.enc decrypts with the private key." "${output}"
+}
+
+testVerifyFileForAnotherKey() {
+    local file; newEncryptedFile file "${otherPubFile}" other.age
+    local output; output="${ valt verify -i "${keyFile}" "${file}" 2>&1; }"
+    assertNotEqual 0 $? "verify of a file encrypted to another key must fail"
+    [[ ${output} != *"decrypts with the private key"* ]] || fail "a file for another key must not be reported as decrypting"
+}
+
+testVerifyFileWithBadSignature() {
+    local file; newEncryptedFile file "${pubFile}" signed.age
+    signFile "${otherKeyFile}" "${file}"
+    local output; output="${ valt verify -i "${keyFile}" "${file}" 2>&1; }"
+    assertNotEqual 0 $? "verify of a file signed with another key must fail"
+    assertContains "Signature verification failed" "${output}"
+}
+
+testVerifyRejectsOtherFiles() {
+    local file; file="${ makeTempFile notes.txt; }"
+    echo 'plain text' > "${file}"
+    local output; output="${ valt verify -i "${keyFile}" "${file}" 2>&1; }"
+    assertContains "not a public key (.pub), encrypted file or secure archive (.valt)" "${output}"
+}
+
+source rayvn.up 'rayvn/test' 'valt/keys' 'valt/archive' 'valt/encrypt' 'valt/sign'
 main "$@"

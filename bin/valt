@@ -15,7 +15,7 @@ usage() {
     echo "    encrypt     Encrypt and sign a single file."
     echo "    decrypt     Decrypt a file, or verify and extract a secure archive."
     echo "    archive     Create, verify or extract a signed, encrypted archive of files and directories."
-    echo "    verify      Verify a key pair, and optionally secure archives made with it."
+    echo "    verify      Verify a key pair, and optionally files encrypted or archived with it."
     echo "    passphrase  Generate random passphrases, or check the strength of one you enter."
     echo "    password    Generate random passwords, or check the strength of one you enter."
     echo "    pwned       Check whether a password or passphrase appears in a known data breach."
@@ -180,16 +180,19 @@ declare -gA cliSpec=(
     # The exit status is 0 if it was not found, or 1 if it was.
     ['pwned']='pwned(--help|-h)'
 
-    # Verify a key pair, and optionally secure archives made with it. You will be prompted for the passphrase that
-    # protects the private key, once.
-    #   FILE...     Public keys (.pub) to check against the private key, and secure archives (.valt) to verify.
+    # Verify a key pair, and optionally files encrypted or archived with it. You will be prompted for the
+    # passphrase that protects the private key, once.
+    #   FILE...     Public keys (.pub) to check against the private key, and encrypted files (e.g. .age) and secure archives (.valt) to verify.
     #   --identity  The private key file (default: valt.key in the valt config directory).
     #
     # The private key must decrypt with its passphrase. Each public key must match it: the keys it
     # contains must be the private key's, a file encrypted to it must decrypt with the private key,
     # and a signature made with the private key must verify. With no public key given, the .pub
-    # file next to the private key is used, if there is one. Each secure archive must have both of
-    # its signatures verify, as with 'valt archive verify'.
+    # file next to the private key is used, if there is one.
+    #
+    # Each encrypted file must decrypt with the private key (nothing is written), and its signature
+    # (FILE.minisig) must verify if it has one; a warning is shown if it does not. Each secure
+    # archive must have both of its signatures verify, as with 'valt archive verify'.
     ['verify']='verify(--identity|-i:file --help|-h *)'
 )
 
@@ -803,21 +806,24 @@ parseVerifyArgs() {
 
 verifyCmdUsage() {
     echo
-    show bold "Verify a key pair, and optionally secure archives made with it. You will be prompted for the"
+    show bold "Verify a key pair, and optionally files encrypted or archived with it. You will be prompted for the"
     show bold "passphrase that protects the private key, once."
     echo
     show "Usage:" bold blue "valt verify" "[FILE...] [--identity IDENTITY]"
     echo
-    option "FILE..." "Public keys (.pub) to check against the private key, and secure" 29
-    option "" "archives (.valt) to verify." 29
+    option "FILE..." "Public keys (.pub) to check against the private key, and encrypted" 29
+    option "" "files (e.g. .age) and secure archives (.valt) to verify." 29
     option "--identity, -i IDENTITY" "The private key file (default: valt.key in the valt config directory)." 29
     option "--help, -h" "Print this help message." 29
     echo
     echo "The private key must decrypt with its passphrase. Each public key must match it: the keys it"
     echo "contains must be the private key's, a file encrypted to it must decrypt with the private key,"
     echo "and a signature made with the private key must verify. With no public key given, the .pub"
-    echo "file next to the private key is used, if there is one. Each secure archive must have both of"
-    echo "its signatures verify, as with 'valt archive verify'."
+    echo "file next to the private key is used, if there is one."
+    echo
+    echo "Each encrypted file must decrypt with the private key (nothing is written), and its signature"
+    echo "(FILE.minisig) must verify if it has one; a warning is shown if it does not. Each secure"
+    echo "archive must have both of its signatures verify, as with 'valt archive verify'."
     declare -F verifyCmdUsageExtra > /dev/null && verifyCmdUsageExtra
     bye "$@"
 }
@@ -1015,15 +1021,19 @@ pwnedCmd() {
 verifyCmd() {
     local keyFile; keyFile="${ identityKeyFile; }"
     assertFile "${keyFile}" "private key file"
-    local -a publicKeyFiles=() archiveFiles=()
+    local -a publicKeyFiles=() encryptedFiles=() archiveFiles=()
     local file
     for file in "${_args[@]}"; do
         assertFile "${file}"
-        case "${file}" in
-            *."${valtPublicKeySuffix}") publicKeyFiles+=("${file}") ;;
-            *.valt) archiveFiles+=("${file}") ;;
-            *) verifyCmdUsage "not a public key (.${valtPublicKeySuffix}) or secure archive (.valt): ${file}" ;;
-        esac
+        if [[ "${file}" == *."${valtPublicKeySuffix}" ]]; then
+            publicKeyFiles+=("${file}")
+        elif [[ "${file}" == *.valt ]]; then
+            archiveFiles+=("${file}")
+        elif isAgeEncryptedFile "${file}"; then
+            encryptedFiles+=("${file}")
+        else
+            verifyCmdUsage "not a public key (.${valtPublicKeySuffix}), encrypted file or secure archive (.valt): ${file}"
+        fi
     done
     if (( ! ${#publicKeyFiles[@]} )); then
         local defaultPublicKey="${keyFile%."${valtPrivateKeySuffix}"}.${valtPublicKeySuffix}"
@@ -1034,13 +1044,23 @@ verifyCmd() {
 
     local rayvnTest_ValtKeyPassphrase="${rayvnTest_ValtKeyPassphrase}"
     _prepareKey "${keyFile}"
-    recipient "${keyFile}" > /dev/null || exit 1 # the error was reported
+    recipient "${keyFile}" > /dev/null || fail
     show "Private key" bold "${ tildePath "${keyFile}"; }" "decrypts with its passphrase. ${successCheckMark}"
     (( ${#publicKeyFiles[@]} )) || show italic "No public key was found next to it to check against."
 
     for file in "${publicKeyFiles[@]}"; do
         verifyValtKeys "${file}" "${keyFile}"
         show "Public key" bold "${ tildePath "${file}"; }" "matches the private key. ${successCheckMark}"
+    done
+
+    for file in "${encryptedFiles[@]}"; do
+        verifySignatureIfPresent "${file}" "${keyFile}"
+        decrypt -i "${keyFile}" -o /dev/null "${file}" || fail
+        if [[ -f "${file}.${_signatureFileSuffix}" ]]; then
+            show "Encrypted file" bold "${ tildePath "${file}"; }" "decrypts with the private key, and its signature verifies. ${successCheckMark}"
+        else
+            show "Encrypted file" bold "${ tildePath "${file}"; }" "decrypts with the private key. ${successCheckMark}"
+        fi
     done
 
     if (( ${#archiveFiles[@]} )); then

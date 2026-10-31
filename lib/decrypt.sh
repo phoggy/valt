@@ -56,6 +56,16 @@ decrypt() {
     fi
 }
 
+# ◇ Succeeds if the file is age encrypted (binary or armored), judged by its header.
+#
+# · ARGS
+#
+#   file (file)  The file to check.
+
+isAgeEncryptedFile() {
+    head -c 64 "$1" 2> /dev/null | LC_ALL=C grep -qa -e '^age-encryption\.org/' -e '^-----BEGIN AGE ENCRYPTED FILE-----'
+}
+
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/encrypt' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_decrypt() {
@@ -163,7 +173,7 @@ _decryptKey() {
 
 _ageError() {
     local error; error="${ echo "$*" | head -n 1; }"
-    [[ ${error} == *"no identity matched any of the recipients" ]] && fail "${operation} key does not match recipient: ${keyFile}"
+    [[ ${error} == *"no identity matched any of the recipients" ]] && fail "not encrypted to the key ${ tildePath "${keyFile}"; }"
     [[ ${error} == *"incorrect passphrase" ]] && fail "incorrect passphrase for ${passphraseFor}"
     fail "${error}"
 }
