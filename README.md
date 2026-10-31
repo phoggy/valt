@@ -93,6 +93,7 @@ nix run github:phoggy/valt#recover -- decrypt FILE -i KEY_FILE
 | `valt archive create INPUT...` | Create a signed, encrypted archive of files and directories. |
 | `valt archive verify ARCHIVE` | Verify both signatures of a secure archive without extracting it. |
 | `valt archive extract ARCHIVE` | Verify and extract a secure archive. |
+| `valt verify [FILE...]` | Verify a key pair (the private key decrypts, and matches its public key), and optionally secure archives. |
 | `valt passphrase` | Generate random passphrases, or check the strength of one (`--check`). |
 | `valt password` | Generate random passwords, or check the strength of one (`--check`). |
 | `valt pwned` | Check whether a password or passphrase appears in a known data breach. |

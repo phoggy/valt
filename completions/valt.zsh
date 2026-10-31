@@ -21,6 +21,7 @@ _valt() {
                 'passphrase:Generate random passphrases, or check the strength of one you enter. Passphrases are made of'
                 'password:Generate random passwords, or check the strength of one you enter. Passwords use letters,'
                 'pwned:Check whether a password or passphrase appears in a known data breach, using the HaveIBeenPwned'
+                'verify:Verify a key pair, and optionally secure archives made with it. You will be prompted for the passphrase that'
                 'archive:'
             )
             _describe 'command' commands
@@ -143,6 +144,12 @@ _valt() {
                 pwned)
                     _arguments \
                     '(--help -h)'{--help,-h}'[Print this help message.]'
+                    ;;
+                verify)
+                    _arguments \
+                    '(--help -h)'{--help,-h}'[Print this help message.]' \
+                    '(--identity -i)'{--identity,-i}'[The private key file (default: valt.key in the valt config directory).]:identity:_files' \
+                    '*:FILE...:'
                     ;;
             esac
             ;;

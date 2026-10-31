@@ -15,7 +15,7 @@ __valtComplete() {
     fi
 
     if (( cword == 1 )); then
-        COMPREPLY=($(compgen -W "decrypt encrypt keys paper passphrase password pwned archive -v --version -h --help" -- "${cur}"))
+        COMPREPLY=($(compgen -W "decrypt encrypt keys paper passphrase password pwned verify archive -v --version -h --help" -- "${cur}"))
         return
     fi
 
@@ -108,6 +108,13 @@ __valtComplete() {
                     ;;
                 pwned)
                     [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--help -h" -- "${cur}")); return; }
+                    ;;
+                verify)
+                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--help --identity -h -i" -- "${cur}")); return; }
+                    case "${prev}" in
+                        --identity|-i) COMPREPLY=($(compgen -f -- "${cur}")); return ;;
+                    esac
+                    local _relIdx=$(( cword - 2 ))
                     ;;
             esac
             ;;
