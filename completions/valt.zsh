@@ -15,6 +15,7 @@ _valt() {
         command)
             local -a commands=(
                 'decrypt:Decrypt an encrypted file, or verify and extract a secure archive (.valt). You will be prompted'
+                'default-key:Show or set the default private key file, used by any command when no key is given.'
                 'encrypt:Encrypt a single file to FILE.age and sign it with your private key (FILE.age.minisig). Your own'
                 'keys:Generate an age key pair, with the private key encrypted by a passphrase, plus a PDF paper key as backup'
                 'paper:Generate the paper key PDF for an existing key pair, personalized from the key.info file. The PDF is written'
@@ -47,7 +48,7 @@ _valt() {
                                     _arguments \
                                     '(--force -f)'{--force,-f}'[Overwrite an existing archive.]' \
                                     '(--help -h)'{--help,-h}'[Print this help message.]' \
-                                    '(--identity -i)'{--identity,-i}'[Your private key file, used to sign and to find your public key (the .pub file next to it); default: valt.key in the valt config directory.]:identity:_files' \
+                                    '(--identity -i)'{--identity,-i}'[Your private key file, used to sign and to find your public key (the .pub file next to it); default: the default key (see '\''valt default-key'\'').]:identity:_files' \
                                     '(--name -n)'{--name,-n}'[The archive file name prefix (default: your user name).]:name:' \
                                     '(--no-self)'--no-self'[Do not include your own public key as a recipient.]' \
                                     '(--output-dir -o)'{--output-dir,-o}'[The directory to write the archive to (default: the current directory).]:output-dir:_files -/' \
@@ -60,14 +61,14 @@ _valt() {
                                 extract)
                                     _arguments \
                                     '(--help -h)'{--help,-h}'[Print this help message.]' \
-                                    '(--identity -i)'{--identity,-i}'[Your private key file (default: valt.key in the valt config directory).]:identity:_files' \
+                                    '(--identity -i)'{--identity,-i}'[Your private key file (default: the default key; see '\''valt default-key'\'').]:identity:_files' \
                                     '(--output-dir -o)'{--output-dir,-o}'[The existing directory to extract into (default: the current directory).]:output-dir:_files -/' \
                                     '1:ARCHIVE:_files'
                                     ;;
                                 verify)
                                     _arguments \
                                     '(--help -h)'{--help,-h}'[Print this help message.]' \
-                                    '(--identity -i)'{--identity,-i}'[Your private key file (default: valt.key in the valt config directory).]:identity:_files' \
+                                    '(--identity -i)'{--identity,-i}'[Your private key file (default: the default key; see '\''valt default-key'\'').]:identity:_files' \
                                     '1:ARCHIVE:_files'
                                     ;;
                             esac
@@ -78,9 +79,15 @@ _valt() {
                     _arguments \
                     '(--force -f)'{--force,-f}'[Overwrite an existing output file.]' \
                     '(--help -h)'{--help,-h}'[Print this help message.]' \
-                    '(--identity -i)'{--identity,-i}'[The private key file (default: valt.key in the valt config directory).]:identity:_files' \
+                    '(--identity -i)'{--identity,-i}'[The private key file (default: the default key; see '\''valt default-key'\'').]:identity:_files' \
                     '(--output -o)'{--output,-o}'[For a file, the output file ('\''-'\'' for standard output; default: FILE without .age). For an archive, the existing directory to extract into (default: the current directory).]:output:' \
                     '1:FILE:_files'
+                    ;;
+                default-key)
+                    _arguments \
+                    '(--clear)'--clear'[Remove the setting, so that the built-in default is used.]' \
+                    '(--help -h)'{--help,-h}'[Print this help message.]' \
+                    '1:KEY_FILE:_files'
                     ;;
                 encrypt)
                     _arguments \
@@ -88,7 +95,7 @@ _valt() {
                     '(--delete)'--delete'[Delete FILE after a successful --verify. This is an ordinary delete, not a secure erase.]' \
                     '(--force -f)'{--force,-f}'[Overwrite an existing output file.]' \
                     '(--help -h)'{--help,-h}'[Print this help message.]' \
-                    '(--identity -i)'{--identity,-i}'[Your private key file, used to sign and to find your public key (the .pub file next to it); default: valt.key in the valt config directory.]:identity:_files' \
+                    '(--identity -i)'{--identity,-i}'[Your private key file, used to sign and to find your public key (the .pub file next to it); default: the default key (see '\''valt default-key'\'').]:identity:_files' \
                     '(--no-self)'--no-self'[Do not include your own public key as a recipient.]' \
                     '(--no-sign)'--no-sign'[Do not sign the encrypted file.]' \
                     '(--output -o)'{--output,-o}'[The output file ('\''-'\'' for standard output, which requires --no-sign); default: FILE.age.]:output:' \
@@ -148,7 +155,7 @@ _valt() {
                 verify)
                     _arguments \
                     '(--help -h)'{--help,-h}'[Print this help message.]' \
-                    '(--identity -i)'{--identity,-i}'[The private key file (default: valt.key in the valt config directory).]:identity:_files' \
+                    '(--identity -i)'{--identity,-i}'[The private key file (default: the default key; see '\''valt default-key'\'').]:identity:_files' \
                     '*:FILE...:'
                     ;;
             esac

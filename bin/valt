@@ -10,21 +10,22 @@ usage() {
     echo
     echo "Commands"
     echo
-    echo "    keys        Create a key pair with an encrypted private key and a paper key as backup."
-    echo "    paper       Create or regenerate the paper key for an existing key pair."
-    echo "    encrypt     Encrypt and sign a single file."
-    echo "    decrypt     Decrypt a file, or verify and extract a secure archive."
-    echo "    archive     Create, verify or extract a signed, encrypted archive of files and directories."
-    echo "    verify      Verify a key pair, and optionally files encrypted or archived with it."
-    echo "    passphrase  Generate random passphrases, or check the strength of one you enter."
-    echo "    password    Generate random passwords, or check the strength of one you enter."
-    echo "    pwned       Check whether a password or passphrase appears in a known data breach."
+    echo "    keys         Create a key pair with an encrypted private key and a paper key as backup."
+    echo "    paper        Create or regenerate the paper key for an existing key pair."
+    echo "    encrypt      Encrypt and sign a single file."
+    echo "    decrypt      Decrypt a file, or verify and extract a secure archive."
+    echo "    archive      Create, verify or extract a signed, encrypted archive of files and directories."
+    echo "    verify       Verify a key pair, and optionally files encrypted or archived with it."
+    echo "    default-key  Show or set the default private key file, used when no key is given."
+    echo "    passphrase   Generate random passphrases, or check the strength of one you enter."
+    echo "    password     Generate random passwords, or check the strength of one you enter."
+    echo "    pwned        Check whether a password or passphrase appears in a known data breach."
     echo
     echo "Use COMMAND --help for additional details."
     echo
     echo "Options"
     echo
-    showCommonOptions 21 true false
+    showCommonOptions 21 true true valtEnvVars
     bye "$@"
 }
 
@@ -36,6 +37,9 @@ main() {
 init() {
     declare -gA _opts=()
     declare -ga _args=()
+    declare -gAr valtEnvVars=(
+        ['VALT_KEY_FILE']="The default private key file; overrides the 'valt default-key' setting."
+    )
 }
 
 SECTION="--+-+-----+-++(-++(---++++(---+( ARGUMENT PARSING )+---)++++---)++-)++-+------+-+--"
@@ -77,7 +81,7 @@ declare -gA cliSpec=(
     # Generate the paper key PDF for an existing key pair, personalized from the key.info file. The PDF is written
     # next to the key and replaces any existing one, so this can be re-run whenever key.info changes. The passphrase
     # is not required, since the private key is included in its encrypted form.
-    #   KEY_FILE    The private key file (default: valt.key in the valt config directory).
+    #   KEY_FILE    The private key file (default: the default key; see 'valt default-key').
     #   --name      Use the NAME.key file in the valt config directory, e.g. bob -> bob.key.
     #   --key-info  Key info file to use instead of the default.
     #   --template  HTML template file to use instead of the default.
@@ -91,7 +95,7 @@ declare -gA cliSpec=(
     # Decrypt an encrypted file, or verify and extract a secure archive (.valt). You will be prompted
     # for the passphrase that protects the private key.
     #   FILE        The encrypted file (.age) or secure archive (.valt).
-    #   --identity  The private key file (default: valt.key in the valt config directory).
+    #   --identity  The private key file (default: the default key; see 'valt default-key').
     #   --output    For a file, the output file ('-' for standard output; default: FILE without .age). For an archive, the existing directory to extract into (default: the current directory).
     #   --force     Overwrite an existing output file.
     #
@@ -104,7 +108,7 @@ declare -gA cliSpec=(
     # public key is always a recipient unless --no-self is given. Use 'valt archive create' for
     # directories or multiple files.
     #   FILE              The file to encrypt.
-    #   --identity        Your private key file, used to sign and to find your public key (the .pub file next to it); default: valt.key in the valt config directory.
+    #   --identity        Your private key file, used to sign and to find your public key (the .pub file next to it); default: the default key (see 'valt default-key').
     #   --recipient       Also encrypt to this recipient (an age public key). Can be repeated.
     #   --recipient-file  Also encrypt to the recipient(s) in this file, e.g. a valt .pub file. Can be repeated.
     #   --no-self         Do not include your own public key as a recipient.
@@ -121,7 +125,7 @@ declare -gA cliSpec=(
     # always a recipient unless --no-self is given. You will be prompted for the passphrase that
     # protects your private key.
     #   INPUT...          Files and directories to add. '-C DIR' changes to DIR before processing the inputs that follow it; an '@' prefixed path is a tar archive whose contents are added.
-    #   --identity        Your private key file, used to sign and to find your public key (the .pub file next to it); default: valt.key in the valt config directory.
+    #   --identity        Your private key file, used to sign and to find your public key (the .pub file next to it); default: the default key (see 'valt default-key').
     #   --recipient       Also encrypt to this recipient (an age public key). Can be repeated.
     #   --recipient-file  Also encrypt to the recipient(s) in this file, e.g. a valt .pub file. Can be repeated.
     #   --no-self         Do not include your own public key as a recipient.
@@ -136,12 +140,12 @@ declare -gA cliSpec=(
     # The inner signature is checked after decrypting, so you will be prompted for the passphrase that
     # protects your private key.
     #   ARCHIVE     The secure archive (.valt).
-    #   --identity  Your private key file (default: valt.key in the valt config directory).
+    #   --identity  Your private key file (default: the default key; see 'valt default-key').
     ['archive verify']='archiveVerify(file --identity|-i:file --help|-h)'
 
     # Verify and extract a secure archive (.valt). Same as 'valt decrypt ARCHIVE'.
     #   ARCHIVE       The secure archive (.valt).
-    #   --identity    Your private key file (default: valt.key in the valt config directory).
+    #   --identity    Your private key file (default: the default key; see 'valt default-key').
     #   --output-dir  The existing directory to extract into (default: the current directory).
     ['archive extract']='archiveExtract(file --identity|-i:file --output-dir|-o:dir --help|-h)'
 
@@ -183,7 +187,7 @@ declare -gA cliSpec=(
     # Verify a key pair, and optionally files encrypted or archived with it. You will be prompted for the
     # passphrase that protects the private key, once.
     #   FILE...     Public keys (.pub) to check against the private key, and encrypted files (e.g. .age) and secure archives (.valt) to verify.
-    #   --identity  The private key file (default: valt.key in the valt config directory).
+    #   --identity  The private key file (default: the default key; see 'valt default-key').
     #
     # The private key must decrypt with its passphrase. Each public key must match it: the keys it
     # contains must be the private key's, a file encrypted to it must decrypt with the private key,
@@ -194,6 +198,15 @@ declare -gA cliSpec=(
     # (FILE.minisig) must verify if it has one; a warning is shown if it does not. Each secure
     # archive must have both of its signatures verify, as with 'valt archive verify'.
     ['verify']='verify(--identity|-i:file --help|-h *)'
+
+    # Show or set the default private key file, used by any command when no key is given.
+    #   KEY_FILE  The valt private key file to use by default.
+    #   --clear   Remove the setting, so that the built-in default is used.
+    #
+    # With no arguments, shows the default key and where it comes from. The default is, in order:
+    # the VALT_KEY_FILE environment variable, the setting made here (stored in valt.conf in the
+    # valt config directory), or valt.key in the valt config directory.
+    ['default-key']='defaultKey(file? --clear --help|-h)'
 )
 
 ARGS_PARSER_BEGIN="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 🚫 BEGIN generated code: DO NOT EDIT 🚫 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -209,6 +222,7 @@ parseCommand() {
         *)
             case "$1" in
                 decrypt) shift; parseDecryptArgs "$@"; (( _opts['help'] )) && decryptCmdUsage || decryptCmd ;;
+                default-key) shift; parseDefaultKeyArgs "$@"; (( _opts['help'] )) && defaultKeyCmdUsage || defaultKeyCmd ;;
                 encrypt) shift; parseEncryptArgs "$@"; (( _opts['help'] )) && encryptCmdUsage || encryptCmd ;;
                 keys) shift; parseKeysArgs "$@"; (( _opts['help'] )) && keysCmdUsage || keysCmd ;;
                 paper) shift; parsePaperArgs "$@"; (( _opts['help'] )) && paperCmdUsage || paperCmd ;;
@@ -290,8 +304,8 @@ archiveCreateCmdUsage() {
     option "" "before processing the inputs that follow it; an '@'" 41
     option "" "prefixed path is a tar archive whose contents are added." 41
     option "-i, --identity IDENTITY" "Your private key file, used to sign and to find your public" 41
-    option "" "key (the .pub file next to it); default: valt.key in the" 41
-    option "" "valt config directory." 41
+    option "" "key (the .pub file next to it); default: the default key" 41
+    option "" "(see 'valt default-key')." 41
     option "-r, --recipient RECIPIENT" "Also encrypt to this recipient (an age public key). Can be" 41
     option "" "repeated." 41
     option "-R, --recipient-file RECIPIENT-FILE" "Also encrypt to the recipient(s) in this file, e.g. a valt" 41
@@ -341,8 +355,8 @@ archiveExtractCmdUsage() {
     show "Usage:" bold blue "valt archive extract" "ARCHIVE [-i IDENTITY] [-o OUTPUT-DIR]"
     echo
     option "ARCHIVE" "The secure archive (.valt)." 33
-    option "-i, --identity IDENTITY" "Your private key file (default: valt.key in the valt config" 33
-    option "" "directory)." 33
+    option "-i, --identity IDENTITY" "Your private key file (default: the default key; see 'valt" 33
+    option "" "default-key')." 33
     option "-o, --output-dir OUTPUT-DIR" "The existing directory to extract into (default: the current" 33
     option "" "directory)." 33
     option "-h, --help" "Print this help message." 33
@@ -380,7 +394,8 @@ archiveVerifyCmdUsage() {
     show "Usage:" bold blue "valt archive verify" "ARCHIVE [-i IDENTITY]"
     echo
     option "ARCHIVE" "The secure archive (.valt)." 29
-    option "-i, --identity IDENTITY" "Your private key file (default: valt.key in the valt config directory)." 29
+    option "-i, --identity IDENTITY" "Your private key file (default: the default key; see 'valt" 29
+    option "" "default-key')." 29
     option "-h, --help" "Print this help message." 29
     declare -F archiveVerifyCmdUsageExtra > /dev/null && archiveVerifyCmdUsageExtra
     bye "$@"
@@ -420,7 +435,8 @@ decryptCmdUsage() {
     show "Usage:" bold blue "valt decrypt" "FILE [-f] [-i IDENTITY] [-o OUTPUT]"
     echo
     option "FILE" "The encrypted file (.age) or secure archive (.valt)." 29
-    option "-i, --identity IDENTITY" "The private key file (default: valt.key in the valt config directory)." 29
+    option "-i, --identity IDENTITY" "The private key file (default: the default key; see 'valt" 29
+    option "" "default-key')." 29
     option "-o, --output OUTPUT" "For a file, the output file ('-' for standard output; default: FILE" 29
     option "" "without .age). For an archive, the existing directory to extract into" 29
     option "" "(default: the current directory)." 29
@@ -431,6 +447,44 @@ decryptCmdUsage() {
     echo "stops if it does not match. A warning is shown if there is no signature. Archives always contain"
     echo "signatures, which are verified before extracting."
     declare -F decryptCmdUsageExtra > /dev/null && decryptCmdUsageExtra
+    bye "$@"
+}
+
+parseDefaultKeyArgs() {
+    local _prevFailHandler="${_failHandler}"
+    declare -g _failHandler=defaultKeyCmdUsage
+    local _argIndex=0
+    while (( $# > 0 )); do
+        case "$1" in
+            --clear) _opts+=(['clear']="1"); shift ;;
+            --clear=*) fail "--clear does not accept a value" ;;
+            --help | -h) _opts+=(['help']="1"); shift ;;
+            --help=*) fail "--help does not accept a value" ;;
+            --) shift
+                while (( $# > 0 )); do
+                    (( _argIndex == 0 )) && assertFile "$1" || unknownArg "$1"
+                    _args+=("$1"); (( _argIndex++ )); shift
+                done ;;
+            *) (( _argIndex == 0 )) && assertFile "$1" || unknownArg "$1"; _args+=("$1"); (( _argIndex++ )); shift ;;
+        esac
+    done
+    declare -g _failHandler="${_prevFailHandler}"
+}
+
+defaultKeyCmdUsage() {
+    echo
+    show bold "Show or set the default private key file, used by any command when no key is given."
+    echo
+    show "Usage:" bold blue "valt defaultKey" "[KEY_FILE] [--clear]"
+    echo
+    option "KEY_FILE" "The valt private key file to use by default." 16
+    option "--clear" "Remove the setting, so that the built-in default is used." 16
+    option "-h, --help" "Print this help message." 16
+    echo
+    echo "With no arguments, shows the default key and where it comes from. The default is, in order:"
+    echo "the VALT_KEY_FILE environment variable, the setting made here (stored in valt.conf in the"
+    echo "valt config directory), or valt.key in the valt config directory."
+    declare -F defaultKeyCmdUsageExtra > /dev/null && defaultKeyCmdUsageExtra
     bye "$@"
 }
 
@@ -487,8 +541,8 @@ encryptCmdUsage() {
     echo
     option "FILE" "The file to encrypt." 41
     option "-i, --identity IDENTITY" "Your private key file, used to sign and to find your public" 41
-    option "" "key (the .pub file next to it); default: valt.key in the" 41
-    option "" "valt config directory." 41
+    option "" "key (the .pub file next to it); default: the default key" 41
+    option "" "(see 'valt default-key')." 41
     option "-r, --recipient RECIPIENT" "Also encrypt to this recipient (an age public key). Can be" 41
     option "" "repeated." 41
     option "-R, --recipient-file RECIPIENT-FILE" "Also encrypt to the recipient(s) in this file, e.g. a valt" 41
@@ -626,7 +680,8 @@ paperCmdUsage() {
     echo
     show "Usage:" bold blue "valt paper" "[KEY_FILE] [-c CSS] [-k KEY-INFO] [-n NAME] [-t TEMPLATE]"
     echo
-    option "KEY_FILE" "The private key file (default: valt.key in the valt config directory)." 29
+    option "KEY_FILE" "The private key file (default: the default key; see 'valt" 29
+    option "" "default-key')." 29
     option "-n, --name NAME" "Use the NAME.key file in the valt config directory, e.g. bob ->" 29
     option "" "bob.key." 29
     option "-k, --key-info KEY-INFO" "Key info file to use instead of the default." 29
@@ -808,7 +863,8 @@ verifyCmdUsage() {
     echo
     option "FILE..." "Public keys (.pub) to check against the private key, and encrypted" 29
     option "" "files (e.g. .age) and secure archives (.valt) to verify." 29
-    option "-i, --identity IDENTITY" "The private key file (default: valt.key in the valt config directory)." 29
+    option "-i, --identity IDENTITY" "The private key file (default: the default key; see 'valt" 29
+    option "" "default-key')." 29
     option "-h, --help" "Print this help message." 29
     echo
     echo "The private key must decrypt with its passphrase. Each public key must match it: the keys it"
@@ -845,6 +901,7 @@ keysCmd() {
     fi
 
     createKeys "${name}" "${outputDir}" "${publicKeyFile}" "${privateKeyFile}" ${verify} "${_opts['force']:-0}"
+    showDefaultKeyHint "${privateKeyFile}"
 
     (( _opts['no-pdf'] )) && return 0
     if isKeyInfoComplete "${_opts['key-info']}"; then
@@ -862,7 +919,7 @@ paperCmd() {
         assertValidFileName "${_opts['name']}"
         keyFile="${valtConfigDir}/${_opts['name']}.${valtPrivateKeySuffix}"
     fi
-    [[ -n ${keyFile} ]] || keyFile="${valtConfigDir}/valt.${valtPrivateKeySuffix}"
+    [[ -n ${keyFile} ]] || keyFile="${ defaultValtKeyFile; }"
     assertFile "${keyFile}" "private key file"
     generatePaperKey "${keyFile}"
 }
@@ -1067,6 +1124,29 @@ verifyCmd() {
     fi
 }
 
+defaultKeyCmd() {
+    if (( _opts['clear'] )); then
+        [[ -z ${_args[0]:-} ]] || defaultKeyCmdUsage "Specify either KEY_FILE or --clear, not both."
+        setDefaultValtKeyFile
+        show "Removed the default key setting."
+    elif [[ -n ${_args[0]:-} ]]; then
+        setDefaultValtKeyFile "${_args[0]}"
+        show "Default key set to" bold "${ tildePath "${ defaultValtKeyFile; }"; }" glue "."
+        [[ -n ${VALT_KEY_FILE:-} ]] && warn "VALT_KEY_FILE is set, and overrides this setting."
+    fi
+
+    local keyFile; keyFile="${ defaultValtKeyFile; }"
+    local source; source="${ defaultValtKeyFileSource; }"
+    case "${source}" in
+        VALT_KEY_FILE) source='the VALT_KEY_FILE environment variable' ;;
+        built-in) source='the built-in default' ;;
+        *) source="${ tildePath "${source}"; }" ;;
+    esac
+    show "Default key:" bold "${ tildePath "${keyFile}"; }" "(from ${source})"
+    [[ -f "${keyFile}" ]] || warn "${ tildePath "${keyFile}"; } does not exist; create a key pair with 'valt keys'."
+    return 0
+}
+
 SECTION="--+-+-----+-++(-++(---++++(---+( SHARED FUNCTIONS )+---)++++---)++-)++-+------+-+--"
 
 # Prompts for a password or passphrase (kind), then shows its strength report. Returns 1 if it is unsafe to use.
@@ -1211,10 +1291,21 @@ extractArchive() {
     show "Extracted to" bold "${ tildePath "${destDir}"; }"
 }
 
-# Outputs the private key file from --identity, defaulting to valt.key in the valt config directory.
+# Suggests making keyFile the default key, if it is not already.
+
+showDefaultKeyHint() {
+    local keyFile; keyFile="${ cd "${ dirname "$1"; }" && pwd -P; }/${ basename "$1"; }"
+    local defaultKey; defaultKey="${ defaultValtKeyFile; }"
+    [[ -f "${defaultKey}" ]] && defaultKey="${ cd "${ dirname "${defaultKey}"; }" && pwd -P; }/${ basename "${defaultKey}"; }"
+    [[ ${keyFile} == "${defaultKey}" ]] && return 0
+    echo
+    show "To use this key when no key is given, run:" primary "valt default-key ${ tildePath "${keyFile}"; }"
+}
+
+# Outputs the private key file from --identity, or the default key (see defaultValtKeyFile).
 
 identityKeyFile() {
-    echo "${_opts['identity']:-${valtConfigDir}/valt.${valtPrivateKeySuffix}}"
+    echo "${_opts['identity']:-${ defaultValtKeyFile; }}"
 }
 
 # Adds -r/-R recipient args from the --recipient, --recipient-file and --no-self options. Unless --no-self is

@@ -378,10 +378,55 @@ armorKeyFile() {
     printf '%s\n' "${_agePemEnd}"
 }
 
+# ◇ Output the path of the default valt private key file, used when no key is specified: VALT_KEY_FILE if set, else the
+#   defaultKeyFile setting in valt.conf in the valt config directory (see setDefaultValtKeyFile), else valt.key in the
+#   valt config directory.
+
+defaultValtKeyFile() {
+    local keyFile source
+    _resolveDefaultValtKeyFile keyFile source
+    echo "${keyFile}"
+}
+
+# ◇ Output where the default valt private key file comes from: 'VALT_KEY_FILE', the path of the valt.conf file that
+#   sets it, or 'built-in'.
+
+defaultValtKeyFileSource() {
+    local keyFile source
+    _resolveDefaultValtKeyFile keyFile source
+    echo "${source}"
+}
+
+# ◇ Set the default valt private key file in valt.conf in the valt config directory, or remove the setting.
+#
+# · ARGS
+#
+#   [keyFile] (file)  The valt private key file to use by default; omit to remove the setting.
+
+setDefaultValtKeyFile() {
+    local configFile; configFile="${ configDirPath -p valt "${_valtConfigFileName}"; }"
+    local keyFile=''
+    if [[ -n ${1:-} ]]; then
+        _assertValtKey "$1"
+        setFileVar keyFile "$1" "key file"
+        [[ ${keyFile} == *"'"* || ${keyFile} == *$'\n'* ]] && fail "key file path must not contain a quote or newline: ${keyFile}"
+    fi
+
+    local -a lines=()
+    [[ -f "${configFile}" ]] && mapfile -t lines < <(grep -v '^defaultKeyFile=' "${configFile}")
+    [[ -n ${keyFile} ]] && lines+=("defaultKeyFile='${keyFile}'")
+    if (( ${#lines[@]} )); then
+        printf '%s\n' "${lines[@]}" > "${configFile}" || fail "could not write ${configFile}"
+    else
+        rm -f "${configFile}"
+    fi
+}
+
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/keys' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_keys() {
-    require 'valt/encrypt' 'valt/decrypt'  'valt/sign'
+    require 'valt/encrypt' 'valt/decrypt'  'valt/sign' 'rayvn/config'
+    declare -gr _valtConfigFileName='valt.conf'
 
     declare -grx valtProjectUrl='https://github.com/phoggy/valt'
 
@@ -499,6 +544,30 @@ _prepareKey() {
         readPassword "${_prompt}" rayvnTest_ValtKeyPassphrase || fail
         cursorUpOneAndEraseLine
     fi
+}
+
+# Set the named vars to the default key file and where it comes from (see defaultValtKeyFile).
+
+_resolveDefaultValtKeyFile() {
+    local -n _rdkFileRef=$1
+    local -n _rdkSourceRef=$2
+    if [[ -n ${VALT_KEY_FILE:-} ]]; then
+        _rdkFileRef="${VALT_KEY_FILE}"
+        _rdkSourceRef='VALT_KEY_FILE'
+        return 0
+    fi
+    local configDir; configDir="${ configDirPath -p valt; }"
+    local configFile="${configDir}/${_valtConfigFileName}"
+    if [[ -f "${configFile}" ]]; then
+        local configured; configured="${ ( sourceConfigFile "${configFile}"; echo "${defaultKeyFile:-}" ) 2> /dev/null; }"
+        if [[ -n ${configured} ]]; then
+            _rdkFileRef="${configured}"
+            _rdkSourceRef="${configFile}"
+            return 0
+        fi
+    fi
+    _rdkFileRef="${configDir}/valt.${valtPrivateKeySuffix}"
+    _rdkSourceRef='built-in'
 }
 
 _assertValtKey() {

@@ -94,12 +94,14 @@ nix run github:phoggy/valt#recover -- decrypt FILE -i KEY_FILE
 | `valt archive verify ARCHIVE` | Verify both signatures of a secure archive without extracting it. |
 | `valt archive extract ARCHIVE` | Verify and extract a secure archive. |
 | `valt verify [FILE...]` | Verify a key pair (the private key decrypts, and matches its public key), and optionally encrypted files and secure archives. |
+| `valt default-key [KEY_FILE]` | Show or set the default private key file, used when no key is given. |
 | `valt passphrase` | Generate random passphrases, or check the strength of one (`--check`). |
 | `valt password` | Generate random passwords, or check the strength of one (`--check`). |
 | `valt pwned` | Check whether a password or passphrase appears in a known data breach. |
 
-Use `valt COMMAND --help` for details. Keys default to `valt.key` and `valt.pub` in the valt
-config directory; most commands take `-i KEY_FILE` to use another.
+Use `valt COMMAND --help` for details. Commands that need a private key use `-i KEY_FILE`, or the default key: the
+`VALT_KEY_FILE` environment variable, else the key set with `valt default-key`, else `valt.key` in the valt config
+directory.
 
 ## Quick Start
 
