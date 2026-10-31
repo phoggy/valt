@@ -54,12 +54,11 @@ generatePassphrase() {
 #
 # · ARGS
 #
-#   prompt (string)                              Prompt label displayed before each entry.
-#   resultVarRef (string)                        Name of the variable to receive the verified password.
-#   [testUseCase] ('account'|'file')              Test password strength and breach status if provided (default: '').
-#   [testThreatLevel] ('casual'|'motivated'|      How much guessing power to judge strength against (default: 'professional').
-#                      'professional'|'nation-state')
-#   [timeout] (int)                               Seconds to wait for each entry (default: 30).
+#   prompt (string)                                                         Prompt label displayed before each entry.
+#   resultVarRef (stringRef)                                                Name of the variable to receive the verified password.
+#   [testUseCase] ('account'|'file')                                        Test password strength and breach status if provided (default: '').
+#   [testThreatLevel] ('casual'|'motivated'|'professional'|'nation-state')  How much guessing power to judge strength against (default: 'professional').
+#   [timeout] (int)                                                         Seconds to wait for each entry (default: 30).
 
 readConfirmedPassword() {
     local _p1 _p2
