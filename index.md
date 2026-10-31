@@ -7,7 +7,7 @@ nav_order: 1
 # valt
 
 Public key encryption for files and archives, using [age](https://age-encryption.org/) and
-[minisign](https://jedisct1.github.io/minisign/), built on [rayvn](/rayvn).
+[minisign](https://jedisct1.github.io/minisign/). Built on [rayvn](/rayvn).
 
 valt creates a passphrase-protected key pair, plus a printable *paper key*: a PDF that backs up the key and explains to
 your successors, step by step, how to use it. Files are encrypted to your own key (and optionally to others), and signed
@@ -59,7 +59,7 @@ from its QR code or printed text.
 | Library | Description |
 |---|---|
 | [valt/keys](/valt/api/valt-keys) | Key pair generation, verification and recipients. |
-| [valt/encrypt](/valt/api/valt-encrypt) | Encryption to public keys or a passphrase. |
+| [valt/encrypt](/valt/api/valt-encrypt) | Encryption with public keys or a passphrase. |
 | [valt/decrypt](/valt/api/valt-decrypt) | Decryption with a private key or a passphrase. |
 | [valt/sign](/valt/api/valt-sign) | File signing and verification with valt keys. |
 | [valt/archive](/valt/api/valt-archive) | Signed, encrypted secure archives of files and directories. |
