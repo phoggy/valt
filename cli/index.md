@@ -91,10 +91,10 @@ successors, along with detailed usage instructions. Keys are represented as a QR
 a text format (often called "paper keys"). Content is personalized from a key.info file; if it has
 not been completed, the PDF is skipped and can be generated later with 'valt paper'.
 
-Please ensure that you print at least one copy of the PDF file and write your passphrase on the
-last page (or leave the passphrase blank and add instructions on where to find it in the Notes
-section), then store copies in secure locations, e.g. safe deposit box/fire safe and/or with
-trusted people!
+The PDF is opened when done, so that you can check and print it. Please ensure that you print at
+least one copy and write your passphrase on the last page (or leave the passphrase blank and add
+instructions on where to find it in the Notes section), then store copies in secure locations,
+e.g. safe deposit box/fire safe and/or with trusted people!
 
 Document Customization
 
@@ -122,9 +122,10 @@ Usage: valt paper [KEY_FILE] [-c CSS] [-k KEY-INFO] [-n NAME] [-t TEMPLATE]
     -c, --css CSS            CSS file with style overrides to apply.
     -h, --help               Print this help message.
 
-Please ensure that you print at least one copy of the PDF file and write your passphrase on the
-last page (or leave the passphrase blank and add instructions on where to find it in the Notes
-section). See 'valt keys --help' for document customization details.
+The PDF is opened when done, so that you can check and print it. Please ensure that you print at
+least one copy and write your passphrase on the last page (or leave the passphrase blank and add
+instructions on where to find it in the Notes section). See 'valt keys --help' for document
+customization details.
 ```
 
 ### valt verify
