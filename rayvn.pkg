@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 projectName='valt'
-projectDescription='Encrypt file archives using age encryption. Built with rayvn.'
+projectDescription='Public key encryption for files and archives, using age and minisign. Built with rayvn.'
 projectVersion='0.1.1+'
 projectReleaseDate=''
 docsWorktree='../valt-pages'
