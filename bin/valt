@@ -911,6 +911,7 @@ keysCmd() {
     (( _opts['no-pdf'] )) && return 0
     if isKeyInfoComplete "${_opts['key-info']}"; then
         generatePaperKey "${privateKeyFile}"
+        openPaperKey "${privateKeyFile}"
     else
         showPaperKeyDeferred "${privateKeyFile}"
     fi
@@ -1294,6 +1295,17 @@ extractArchive() {
     show "Verifying and extracting secure archive" cyan "${ tildePath "${file}"; }"
     extractSecureArchive "${file}" -i "${keyFile}" -o "${destDir}" || fail
     show "Extracted to" bold "${ tildePath "${destDir}"; }"
+}
+
+# Opens the paper key PDF for keyFile in the default viewer, only on a terminal (not in scripts or tests), so that it
+# can be checked and printed. Failing to open it is not an error, since it has been saved.
+
+openPaperKey() {
+    [[ -t 0 && -t 1 ]] || return 0
+    local pdfFile; pdfFile="${ _paperKeyFile "$1"; }"
+    [[ -f "${pdfFile}" ]] || return 0
+    ( openUrl "${pdfFile}" ) &> /dev/null || warn "Could not open" bold "${ tildePath "${pdfFile}"; }" glue "; open it to check and print it."
+    return 0
 }
 
 # Makes keyFile the default key if makeDefault, or if the user agrees when asked (only on a terminal), unless it is
