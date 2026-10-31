@@ -29,6 +29,7 @@ main() {
     testForceOverwrite
     testNoForceFailsOnConflict
     testCustomName
+    testDefaultTimeZoneIsLocal
     testCustomOutputDir
 
     # Extract
@@ -266,8 +267,19 @@ testPrivateReadmeWithNotes() {
 
 # ─── Options ─────────────────────────────────────────────────────────────────
 
+# Archive names include a timestamp to the second. Tests that predict a name start at the beginning of a second, so the
+# archive is created within the same second.
+
+waitForNewSecond() {
+    local second; second="${ date '+%S'; }"
+    while [[ ${ date '+%S'; } == "${second}" ]]; do
+        sleep 0.05
+    done
+}
+
 testForceOverwrite() {
     local outputDir; outputDir="${ makeTempDir; }"
+    waitForNewSecond
     local ts; ts="${ timeStamp UTC; }"
     touch "${outputDir}/overwrite-${ts}.valt" "${outputDir}/overwrite-${ts}.valt.pub"
     local file; file="${ newSecureArchive -C "${testInputDir}" file1.txt \
@@ -277,12 +289,19 @@ testForceOverwrite() {
 
 testNoForceFailsOnConflict() {
     local outputDir; outputDir="${ makeTempDir; }"
+    waitForNewSecond
     local ts; ts="${ timeStamp UTC; }"
     touch "${outputDir}/conflict-${ts}.valt"
     ( newSecureArchive -C "${testInputDir}" file1.txt \
         -i "${keyFile}" -R "${pubFile}" -n conflict -z UTC -o "${outputDir}" ) 2> /dev/null \
         && fail "must fail when archive already exists"
     return 0
+}
+
+testDefaultTimeZoneIsLocal() {
+    local outputDir; outputDir="${ makeTempDir; }"
+    local file; file="${ newSecureArchive -C "${testInputDir}" file1.txt -i "${keyFile}" -R "${pubFile}" -n zone -o "${outputDir}"; }"
+    [[ ${file} == "${outputDir}"/zone-*_"${ date '+%Z'; }".valt ]] || fail "the archive name must use the local time zone: ${file}"
 }
 
 testCustomName() {

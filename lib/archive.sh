@@ -18,7 +18,7 @@
 #   -f, --force                Overwrite any existing output file (default: fail).
 #   -n, --name NAME            Specify the archive file name prefix (default: ${USER}).
 #   -z, --zone ZONE            The time zone for the timestamp in the name: 'local' (the system time zone), 'UTC', or a
-#                              zone name such as 'America/Los_Angeles' (default: UTC).
+#                              zone name such as 'America/Los_Angeles' (default: local).
 #   -u, --user-text TEXT       User text to include in readme. Can contain '\n'.
 #   -o, --output-dir DIR       Specify the archive destination directory path (default: ${PWD}).
 #   -C DIR                     Change to the specified directory before processing the remaining relative INPUT paths.
@@ -81,7 +81,7 @@ newSecureArchive() {
     # Options
     local destDir="${PWD}"
     local name="${USER}"
-    local timeZoneName='UTC'
+    local timeZoneName='local'
     local force=0
     local userReadmeText
     local currentDir="${PWD}"

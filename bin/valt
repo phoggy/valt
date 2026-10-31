@@ -125,7 +125,7 @@ declare -gA cliSpec=(
     #   --recipient-file  Also encrypt to the recipient(s) in this file, e.g. a valt .pub file. Can be repeated.
     #   --no-self         Do not include your own public key as a recipient.
     #   --name            The archive file name prefix (default: your user name).
-    #   --zone            The time zone for the timestamp in the archive name: 'local' (the system time zone), 'UTC', or a name such as 'America/Los_Angeles' (default: UTC).
+    #   --zone            The time zone for the timestamp in the archive name: 'local' (the system time zone), 'UTC', or a name such as 'America/Los_Angeles' (default: local).
     #   --user-text       Text to include in the archive's README. Can contain '\n'.
     #   --output-dir      The directory to write the archive to (default: the current directory).
     #   --force           Overwrite an existing archive.
@@ -284,7 +284,7 @@ archiveCreateCmdUsage() {
     option "--name, -n NAME" "The archive file name prefix (default: your user name)." 41
     option "--zone, -z ZONE" "The time zone for the timestamp in the archive name:" 41
     option "" "'local' (the system time zone), 'UTC', or a name such as" 41
-    option "" "'America/Los_Angeles' (default: UTC)." 41
+    option "" "'America/Los_Angeles' (default: local)." 41
     option "--user-text, -u USER-TEXT" "Text to include in the archive's README. Can contain '\\n'." 41
     option "--output-dir, -o OUTPUT-DIR" "The directory to write the archive to (default: the current" 41
     option "" "directory)." 41
