@@ -10,6 +10,10 @@ main() {
     testPassphraseCheckStrong
     testPassphraseCheckUnchecked
 
+    # typed passphrases (the interactive path, with only the terminal input simulated)
+    testTypedStrongPassphraseAccepted
+    testTypedWeakPassphraseRejected
+
     # password
     testPasswordOptions
     testPasswordMinGreaterThanMax
@@ -94,6 +98,36 @@ testPassphraseCheckUnchecked() {
     assertContains "but unable to check for breaches" "${output}"
 }
 
+# ---- typed passphrases ----
+
+# Simulates typing the given text at a passphrase prompt.
+
+typePassphrase() {
+    declare -g typedText="$1"
+    secureRequest() { local -n _typedRef=$2; _typedRef="${typedText}"; }
+    cursorUpToColumn() { :; }
+}
+
+testTypedStrongPassphraseAccepted() {
+    local phrase='ribbon corridor gravel unbuckle mosaic salvage'
+    addToFakeApi "${phrase}" 0
+    typePassphrase "${phrase}"
+    local entered; readPassword "Enter passphrase" entered file > /dev/null 2>&1
+    assertEqual 0 $? "a strong typed passphrase must be accepted"
+    assertEqual "${phrase}" "${entered}"
+    local confirmed; readConfirmedPassword "Enter passphrase" confirmed file > /dev/null 2>&1
+    assertEqual 0 $? "a strong typed and confirmed passphrase must be accepted"
+    assertEqual "${phrase}" "${confirmed}"
+}
+
+testTypedWeakPassphraseRejected() {
+    addToFakeApi 'password123' 3
+    typePassphrase 'password123'
+    local entered; readPassword "Enter passphrase" entered file > /dev/null 2>&1
+    assertEqual 1 $? "a weak typed passphrase must be rejected"
+    assertEqual '' "${entered}"
+}
+
 # ---- password ----
 
 testPasswordOptions() {
@@ -150,5 +184,6 @@ testPwnedNoInput() {
     assertContains "no input" "${output}"
 }
 
-source rayvn.up 'rayvn/test'
+rayvnTest_ModifiableFunctions=1
+source rayvn.up 'rayvn/test' 'valt/password'
 main "$@"

@@ -174,7 +174,12 @@ readPassword() {
 #   2  password is strong enough, but whether it appears in a known breach could not be checked (e.g. offline).
 
 passwordStrength() {
-    local _passVar="$1"
+
+    # Copy the password before declaring any other local, so that the caller's variable is read even if its name is
+    # the same as one of ours (e.g. readPassword passes '_result')
+
+    local -n _psPasswordRef="$1"
+    local _psPassword="${_psPasswordRef}"
     local _useCase="$2"
     local _threatLevel="${3:-professional}"
     local -n _scoreRef="$4"
@@ -182,7 +187,7 @@ passwordStrength() {
     local _breached _apiError=0 _breachCount=0 _breachInfo _breachSummary _sourcesInfo
     local _score _scoreDesc _strengthSummary _crackSummary _crackTimes _primaryCount _summary _info
     local _time _actor _detail _primary _json
-    local _result=0
+    local _psResult=0
     local _context="against ${_threatLevel} ${_useCase} attacker"
 
     [[ ${_useCase} == account || ${_useCase} == file ]] || \
@@ -192,7 +197,7 @@ passwordStrength() {
 
     # Check pwned database and summarize
 
-    hasNotBeenPwned ${_passVar} _apiError _breachCount; _breached=$?
+    hasNotBeenPwned _psPassword _apiError _breachCount; _breached=$?
     if (( _breached == 0 )); then
         _breachSummary="${ show success "no known breaches"; }"
     elif (( _breached == 1 )); then
@@ -211,8 +216,7 @@ passwordStrength() {
     # and --verbose "report" field), so there's nothing left to do here but ask it and render
     # what it returns.
 
-    local -n _passRef="${_passVar}"
-    _json="${ printf '%s\n' "${_passRef}" | mrld --verbose --use-case "${_useCase}" --threat-level "${_threatLevel}"; }"
+    _json="${ printf '%s\n' "${_psPassword}" | mrld --verbose --use-case "${_useCase}" --threat-level "${_threatLevel}"; }"
     _score="${ printf '%s' "${_json}" | jq -r '.level'; }"
     _scoreDesc="${ printf '%s' "${_json}" | jq -r '.description'; }"
 
@@ -228,13 +232,13 @@ passwordStrength() {
 
     if (( _breached == 2 )); then
         _summary="⛔ ${ show bold error "Do NOT use:" "${_breachSummary}, ${_strengthSummary}"; }"
-        _result=1
+        _psResult=1
     elif (( _weak )); then
         _summary="⚠️ ${ show bold warning "Not safe to use:" "${_strengthSummary}, ${_breachSummary}"; }"
-        _result=1
+        _psResult=1
     elif (( _breached == 1 )); then
         _summary="⚠️ ${_strengthSummary}, but ${_breachSummary}"
-        _result=2
+        _psResult=2
     else
         _summary="✅ ${_strengthSummary}, ${_breachSummary}"
     fi
@@ -258,7 +262,7 @@ passwordStrength() {
 
     _resultArrayRef=("${_summary}" "" "${_crackSummary}:" "" "${_crackTimes[@]}" "" "${_breachInfo}" "${_sourcesInfo}")
     _scoreRef=${_score}
-    return ${_result}
+    return ${_psResult}
 }
 
 
