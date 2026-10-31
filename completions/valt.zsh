@@ -53,7 +53,7 @@ _valt() {
                                     '*'{--recipient,-r}'[Also encrypt to this recipient (an age public key). Can be repeated.]:recipient:' \
                                     '*'{--recipient-file,-R}'[Also encrypt to the recipient(s) in this file, e.g. a valt .pub file. Can be repeated.]:recipient-file:_files' \
                                     '(--user-text -u)'{--user-text,-u}'[Text to include in the archive'\''s README. Can contain '\''\\n'\''.]:user-text:' \
-                                    '(--zone -z)'{--zone,-z}'[The timezone for the timestamp in the archive name, e.g. PDT (default: UTC).]:zone:' \
+                                    '(--zone -z)'{--zone,-z}'[The time zone for the timestamp in the archive name: '\''local'\'' (the system time zone), '\''UTC'\'', or a name such as '\''America/Los_Angeles'\'' (default: UTC).]:zone:' \
                                     '*:INPUT...:'
                                     ;;
                                 extract)

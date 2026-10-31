@@ -17,7 +17,8 @@
 #                              for decryption. Can be repeated.
 #   -f, --force                Overwrite any existing output file (default: fail).
 #   -n, --name NAME            Specify the archive file name prefix (default: ${USER}).
-#   -z, --zone ZONE            Specify the timezone to use for timestamps, e.g. PDT (default: UTC).
+#   -z, --zone ZONE            The time zone for the timestamp in the name: 'local' (the system time zone), 'UTC', or a
+#                              zone name such as 'America/Los_Angeles' (default: UTC).
 #   -u, --user-text TEXT       User text to include in readme. Can contain '\n'.
 #   -o, --output-dir DIR       Specify the archive destination directory path (default: ${PWD}).
 #   -C DIR                     Change to the specified directory before processing the remaining relative INPUT paths.
