@@ -52,6 +52,7 @@ declare -gA cliSpec=(
     #   --output-dir  Directory for the key files (default: the valt config directory).
     #   --force       Replace existing key files, once the new ones have been created.
     #   --allow-weak-passphrase  Accept a passphrase that fails the strength and breach check. Not recommended: the passphrase is all that protects the private key.
+    #   --default     Make the new key the default key (see 'valt default-key') without asking. Otherwise you are asked, unless it already is the default.
     #   --no-verify   Do not verify keys.
     #   --no-advice   Do not show passphrase advice.
     #   --quick       Same as --no-advice --no-verify.
@@ -76,7 +77,7 @@ declare -gA cliSpec=(
     # default template and primary CSS file can be found in the valt 'etc' directory. Template
     # substitutions are performed with variables defined in the key.info file. Note that keys prefixed
     # with an underscore are reserved for system use.
-    ['keys']='keys(--name|-n:str=valt --output-dir|-o:dir --force|-f --allow-weak-passphrase --no-verify --no-advice --quick|-q --no-pdf --key-info|-k:file --template|-t:file --css|-c:file --help|-h)'
+    ['keys']='keys(--name|-n:str=valt --output-dir|-o:dir --force|-f --allow-weak-passphrase --default|-d --no-verify --no-advice --quick|-q --no-pdf --key-info|-k:file --template|-t:file --css|-c:file --help|-h)'
 
     # Generate the paper key PDF for an existing key pair, personalized from the key.info file. The PDF is written
     # next to the key and replaces any existing one, so this can be re-run whenever key.info changes. The passphrase
@@ -571,15 +572,17 @@ parseKeysArgs() {
         case "$1" in
             --allow-weak-passphrase) _opts+=(['allow-weak-passphrase']="1"); shift ;;
             --allow-weak-passphrase=*) fail "--allow-weak-passphrase does not accept a value" ;;
-            --css | -c) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--allow-weak-passphrase|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --css"; assertFile "$2"; _opts+=(['css']="$2"); shift 2 ;;
+            --css | -c) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--allow-weak-passphrase|--output-dir|--no-verify|--template|--default|-t|-q|-f|-d|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --css"; assertFile "$2"; _opts+=(['css']="$2"); shift 2 ;;
             --css=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --css"; assertFile "${_value}"; _opts+=(['css']="${_value}"); shift ;;
+            --default | -d) _opts+=(['default']="1"); shift ;;
+            --default=*) fail "--default does not accept a value" ;;
             --force | -f) _opts+=(['force']="1"); shift ;;
             --force=*) fail "--force does not accept a value" ;;
             --help | -h) _opts+=(['help']="1"); shift ;;
             --help=*) fail "--help does not accept a value" ;;
-            --key-info | -k) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--allow-weak-passphrase|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --key-info"; assertFile "$2"; _opts+=(['key-info']="$2"); shift 2 ;;
+            --key-info | -k) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--allow-weak-passphrase|--output-dir|--no-verify|--template|--default|-t|-q|-f|-d|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --key-info"; assertFile "$2"; _opts+=(['key-info']="$2"); shift 2 ;;
             --key-info=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --key-info"; assertFile "${_value}"; _opts+=(['key-info']="${_value}"); shift ;;
-            --name | -n) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--allow-weak-passphrase|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --name"; _opts+=(['name']="$2"); shift 2 ;;
+            --name | -n) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--allow-weak-passphrase|--output-dir|--no-verify|--template|--default|-t|-q|-f|-d|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --name"; _opts+=(['name']="$2"); shift 2 ;;
             --name=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --name"; _opts+=(['name']="${_value}"); shift ;;
             --no-advice) _opts+=(['no-advice']="1"); shift ;;
             --no-advice=*) fail "--no-advice does not accept a value" ;;
@@ -587,11 +590,11 @@ parseKeysArgs() {
             --no-pdf=*) fail "--no-pdf does not accept a value" ;;
             --no-verify) _opts+=(['no-verify']="1"); shift ;;
             --no-verify=*) fail "--no-verify does not accept a value" ;;
-            --output-dir | -o) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--allow-weak-passphrase|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --output-dir"; assertDirectory "$2"; _opts+=(['output-dir']="$2"); shift 2 ;;
+            --output-dir | -o) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--allow-weak-passphrase|--output-dir|--no-verify|--template|--default|-t|-q|-f|-d|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --output-dir"; assertDirectory "$2"; _opts+=(['output-dir']="$2"); shift 2 ;;
             --output-dir=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --output-dir"; assertDirectory "${_value}"; _opts+=(['output-dir']="${_value}"); shift ;;
             --quick | -q) _opts+=(['quick']="1"); shift ;;
             --quick=*) fail "--quick does not accept a value" ;;
-            --template | -t) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--allow-weak-passphrase|--output-dir|--no-verify|--template|-t|-q|-f|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --template"; assertFile "$2"; _opts+=(['template']="$2"); shift 2 ;;
+            --template | -t) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--css|--allow-weak-passphrase|--output-dir|--no-verify|--template|--default|-t|-q|-f|-d|-c|-n|-o|-k|-h|--no-advice|--key-info|--name|--help|--no-pdf|--force|--quick)$ ) ]] && fail "missing value for --template"; assertFile "$2"; _opts+=(['template']="$2"); shift 2 ;;
             --template=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --template"; assertFile "${_value}"; _opts+=(['template']="${_value}"); shift ;;
             --) shift; (( $# == 0 )) || unknownArg "$1" ;;
             *) unknownArg "$1" ;;
@@ -606,7 +609,7 @@ keysCmdUsage() {
     show bold "backup documentation. A strong passphrase is highly encouraged; advice and an opportunity to"
     show bold "generate one will be offered."
     echo
-    show "Usage:" bold blue "valt keys" "[--allow-weak-passphrase] [-c CSS] [-f] [-k KEY-INFO] [-n NAME] [--no-advice]"
+    show "Usage:" bold blue "valt keys" "[--allow-weak-passphrase] [-c CSS] [-d] [-f] [-k KEY-INFO] [-n NAME] [--no-advice]"
     echo "                 [--no-pdf] [--no-verify] [-o OUTPUT-DIR] [-q] [-t TEMPLATE]"
     echo
     option "-n, --name NAME" "Name to use for key files, e.g. bob -> bob.pub, bob.key. (default:" 33
@@ -615,6 +618,8 @@ keysCmdUsage() {
     option "-f, --force" "Replace existing key files, once the new ones have been created." 33
     option "--allow-weak-passphrase" "Accept a passphrase that fails the strength and breach check. Not" 33
     option "" "recommended: the passphrase is all that protects the private key." 33
+    option "-d, --default" "Make the new key the default key (see 'valt default-key') without" 33
+    option "" "asking. Otherwise you are asked, unless it already is the default." 33
     option "--no-verify" "Do not verify keys." 33
     option "--no-advice" "Do not show passphrase advice." 33
     option "-q, --quick" "Same as --no-advice --no-verify." 33
@@ -901,7 +906,7 @@ keysCmd() {
     fi
 
     createKeys "${name}" "${outputDir}" "${publicKeyFile}" "${privateKeyFile}" ${verify} "${_opts['force']:-0}"
-    showDefaultKeyHint "${privateKeyFile}"
+    offerDefaultKey "${privateKeyFile}" "${_opts['default']:-0}"
 
     (( _opts['no-pdf'] )) && return 0
     if isKeyInfoComplete "${_opts['key-info']}"; then
@@ -1291,15 +1296,34 @@ extractArchive() {
     show "Extracted to" bold "${ tildePath "${destDir}"; }"
 }
 
-# Suggests making keyFile the default key, if it is not already.
+# Makes keyFile the default key if makeDefault, or if the user agrees when asked (only on a terminal), unless it is
+# already the default; otherwise shows how to do so later.
 
-showDefaultKeyHint() {
+offerDefaultKey() {
     local keyFile; keyFile="${ cd "${ dirname "$1"; }" && pwd -P; }/${ basename "$1"; }"
+    local makeDefault=$2
     local defaultKey; defaultKey="${ defaultValtKeyFile; }"
     [[ -f "${defaultKey}" ]] && defaultKey="${ cd "${ dirname "${defaultKey}"; }" && pwd -P; }/${ basename "${defaultKey}"; }"
     [[ ${keyFile} == "${defaultKey}" ]] && return 0
+
+    local path; path="${ tildePath "${keyFile}"; }"
+    if (( ! makeDefault )) && [[ -t 0 && -t 1 ]]; then
+        require 'rayvn/prompt'
+        local choiceIndex=1
+        echo
+        confirm "Use ${path} as your default key, when no key is given?" yes no choiceIndex
+        (( choiceIndex == 0 )) && makeDefault=1
+    fi
+
     echo
-    show "To use this key when no key is given, run:" primary "valt default-key ${ tildePath "${keyFile}"; }"
+    if (( makeDefault )); then
+        setDefaultValtKeyFile "${keyFile}"
+        show "Default key set to" bold "${path}" glue "."
+        [[ -n ${VALT_KEY_FILE:-} ]] && warn "VALT_KEY_FILE is set, and overrides this setting."
+    else
+        show "To use this key when no key is given, run:" primary "valt default-key ${path}"
+    fi
+    return 0
 }
 
 # Outputs the private key file from --identity, or the default key (see defaultValtKeyFile).
