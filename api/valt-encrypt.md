@@ -1,14 +1,14 @@
 ---
 layout: default
 title: "valt/encrypt"
-parent: API Reference
-nav_order: 999
+parent: "Encryption"
+grand_parent: API Reference
+nav_order: 2
 ---
 
 # valt/encrypt
 
-Encryption using age.
-Use via: require 'valt/encrypt'
+Encryption with public keys or a passphrase.
 
 ## Functions
 
@@ -24,14 +24,14 @@ Encrypt input.
 
 | | |
 |---|---|
-| `encrypt` | [INPUT | -v NAME] --passphrase [--armor] [-o PATH] |
-| `-r,` | --recipient RECIPIENT  Encrypt to the specified RECIPIENT. See the recipient() function in 'valt/keys'. |
-| `-R,` | --recipient-file PATH  Encrypt to one or more recipients. PATH can be a valt key or contain a list of recipients (see the |
-| `-a,` | --armor                Encrypt to a PEM encoded format. |
-| `-p,` | --passphrase           Encrypt with a passphrase which will be requested via prompt. Cannot be combined with recipients. |
-| `-v,` | --var NAME             Encrypt the value of scalar shell variable NAME. Cannot be combined with INPUT path. |
-| `-o,` | --output PATH          Write the result to the file at PATH (default: standard output). Any existing file will be |
-| `[INPUT]` | Optional file path (default: standard input). If INPUT is a directory, it will be converted to a |
+| `encrypt` | `[INPUT | -v NAME] --passphrase [--armor] [-o PATH]` |
+| `-r, --recipient RECIPIENT` | Encrypt to the specified RECIPIENT. See the recipient() function in 'valt/keys'. |
+| `-R, --recipient-file PATH` | Encrypt to one or more recipients. PATH can be a valt key or contain a list of recipients (see the newRecipientsFile() function in 'valt/keys'). Valt private key files require passphrase input for decryption. Can be repeated. |
+| `-a, --armor` | Encrypt to a PEM encoded format. |
+| `-p, --passphrase` | Encrypt with a passphrase which will be requested via prompt. Cannot be combined with recipients. |
+| `-v, --var NAME` | Encrypt the value of scalar shell variable NAME. Cannot be combined with INPUT path. |
+| `-o, --output PATH` | Write the result to the file at PATH (default: standard output). Any existing file will be overwritten. |
+| `[INPUT]` | Optional file path (default: standard input). If INPUT is a directory, it will be converted to a tar file before encryption. Path cannot be combined with `-v` / `--var`. |
 {: .usage-table}
 
 *example*

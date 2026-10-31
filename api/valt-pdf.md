@@ -1,27 +1,28 @@
 ---
 layout: default
 title: "valt/pdf"
-parent: API Reference
-nav_order: 4
+parent: "Paper Keys"
+grand_parent: API Reference
+nav_order: 7
 ---
 
 # valt/pdf
 
+PDF generation from HTML.
+
 ## Functions
 
-### generatePdf
+### generatePdf()
 
-**Library:** `valt/pdf`
+Generates a PDF from an HTML file via a Node.js Puppeteer script.
 
-Generate PDF files from HTML.
-Use via: require 'valt/pdf'
-Generate a PDF file from an HTML file using Puppeteer (Node.js).
-Args: htmlFile outputFile [footerTemplate]
-  htmlFile       - path to the input HTML file
-  outputFile     - path where the generated PDF will be written
-  footerTemplate - optional HTML string used as the PDF footer template
 
-```bash
-generatePdf()
-```
+*args*
+
+| | |
+|---|---|
+| `htmlFile` *(string)* | Path to the input HTML file. |
+| `outputFile` *(string)* | Path where the generated PDF will be written. |
+| `[footerTemplate]` *(string)* | HTML string used as the PDF footer template. |
+{: .args-table}
 

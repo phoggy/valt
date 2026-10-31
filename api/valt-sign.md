@@ -1,14 +1,14 @@
 ---
 layout: default
 title: "valt/sign"
-parent: API Reference
-nav_order: 999
+parent: "Encryption"
+grand_parent: API Reference
+nav_order: 4
 ---
 
 # valt/sign
 
-Sign files using valt keys.
-Use via: require 'valt/sign'
+File signing and verification with valt keys.
 
 ## Functions
 

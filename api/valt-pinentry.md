@@ -1,33 +1,22 @@
 ---
 layout: default
 title: "valt/pinentry"
-parent: API Reference
-nav_order: 1
+parent: "Passwords"
+grand_parent: API Reference
+nav_order: 11
 ---
 
 # valt/pinentry
 
+The valt pinentry program for passphrase input.
+
 ## Functions
 
-### useValtPinEntry
+### useValtPinEntry()
 
-**Library:** `valt/pinentry`
+Sets PINENTRY_PROGRAM to the path of the valt-pinentry binary.
 
-Library supporting password/phrase generation
-Intended for use via: require 'valt/pinentry'
-Set PINENTRY_PROGRAM to valt's custom pinentry binary, enabling passphrase capture.
+### disableValtPinEntry()
 
-```bash
-useValtPinEntry() {
-```
-
-### disableValtPinEntry
-
-**Library:** `valt/pinentry`
-
-Unset PINENTRY_PROGRAM, restoring the default pinentry behavior.
-
-```bash
-disableValtPinEntry() {
-```
+Unsets PINENTRY_PROGRAM, restoring the default pinentry behavior.
 

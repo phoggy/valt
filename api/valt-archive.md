@@ -1,14 +1,14 @@
 ---
 layout: default
 title: "valt/archive"
-parent: API Reference
-nav_order: 999
+parent: "Encryption"
+grand_parent: API Reference
+nav_order: 5
 ---
 
 # valt/archive
 
-Secure archives.
-Use via: require 'valt/archive'
+Signed, encrypted secure archives of files and directories.
 
 ## Functions
 
@@ -25,16 +25,16 @@ standard output. Also creates the public version of the archive (same path plus 
 
 | | |
 |---|---|
-| `-i,` | --identity PATH        The valt.key file used to sign the archive. |
-| `-r,` | --recipient RECIPIENT  Encrypt to the specified RECIPIENT. See the recipient() function in 'valt/keys'. |
-| `-R,` | --recipient-file PATH  Encrypt to one or more recipients. PATH can be a valt key or contain a list of recipients (see the |
-| `-f,` | --force                Overwrite any existing output file (default: fail). |
-| `-n,` | --name NAME            Specify the archive file name prefix (default: ${USER}). |
-| `-z,` | --zone ZONE            Specify the timezone to use for timestamps, e.g. PDT (default: UTC). |
-| `-u,` | --user-text TEXT       User text to include in readme. Can contain '\n'. |
-| `-o,` | --output-dir DIR       Specify the archive destination directory path (default: ${PWD}). |
-| `-C` | DIR                     Change to the specified directory before processing the remaining relative INPUT paths. |
-| `INPUT...` | File, directory or @<archive> paths to add. An '@' prefixed file path is treated as a tar archive |
+| `-i, --identity PATH` | The valt.key file used to sign the archive. |
+| `-r, --recipient RECIPIENT` | Encrypt to the specified RECIPIENT. See the recipient() function in 'valt/keys'. |
+| `-R, --recipient-file PATH` | Encrypt to one or more recipients. PATH can be a valt key or contain a list of recipients (see the newRecipientsFile() function in 'valt/keys'). Valt private key files require passphrase input for decryption. Can be repeated. |
+| `-f, --force` | Overwrite any existing output file (default: fail). |
+| `-n, --name NAME` | Specify the archive file name prefix (default: ${USER}). |
+| `-z, --zone ZONE` | Specify the timezone to use for timestamps, e.g. PDT (default: UTC). |
+| `-u, --user-text TEXT` | User text to include in readme. Can contain '\n'. |
+| `-o, --output-dir DIR` | Specify the archive destination directory path (default: ${PWD}). |
+| `-C DIR` | Change to the specified directory before processing the remaining relative INPUT paths. |
+| `INPUT...` | File, directory or @<archive> paths to add. An '@' prefixed file path is treated as a tar archive whose contents should be extracted and added. |
 {: .usage-table}
 
 *example*
@@ -57,7 +57,6 @@ Encryption provides confidentiality while signatures provide authenticity/integr
 
 Valt File Structure
 
-```bash
 backup-2026-05-28_23.14_PDT.valt
 │
 ├── encrypted.tar.xz.age
@@ -70,19 +69,16 @@ backup-2026-05-28_23.14_PDT.valt
 ├── minisign.pub
 ├── age.pub
 └── README.txt
-```
 
 The encrypted tar structure ensures there is always a valid payload signature to use even if the outer one is missing or
 tampered with. The unencrypted files can be shared publicly and are packaged as a separate file:
 
-```bash
 backup-2026-05-28_23.14_PDT.valt.pub
 │
 ├── encrypted.tar.age.minisig
 ├── minisign.pub
 ├── age.pub
 └── README.txt
-```
 
 This file can be recreated from the original via the extractPublicArchive function.
 
@@ -103,7 +99,7 @@ and the inner payload signature (requires decryption with the private key).
 | | |
 |---|---|
 | `ARCHIVE` | Path to the .valt archive file. |
-| `-i,` | --identity PATH  The valt.key file used to decrypt and verify signatures. |
+| `-i, --identity PATH` | The valt.key file used to decrypt and verify signatures. |
 {: .usage-table}
 
 ### extractSecureArchive()
@@ -120,8 +116,8 @@ Checks both the outer and inner signatures before extracting the payload.
 | | |
 |---|---|
 | `ARCHIVE` | Path to the .valt archive file. |
-| `-i,` | --identity PATH  The valt.key file used to decrypt and verify signatures. |
-| `-o,` | --output-dir     Directory to extract contents into (default: ${PWD}). |
+| `-i, --identity PATH` | The valt.key file used to decrypt and verify signatures. |
+| `-o, --output-dir` | Directory to extract contents into (default: ${PWD}). |
 {: .usage-table}
 
 ### extractPublicArchive()

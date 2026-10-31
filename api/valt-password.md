@@ -1,74 +1,115 @@
 ---
 layout: default
 title: "valt/password"
-parent: API Reference
-nav_order: 3
+parent: "Passwords"
+grand_parent: API Reference
+nav_order: 9
 ---
 
 # valt/password
 
+Password and passphrase generation, secure input and strength estimates.
+
 ## Functions
 
-### generatePassword
+### generatePassword()
 
-**Library:** `valt/password`
+Generates a random password of random length within a given range.
 
-Password/phrase generation.
-Use via: require 'valt/passwords'
-TODO: don't display strength (via mrld) as it is inaccurate. Just pick a threshold and warn is week if below.
-Generate a random password of random length within the given range.
-Prints the generated password.
-Args: [minLength] [maxLength]
-  minLength - minimum password length (default: 24)
-  maxLength - maximum password length (default: 32)
 
-```bash
-generatePassword()
-```
+*args*
 
-### generatePassphrase
+| | |
+|---|---|
+| `resultVarName` *(string)* | Name of the variable to receive the password. |
+| `[minLength]` *(int)* | Minimum password length (default: 24). |
+| `[maxLength]` *(int)* | Maximum password length (default: 32). |
+{: .args-table}
 
-**Library:** `valt/password`
+### generatePassphrase()
 
-Generate a random passphrase using the Orchard Street Long word list via phraze.
-Prints the generated passphrase.
-Args: [wordCount] [separator]
-  wordCount - number of words in the passphrase (default: 5)
-  separator - string placed between words (default: space)
+Generates a random passphrase using the Orchard Street Long word list (17,576 words) via phraze.
 
-```bash
-generatePassphrase()
-```
 
-### readVerifiedPassword
+*args*
 
-**Library:** `valt/password`
+| | |
+|---|---|
+| `resultVarName` *(string)* | Name of the variable to receive the passphrase. |
+| `[wordCount]` *(int)* | Number of words in the passphrase (default: 5). |
+| `[separator]` *(string)* | String placed between words (default: ' '). |
+{: .args-table}
 
-Interactively prompt for a password twice and verify both entries match.
-Stores the verified password in a nameref variable. Fails if entries do not match.
-Args: resultVar [checkResult] [retryCount] [timeout]
-  resultVar   - nameref variable to receive the verified password
-  checkResult - if 'true', check strength and breach status (default: 'true')
-  retryCount  - number of times to retry the verification step (default: 3)
-  timeout     - seconds to wait for each entry before timing out (default: 30)
+### readConfirmedPassword()
 
-```bash
-readVerifiedPassword()
-```
+Interactively prompts for a password twice and stores the verified result in resultVarRef.
+Fails if the entries do not match or the first entry is empty. Returns 1 if the strength test (when requested)
+finds the first entry unsafe, after showing why.
 
-### readPassword
 
-**Library:** `valt/password`
+*args*
 
-Interactively prompt for a password with optional strength checking and breach detection.
-Stores the entered password in a nameref variable. Visibility controlled by passwordVisibility.
-Args: prompt resultVar [timeout] [checkResult]
-  prompt      - label displayed before the input field
-  resultVar   - nameref variable to receive the entered password
-  timeout     - seconds to wait for input before timing out (default: 30)
-  checkResult - if 'true', check strength and breach status (default: 'true')
+| | |
+|---|---|
+| `prompt` *(string)* | Prompt label displayed before each entry. |
+| `resultVarRef` *(stringRef)* | Name of the variable to receive the verified password. |
+| `[testUseCase]` *('account'\|'file')* | Test password strength and breach status if provided (default: ''). |
+| `[testThreatLevel]` *('casual'\|'motivated'\|'professional'\|'nation-state')* | How much guessing power to judge strength against (default: 'professional'). |
+| `[timeout]` *(int)* | Seconds to wait for each entry (default: 30). |
+{: .args-table}
 
-```bash
-readPassword()
-```
+### readPassword()
+
+Interactively prompts for a password, storing the result in resultVarRef.
+
+
+*args*
+
+| | |
+|---|---|
+| `prompt` *(string)* | Label displayed before the input field. |
+| `resultVarRef` *(string)* | Name of the variable to receive the entered password. |
+| `[strengthUseCase]` *(string)* | Estimate password strength and breach status if provided, either 'account' (online/offline attacks against a service whose password hashing you don't control) or 'file' (offline attacks against an Age-encrypted file or private key, at Age's default scrypt work factor). |
+| `[threatLevel]` *(string)* | How much guessing power to judge the strength verdict against: 'casual', 'motivated', 'professional', or 'nation-state' (default: 'professional'). |
+| `[timeout]` *(int)* | Seconds to wait for input (default: 30). |
+{: .args-table}
+
+*env vars*
+
+passwordVisibility          Controls input display: 'none' hides input, 'hide' masks it, 'show' reveals it (default: 'none').
+skipReadPasswordStrength    When set and non-zero, disables strength checking.
+
+*returns*
+
+| | |
+|---|---|
+| `0` | password accepted (with a warning shown if known breaches could not be checked) |
+| `1` | password is unsafe |
+{: .args-table}
+
+### passwordStrength()
+
+Returns a formatted password strength estimate as an array of description strings. Element 0 is a summary, subsequent elements
+provide additional detail.
+
+
+*args*
+
+| | |
+|---|---|
+| `passVar` *(string)* | Name of the variable holding the password to check. |
+| `useCase` *(string)* | Either 'account' (online/offline attacks against a service whose password hashing you don't control) or 'file' (offline attacks against an Age-encrypted file or private key, at Age's default scrypt work factor). |
+| `threatLevel` *(string)* | How much guessing power to judge the strength verdict against: 'casual', 'motivated', 'professional', or 'nation-state' (default: 'professional'). |
+| `strengthRef` *(intRef)* | Name of the variable to return the 0-4 strength value. |
+| `resultArrayRef` *(arrayRef)* | Name of an array variable to populate with the formatted strength report. |
+{: .args-table}
+
+*returns*
+
+| | |
+|---|---|
+| `0` | password appears safe to use. |
+| `1` | password is unsafe to use: it appears in a known breach, or strength < 3. |
+| `2` | password is strong enough, but whether it appears in a known breach could not be checked (e.g. offline). |
+{: .args-table}
 

@@ -1,14 +1,14 @@
 ---
 layout: default
 title: "valt/node"
-parent: API Reference
-nav_order: 999
+parent: "Paper Keys"
+grand_parent: API Reference
+nav_order: 8
 ---
 
 # valt/node
 
-Node.js / npm utilities.
-Use via: require 'valt/node'
+Node.js and npm support, used for PDF generation.
 
 ## Functions
 

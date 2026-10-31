@@ -1,11 +1,14 @@
 ---
 layout: default
 title: "valt/paper-keys"
-parent: API Reference
-nav_order: 999
+parent: "Paper Keys"
+grand_parent: API Reference
+nav_order: 6
 ---
 
 # valt/paper-keys
+
+Paper key PDF generation from key.info, and reminders to keep it current.
 
 ## Functions
 
@@ -74,6 +77,6 @@ Generates a paper key PDF from a private key file, storing the output path in a 
 | `resultVarRef` *(string)* | Name of the variable to receive the output paper key file path. |
 | `[keyInfoFile]` *(string)* | Path to the key info file (default: ${valtConfigDir}/key.info). |
 | `[cssOverride]` *(string)* | Path to an optional CSS override file. |
-| `[htmlTemplate]` *(string)* | Path to an HTML template file |
+| `[htmlTemplate]` *(string)* | Path to an HTML template file (default: ${valtHome}/etc/key-doc-template.html). |
 {: .args-table}
 
