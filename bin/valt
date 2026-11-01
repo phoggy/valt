@@ -122,10 +122,9 @@ declare -gA cliSpec=(
     #   --delete          Delete FILE after a successful --verify. This is an ordinary delete, not a secure erase.
     ['encrypt']='encrypt(str --identity|-i:file --recipient|-r:str+ --recipient-file|-R:file+ --no-self --no-sign --armor|-a --output|-o:str --force|-f --verify --delete --help|-h)'
 
-    # Create a signed, encrypted secure archive (.valt) from files and directories.
-    # A public companion (.valt.pub) that is safe to share is also created. Your own public key is
-    # always a recipient unless --no-self is given. You will be prompted for the passphrase that
-    # protects your private key.
+    # Create a signed, encrypted secure archive (.valt) from files and directories, and its public
+    # companion (.valt.pub). Your own public key is always a recipient unless --no-self is given. You
+    # will be prompted for the passphrase that protects your private key.
     #   INPUT...          Files and directories to add. '-C DIR' changes to DIR before processing the inputs that follow it; an '@' prefixed path is a tar archive whose contents are added.
     #   --identity        Your private key file, used to sign and to find your public key (the .pub file next to it); default: the default key (see 'valt default-key').
     #   --recipient       Also encrypt to this recipient (an age public key). Can be repeated.
@@ -137,6 +136,11 @@ declare -gA cliSpec=(
     #   --output-dir      The directory to write the archive to (default: the current directory).
     #   --force           Overwrite an existing archive.
     #   --no-mac-metadata  Do not keep the macOS metadata (extended attributes such as Finder tags, ACLs and file flags) of the files added. It is kept by default, but only macOS tar restores it; other tars, e.g. on Linux, may warn about it.
+    #
+    # The public companion holds no secrets, only the archive's signature, public keys and README, so it
+    # is safe to share. With it, anyone can confirm that a copy of the archive is authentic and
+    # unchanged, without a key. Keep it apart from the archive (e.g. with your paper key), so that an
+    # archive replaced by one signed with another key would not match it.
     ['archive create']='archiveCreate(--identity|-i:file --recipient|-r:str+ --recipient-file|-R:file+ --no-self --name|-n:str --zone|-z:str --user-text|-u:str --output-dir|-o:dir --force|-f --no-mac-metadata --help|-h *)'
 
     # Verify both signatures of a secure archive (.valt) without extracting it.
@@ -246,7 +250,7 @@ archiveCmdUsage() {
     echo
     echo "Subcommands:"
     echo
-    option "create" "Create a signed, encrypted secure archive (.valt) from files and directories." 13
+    option "create" "Create a signed, encrypted secure archive (.valt) from files and directories, and its public" 13
     option "extract" "Verify and extract a secure archive (.valt). Same as 'valt decrypt ARCHIVE'." 13
     option "verify" "Verify both signatures of a secure archive (.valt) without extracting it." 13
     echo
@@ -293,9 +297,9 @@ parseArchiveCreateArgs() {
 
 archiveCreateCmdUsage() {
     echo
-    show bold "Create a signed, encrypted secure archive (.valt) from files and directories. A public companion"
-    show bold "(.valt.pub) that is safe to share is also created. Your own public key is always a recipient unless"
-    show bold "--no-self is given. You will be prompted for the passphrase that protects your private key."
+    show bold "Create a signed, encrypted secure archive (.valt) from files and directories, and its public"
+    show bold "companion (.valt.pub). Your own public key is always a recipient unless --no-self is given. You will"
+    show bold "be prompted for the passphrase that protects your private key."
     echo
     show "Usage:" bold blue "valt archive create" "[INPUT...] [-f] [-i IDENTITY] [-n NAME] [--no-mac-metadata] [--no-self]"
     echo "                           [-o OUTPUT-DIR] [-r RECIPIENT]... [-R RECIPIENT-FILE]... [-u USER-TEXT]"
@@ -325,6 +329,11 @@ archiveCreateCmdUsage() {
     option "" "kept by default, but only macOS tar restores it; other" 41
     option "" "tars, e.g. on Linux, may warn about it." 41
     option "-h, --help" "Print this help message." 41
+    echo
+    echo "The public companion holds no secrets, only the archive's signature, public keys and README, so it"
+    echo "is safe to share. With it, anyone can confirm that a copy of the archive is authentic and"
+    echo "unchanged, without a key. Keep it apart from the archive (e.g. with your paper key), so that an"
+    echo "archive replaced by one signed with another key would not match it."
     declare -F archiveCreateCmdUsageExtra > /dev/null && archiveCreateCmdUsageExtra
     bye "$@"
 }

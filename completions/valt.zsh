@@ -36,7 +36,7 @@ _valt() {
                     case $state in
                         subcommand)
                             local -a subcommands=(
-                                'create:Create a signed, encrypted secure archive (.valt) from files and directories.'
+                                'create:Create a signed, encrypted secure archive (.valt) from files and directories, and its public'
                                 'extract:Verify and extract a secure archive (.valt). Same as '\''valt decrypt ARCHIVE'\''.'
                                 'verify:Verify both signatures of a secure archive (.valt) without extracting it.'
                             )

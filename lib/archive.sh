@@ -4,12 +4,13 @@
 # Use via: require 'valt/archive'
 
 # ◇ Create an encrypted, signed archive from one or more files, directories and archives. The archive file path is written to
-#   standard output. Also creates the public version of the archive (same path plus ".pub" suffix). See NOTES below for details.
+#   standard output. Also creates the public version of the archive (same path plus ".pub" suffix) unless --no-public. See
+#   NOTES below for details.
 #
 # · USAGE
 #
 #   newSecureArchive ([-C DIR] INPUT...) -i PATH (-r RECIPIENT | -R PATH)... [-f] [-n NAME] [-z ZONE] [-u TEXT] [-o DIR]
-#                    [--no-mac-metadata]
+#                    [--no-mac-metadata] [--no-public]
 #
 #   -i, --identity PATH        The valt.key file used to sign the archive.
 #   -r, --recipient RECIPIENT  Encrypt to the specified RECIPIENT. See the recipient() function in 'valt/keys'.
@@ -25,6 +26,7 @@
 #   --no-mac-metadata          Do not keep the macOS metadata (extended attributes such as Finder tags, ACLs and file
 #                              flags) of the INPUT files. It is kept by default, but only macOS tar restores it; other
 #                              tars may warn about it. Metadata is never kept for the archive's own files.
+#   --no-public                Do not create the public companion (ARCHIVE.pub).
 #   -C DIR                     Change to the specified directory before processing the remaining relative INPUT paths.
 #   INPUT...                   File, directory or @<archive> paths to add. An '@' prefixed file path is treated as a tar archive
 #                              whose contents should be extracted and added.
@@ -90,6 +92,7 @@ newSecureArchive() {
     local userReadmeText
     local currentDir="${PWD}"
     local stripMetadata=0
+    local createPublic=1
 
     # Parse options
 
@@ -104,6 +107,7 @@ newSecureArchive() {
             -u | --user-text) shift; userReadmeText="$1" ;;
             -o | --output-dir) shift; assertDirectory "$1"; destDir="$1" ;;
             --no-mac-metadata) stripMetadata=1 ;;
+            --no-public) createPublic=0 ;;
             -C ) shift; tarArgs+=(-C "$1"); [[ "$1" == /* ]] && currentDir="$1" || currentDir="${PWD}/$1" ;;
             *) tarArgs+=("$1"); [[ "$1" == /* ]] && inputPaths+=("$1") || inputPaths+=("${currentDir}/$1") ;;
         esac
@@ -127,7 +131,11 @@ newSecureArchive() {
     local archiveFile="${destDir}/${archiveName}"
     local archivePubFile="${destDir}/${archivePubName}"
 
-    _checkOutputConflict ${force} "${archiveFile}" "${archivePubFile}"
+    if (( createPublic )); then
+        _checkOutputConflict ${force} "${archiveFile}" "${archivePubFile}"
+    else
+        _checkOutputConflict ${force} "${archiveFile}"
+    fi
 
     # Create secure work dir sized to hold payload.tar + encrypted.tar simultaneously (2× input)
 
@@ -184,7 +192,9 @@ newSecureArchive() {
     # Create the archive files
 
     _tarCreate 1 -C "${workDir}" "${_archiveFiles[@]}" > ${archiveFile} || fail
-    _tarCreate 1 -C "${workDir}" "${_archivePubFiles[@]}" > ${archivePubFile} || fail
+    if (( createPublic )); then
+        _tarCreate 1 -C "${workDir}" "${_archivePubFiles[@]}" > ${archivePubFile} || fail
+    fi
 
     # Finally, return the archive file name via stdout
 

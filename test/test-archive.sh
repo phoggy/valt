@@ -32,6 +32,7 @@ main() {
     testDefaultTimeZoneIsLocal
     testMacMetadataKeptByDefault
     testNoMacMetadata
+    testNoPublicCompanion
     testCustomOutputDir
 
     # Extract
@@ -335,6 +336,13 @@ testNoMacMetadata() {
     extractSecureArchive -i "${keyFile}" -o "${destDir}" "${archive}" > /dev/null 2>&1 || fail "extract failed"
     assertEqual 'tagged' "${ cat "${destDir}/tagged.txt"; }"
     [[ ${ xattr "${destDir}/tagged.txt"; } != *_kMDItemUserTags* ]] || fail "--no-mac-metadata must drop the Finder tag"
+}
+
+testNoPublicCompanion() {
+    local outputDir; outputDir="${ makeTempDir; }"
+    local file; file="${ newSecureArchive -C "${testInputDir}" file1.txt -i "${keyFile}" -R "${pubFile}" -n nopub -o "${outputDir}" --no-public; }"
+    assertFile "${file}"
+    assertFileDoesNotExist "${file}.pub"
 }
 
 testCustomName() {
