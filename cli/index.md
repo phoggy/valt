@@ -232,9 +232,9 @@ encryption, so that the contents can still be verified if the outer signature is
 ### valt archive create
 
 ```
-Create a signed, encrypted secure archive (.valt) from files and directories. A public companion
-(.valt.pub) that is safe to share is also created. Your own public key is always a recipient unless
---no-self is given. You will be prompted for the passphrase that protects your private key.
+Create a signed, encrypted secure archive (.valt) from files and directories, and its public
+companion (.valt.pub). Your own public key is always a recipient unless --no-self is given. You will
+be prompted for the passphrase that protects your private key.
 
 Usage: valt archive create [INPUT...] [-f] [-i IDENTITY] [-n NAME] [--no-mac-metadata] [--no-self]
                            [-o OUTPUT-DIR] [-r RECIPIENT]... [-R RECIPIENT-FILE]... [-u USER-TEXT]
@@ -264,6 +264,11 @@ Usage: valt archive create [INPUT...] [-f] [-i IDENTITY] [-n NAME] [--no-mac-met
                                          kept by default, but only macOS tar restores it; other
                                          tars, e.g. on Linux, may warn about it.
     -h, --help                           Print this help message.
+
+The public companion holds no secrets, only the archive's signature, public keys and README, so it
+is safe to share. With it, anyone can confirm that a copy of the archive is authentic and
+unchanged, without a key. Keep it apart from the archive (e.g. with your paper key), so that an
+archive replaced by one signed with another key would not match it.
 ```
 
 ### valt archive verify
