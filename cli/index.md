@@ -25,9 +25,9 @@ Commands
     archive      Create, verify or extract a signed, encrypted archive of files and directories.
     verify       Verify a key pair, and optionally files encrypted or archived with it.
     default-key  Show or set the default private key file, used when no key is given.
-    passphrase   Generate random passphrases, or check the strength of one you enter.
-    password     Generate random passwords, or check the strength of one you enter.
-    pwned        Check whether a password or passphrase appears in a known data breach.
+    passphrase   Generate random passphrases.
+    password     Generate random passwords.
+    pass-check   Check a password or passphrase: its strength, and whether it is in a known breach.
 
 Use COMMAND --help for additional details.
 
@@ -303,69 +303,58 @@ valt rates strength with [mrld](https://github.com/phoggy/mrld), and checks for 
 ### valt passphrase
 
 ```
-Generate random passphrases, or check the strength of one you enter. Passphrases are made of words
-chosen at random from a list of 17,576, so they are much easier to remember than random passwords of
-similar strength.
+Generate random passphrases. Passphrases are made of words chosen at random from a list of 17,576,
+so they are much easier to remember than random passwords of similar strength. Use 'valt pass-check'
+to check the strength of one.
 
-Usage: valt passphrase [-c] [-n COUNT] [-s SEPARATOR] [-t THREAT-LEVEL] [-u file|account] [-w WORDS]
+Usage: valt passphrase [-n COUNT] [-s SEPARATOR] [-w WORDS]
 
-    -w, --words WORDS                The number of words in each passphrase. (default: 5)
-    -n, --count COUNT                The number of passphrases to generate. (default: 1)
-    -s, --separator SEPARATOR        The text between words (default: a space).
-    -c, --check                      Instead of generating, prompt for a passphrase and report its
-                                     strength and whether it appears in a known breach. Reads from
-                                     standard input if it is not a terminal.
-    -u, --use-case file|account      What the passphrase protects: 'file' (an encrypted file or
-                                     private key, open to unlimited offline guessing) or 'account'
-                                     (an online account). (default: file)
-    -t, --threat-level THREAT-LEVEL  How capable an attacker to judge strength against. One of:
-                                     casual, motivated, professional, nation-state. (default:
-                                     professional)
-    -h, --help                       Print this help message.
-
-With --check, the exit status is 0 if the passphrase appears safe to use, 1 if not, or 2 if it is
-strong enough but known breaches could not be checked (e.g. when offline).
+    -w, --words WORDS          The number of words in each passphrase. (default: 5)
+    -n, --count COUNT          The number of passphrases to generate. (default: 1)
+    -s, --separator SEPARATOR  The text between words (default: a space).
+    -h, --help                 Print this help message.
 ```
 
 ### valt password
 
 ```
-Generate random passwords, or check the strength of one you enter. Passwords use letters, digits and
-symbols, with a random length between --min and --max.
+Generate random passwords, using letters, digits and symbols, with a random length between --min and
+--max. Use 'valt pass-check' to check the strength of one.
 
-Usage: valt password [-c] [-n COUNT] [--max MAX] [--min MIN] [-t THREAT-LEVEL] [-u account|file]
+Usage: valt password [-n COUNT] [--max MAX] [--min MIN]
 
-    --min MIN                        The minimum length. (default: 24)
-    --max MAX                        The maximum length. (default: 32)
-    -n, --count COUNT                The number of passwords to generate. (default: 1)
-    -c, --check                      Instead of generating, prompt for a password and report its
-                                     strength and whether it appears in a known breach. Reads from
-                                     standard input if it is not a terminal.
-    -u, --use-case account|file      What the password protects: 'account' (an online account) or
-                                     'file' (an encrypted file or private key, open to unlimited
-                                     offline guessing). (default: account)
+    --min MIN          The minimum length. (default: 24)
+    --max MAX          The maximum length. (default: 32)
+    -n, --count COUNT  The number of passwords to generate. (default: 1)
+    -h, --help         Print this help message.
+```
+
+### valt pass-check
+
+```
+Check a password or passphrase: rate its strength, and look it up in the HaveIBeenPwned database of
+known data breaches. You will be prompted for it; it is read from standard input if that is not a
+terminal.
+
+Usage: valt pass-check [-b] [-t THREAT-LEVEL] [-u account|file]
+
+    -u, --use-case account|file      What it protects: 'account' (an online account, whose password
+                                     hashes could be stolen and attacked quickly) or 'file' (an
+                                     encrypted file or private key, such as a valt key, protected by
+                                     age's deliberately slow hashing). (default: account)
     -t, --threat-level THREAT-LEVEL  How capable an attacker to judge strength against. One of:
                                      casual, motivated, professional, nation-state. (default:
                                      professional)
+    -b, --breach-only                Only look it up in the breach database; do not rate its
+                                     strength.
     -h, --help                       Print this help message.
 
-With --check, the exit status is 0 if the password appears safe to use, 1 if not, or 2 if it is
-strong enough but known breaches could not be checked (e.g. when offline).
-```
+The exit status is 0 if it appears safe to use, 1 if not, or 2 if it is strong enough but known
+breaches could not be checked (e.g. when offline). With --breach-only it is 0 if it was not
+found and 1 if it was.
 
-### valt pwned
-
-```
-Check whether a password or passphrase appears in a known data breach, using the HaveIBeenPwned
-database. You will be prompted for it; it is read from standard input if that is not a terminal.
-
-Usage: valt pwned
-
-    -h, --help  Print this help message.
-
-Only the first 5 characters of a SHA-1 hash of the password are sent, so neither the password
-nor its full hash leaves this computer (see https://haveibeenpwned.com/API/v3#PwnedPasswords).
-The exit status is 0 if it was not found, or 1 if it was.
+Only the first 5 characters of a SHA-1 hash of it are sent, so neither it nor its full hash
+leaves this computer (see https://haveibeenpwned.com/API/v3#PwnedPasswords).
 ```
 
 ## Recovery

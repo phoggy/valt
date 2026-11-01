@@ -22,7 +22,7 @@ valt encrypt taxes.pdf             # writes taxes.pdf.age and taxes.pdf.age.mini
 valt decrypt taxes.pdf.age         # verifies the signature, writes taxes.pdf
 valt archive create -C ~/docs .    # writes USER-TIMESTAMP.valt and a shareable .valt.pub
 valt decrypt USER-TIMESTAMP.valt   # verifies and extracts into the current directory
-valt passphrase --check            # rates a passphrase and checks it against known breaches
+valt pass-check -u file            # rates a passphrase and checks it against known breaches
 ```
 
 - Keys default to `valt.key` and `valt.pub` in the valt config directory; most commands take `-i KEY_FILE` to use another.
