@@ -15,7 +15,7 @@ __valtComplete() {
     fi
 
     if (( cword == 1 )); then
-        COMPREPLY=($(compgen -W "decrypt default-key encrypt keys paper passphrase password pwned verify archive -v --version -h --help" -- "${cur}"))
+        COMPREPLY=($(compgen -W "decrypt default-key encrypt keys paper pass-check passphrase password verify archive -v --version -h --help" -- "${cur}"))
         return
     fi
 
@@ -97,22 +97,18 @@ __valtComplete() {
                     local _relIdx=$(( cword - 2 ))
                     (( _relIdx == 0 )) && { COMPREPLY=($(compgen -f -- "${cur}")); return; }
                     ;;
-                passphrase)
-                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--check --count --help --separator --threat-level --use-case --words -c -h -n -s -t -u -w" -- "${cur}")); return; }
-                    case "${prev}" in
-                        --threat-level|-t) COMPREPLY=($(compgen -W "casual motivated professional nation-state" -- "${cur}")); return ;;
-                        --use-case|-u) COMPREPLY=($(compgen -W "file account" -- "${cur}")); return ;;
-                    esac
-                    ;;
-                password)
-                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--check --count --help --max --min --threat-level --use-case -c -h -n -t -u" -- "${cur}")); return; }
+                pass-check)
+                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--breach-only --help --threat-level --use-case -b -h -t -u" -- "${cur}")); return; }
                     case "${prev}" in
                         --threat-level|-t) COMPREPLY=($(compgen -W "casual motivated professional nation-state" -- "${cur}")); return ;;
                         --use-case|-u) COMPREPLY=($(compgen -W "account file" -- "${cur}")); return ;;
                     esac
                     ;;
-                pwned)
-                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--help -h" -- "${cur}")); return; }
+                passphrase)
+                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--count --help --separator --words -h -n -s -w" -- "${cur}")); return; }
+                    ;;
+                password)
+                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--count --help --max --min -h -n" -- "${cur}")); return; }
                     ;;
                 verify)
                     [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--help --identity -h -i" -- "${cur}")); return; }

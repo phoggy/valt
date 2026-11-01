@@ -32,7 +32,7 @@ hasNotBeenPwned() {
         return 1  # Unable to check
     fi
 
-    local match; match=${ echo "${results}" | grep ${suffix}; }
+    local match; match=${ echo "${results}" | grep -m 1 "^${suffix}:"; } # each line is SUFFIX:COUNT
     if [[ -n ${match} ]]; then
         local count; count=${ trim "${match#*:}"; }
         if (( count > 0 )); then

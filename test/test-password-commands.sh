@@ -6,9 +6,7 @@ main() {
     # passphrase
     testPassphraseDefault
     testPassphraseOptions
-    testPassphraseCheckWeak
-    testPassphraseCheckStrong
-    testPassphraseCheckUnchecked
+    testPassphraseHasNoCheck
 
     # typed passphrases (the interactive path, with only the terminal input simulated)
     testTypedStrongPassphraseAccepted
@@ -18,14 +16,19 @@ main() {
     # password
     testPasswordOptions
     testPasswordMinGreaterThanMax
-    testPasswordCheckDefaultsToAccount
 
-    # pwned
-    testPwnedFound
-    testPwnedFoundOnce
-    testPwnedNotFound
-    testPwnedApiError
-    testPwnedNoInput
+    # pass-check
+    testPassCheckWeak
+    testPassCheckStrongForFile
+    testPassCheckDefaultsToAccount
+    testPassCheckUnchecked
+
+    # pass-check --breach-only
+    testBreachOnlyFound
+    testBreachOnlyFoundOnce
+    testBreachOnlyNotFound
+    testBreachOnlyApiError
+    testPassCheckNoInput
 
     return 0
 }
@@ -75,28 +78,11 @@ testPassphraseOptions() {
     done
 }
 
-testPassphraseCheckWeak() {
-    addToFakeApi 'password123' 3
-    local output; output="${ echo 'password123' | valt passphrase --check 2>&1; }"
-    assertEqual 1 $? "a weak, breached passphrase must fail the check"
-    assertContains "Do NOT use" "${output}"
-    assertContains "present in 3 breaches" "${output}"
-}
+# Checking moved to 'valt pass-check'.
 
-testPassphraseCheckStrong() {
-    local phrase; phrase="${ valt passphrase -w 6 2> /dev/null; }"
-    addToFakeApi "${phrase}" 0
-    local output; output="${ echo "${phrase}" | valt passphrase --check 2>&1; }"
-    assertEqual 0 $? "a strong, unbreached passphrase must pass the check: ${output}"
-    assertContains "no known breaches" "${output}"
-    assertContains "file attacker" "${output}"
-}
-
-testPassphraseCheckUnchecked() {
-    local phrase; phrase="${ valt passphrase -w 6 2> /dev/null; }"
-    local output; output="${ echo "${phrase}" | rayvnTest_PwnedApiUrl="file://${fakeApiDir}/missing" valt passphrase --check 2>&1; }"
-    assertEqual 2 $? "a strong passphrase that cannot be checked for breaches must exit 2: ${output}"
-    assertContains "but unable to check for breaches" "${output}"
+testPassphraseHasNoCheck() {
+    local output; output="${ valt passphrase --check 2>&1 < /dev/null; }"
+    assertContains "unknown argument: --check" "${output}" "passphrase --check must no longer be accepted"
 }
 
 # ---- typed passphrases ----
@@ -169,43 +155,69 @@ testPasswordMinGreaterThanMax() {
     assertContains "--min must not be greater than --max" "${output}"
 }
 
-testPasswordCheckDefaultsToAccount() {
+# ---- pass-check ----
+
+testPassCheckWeak() {
+    addToFakeApi 'password123' 3
+    local output; output="${ echo 'password123' | valt pass-check 2>&1; }"
+    assertEqual 1 $? "a weak, breached secret must fail the check"
+    assertContains "Do NOT use" "${output}"
+    assertContains "present in 3 breaches" "${output}"
+}
+
+testPassCheckStrongForFile() {
+    local phrase; phrase="${ valt passphrase -w 6 2> /dev/null; }"
+    addToFakeApi "${phrase}" 0
+    local output; output="${ echo "${phrase}" | valt pass-check -u file 2>&1; }"
+    assertEqual 0 $? "a strong, unbreached passphrase must pass the check: ${output}"
+    assertContains "no known breaches" "${output}"
+    assertContains "file attacker" "${output}"
+}
+
+testPassCheckDefaultsToAccount() {
     local password; password="${ valt password 2> /dev/null; }"
     addToFakeApi "${password}" 0
-    local output; output="${ echo "${password}" | valt password --check 2>&1; }"
+    local output; output="${ echo "${password}" | valt pass-check 2>&1; }"
     assertEqual 0 $? "a random password must pass the check: ${output}"
     assertContains "account attacker" "${output}"
 }
 
-# ---- pwned ----
+testPassCheckUnchecked() {
+    local phrase; phrase="${ valt passphrase -w 6 2> /dev/null; }"
+    local output; output="${ echo "${phrase}" | rayvnTest_PwnedApiUrl="file://${fakeApiDir}/missing" valt pass-check -u file 2>&1; }"
+    assertEqual 2 $? "a strong secret that cannot be checked for breaches must exit 2: ${output}"
+    assertContains "but unable to check for breaches" "${output}"
+}
 
-testPwnedFound() {
+# ---- pass-check --breach-only ----
+
+testBreachOnlyFound() {
     addToFakeApi 'found-secret' 1234
-    local output; output="${ echo 'found-secret' | valt pwned 2>&1; }"
+    local output; output="${ echo 'found-secret' | valt pass-check -b 2>&1; }"
     assertEqual 1 $? "a breached secret must exit 1"
     assertContains "Found in 1,234 breaches" "${output}"
 }
 
-testPwnedFoundOnce() {
+testBreachOnlyFoundOnce() {
     addToFakeApi 'found-once-secret' 1
-    local output; output="${ echo 'found-once-secret' | valt pwned 2>&1; }"
+    local output; output="${ echo 'found-once-secret' | valt pass-check -b 2>&1; }"
     assertContains "Found in 1 breach." "${output}"
 }
 
-testPwnedNotFound() {
+testBreachOnlyNotFound() {
     addToFakeApi 'clean-secret' 0
-    local output; output="${ echo 'clean-secret' | valt pwned 2>&1; }"
+    local output; output="${ echo 'clean-secret' | valt pass-check -b 2>&1; }"
     assertEqual 0 $? "an unbreached secret must exit 0: ${output}"
     assertContains "Not found in any known breach" "${output}"
 }
 
-testPwnedApiError() {
-    local output; output="${ echo 'secret-not-in-fake-api' | valt pwned 2>&1; }"
+testBreachOnlyApiError() {
+    local output; output="${ echo 'secret-not-in-fake-api' | valt pass-check -b 2>&1; }"
     assertContains "Unable to check for breaches" "${output}"
 }
 
-testPwnedNoInput() {
-    local output; output="${ valt pwned < /dev/null 2>&1; }"
+testPassCheckNoInput() {
+    local output; output="${ valt pass-check -b < /dev/null 2>&1; }"
     assertContains "no input" "${output}"
 }
 
