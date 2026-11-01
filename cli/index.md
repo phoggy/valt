@@ -157,7 +157,7 @@ archive must have both of its signatures verify, as with 'valt archive verify'.
 ```
 Show or set the default private key file, used by any command when no key is given.
 
-Usage: valt defaultKey [KEY_FILE] [--clear]
+Usage: valt default-key [KEY_FILE] [--clear]
 
     KEY_FILE    The valt private key file to use by default.
     --clear     Remove the setting, so that the built-in default is used.
