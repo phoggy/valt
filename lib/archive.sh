@@ -234,7 +234,7 @@ verifySecureArchive() {
 
     # Decrypt and expand inner archive to a secure temp dir
 
-    local innerDir; makeSecureTempDir innerDir
+    local innerDir; makeSecureTempDir innerDir "" "${ _innerDirSizeMb "${archiveFile}"; }"
     decrypt -i "${keyFile}" -o "${innerDir}/decrypted.tar.xz" "${outerDir}/${_archiveEncryptedName}" || fail
     tar xJf "${innerDir}/decrypted.tar.xz" -C "${innerDir}" || fail
 
@@ -293,7 +293,7 @@ extractSecureArchive() {
 
     # Decrypt and expand inner archive to a secure temp dir
 
-    local innerDir; makeSecureTempDir innerDir
+    local innerDir; makeSecureTempDir innerDir "" "${ _innerDirSizeMb "${archiveFile}"; }"
     decrypt -i "${keyFile}" -o "${innerDir}/decrypted.tar.xz" "${outerDir}/${_archiveEncryptedName}" || fail
     tar xJf "${innerDir}/decrypted.tar.xz" -C "${innerDir}" || fail
 
@@ -476,4 +476,13 @@ _tarCreate() {
         (( onMacOS )) && metadataArgs+=(--no-mac-metadata)
     fi
     tar cJ "${metadataArgs[@]}" "$@"
+}
+
+# Output the size (MB) of secure temp storage needed to decrypt and expand an archive's inner archive: the decrypted
+# inner archive, plus the (still compressed) payload and other files expanded from it.
+# Args: archiveFile
+
+_innerDirSizeMb() {
+    local archiveMb; archiveMb=${ du -sm "$1" | gawk '{print $1}'; }
+    echo $(( archiveMb * 2 + 64 ))
 }
