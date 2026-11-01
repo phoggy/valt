@@ -136,7 +136,8 @@ declare -gA cliSpec=(
     #   --user-text       Text to include in the archive's README. Can contain '\n'.
     #   --output-dir      The directory to write the archive to (default: the current directory).
     #   --force           Overwrite an existing archive.
-    ['archive create']='archiveCreate(--identity|-i:file --recipient|-r:str+ --recipient-file|-R:file+ --no-self --name|-n:str --zone|-z:str --user-text|-u:str --output-dir|-o:dir --force|-f --help|-h *)'
+    #   --no-mac-metadata  Do not keep the macOS metadata (extended attributes such as Finder tags, ACLs and file flags) of the files added. It is kept by default, but only macOS tar restores it; other tars, e.g. on Linux, may warn about it.
+    ['archive create']='archiveCreate(--identity|-i:file --recipient|-r:str+ --recipient-file|-R:file+ --no-self --name|-n:str --zone|-z:str --user-text|-u:str --output-dir|-o:dir --force|-f --no-mac-metadata --help|-h *)'
 
     # Verify both signatures of a secure archive (.valt) without extracting it.
     # The inner signature is checked after decrypting, so you will be prompted for the passphrase that
@@ -270,21 +271,23 @@ parseArchiveCreateArgs() {
             --force=*) fail "--force does not accept a value" ;;
             --help | -h) _opts+=(['help']="1"); shift ;;
             --help=*) fail "--help does not accept a value" ;;
-            --identity | -i) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-self|--force)$ ) ]] && fail "missing value for --identity"; assertFile "$2"; _opts+=(['identity']="$2"); shift 2 ;;
+            --identity | -i) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --identity"; assertFile "$2"; _opts+=(['identity']="$2"); shift 2 ;;
             --identity=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --identity"; assertFile "${_value}"; _opts+=(['identity']="${_value}"); shift ;;
-            --name | -n) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-self|--force)$ ) ]] && fail "missing value for --name"; _opts+=(['name']="$2"); shift 2 ;;
+            --name | -n) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --name"; _opts+=(['name']="$2"); shift 2 ;;
             --name=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --name"; _opts+=(['name']="${_value}"); shift ;;
+            --no-mac-metadata) _opts+=(['no-mac-metadata']="1"); shift ;;
+            --no-mac-metadata=*) fail "--no-mac-metadata does not accept a value" ;;
             --no-self) _opts+=(['no-self']="1"); shift ;;
             --no-self=*) fail "--no-self does not accept a value" ;;
-            --output-dir | -o) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-self|--force)$ ) ]] && fail "missing value for --output-dir"; assertDirectory "$2"; _opts+=(['output-dir']="$2"); shift 2 ;;
+            --output-dir | -o) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --output-dir"; assertDirectory "$2"; _opts+=(['output-dir']="$2"); shift 2 ;;
             --output-dir=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --output-dir"; assertDirectory "${_value}"; _opts+=(['output-dir']="${_value}"); shift ;;
-            --recipient | -r) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-self|--force)$ ) ]] && fail "missing value for --recipient"; _optListRecipient+=("$2"); _opts+=(['recipient']="1"); shift 2 ;;
+            --recipient | -r) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --recipient"; _optListRecipient+=("$2"); _opts+=(['recipient']="1"); shift 2 ;;
             --recipient=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --recipient"; _optListRecipient+=("${_value}"); _opts+=(['recipient']="1"); shift ;;
-            --recipient-file | -R) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-self|--force)$ ) ]] && fail "missing value for --recipient-file"; assertFile "$2"; _optListRecipientFile+=("$2"); _opts+=(['recipient-file']="1"); shift 2 ;;
+            --recipient-file | -R) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --recipient-file"; assertFile "$2"; _optListRecipientFile+=("$2"); _opts+=(['recipient-file']="1"); shift 2 ;;
             --recipient-file=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --recipient-file"; assertFile "${_value}"; _optListRecipientFile+=("${_value}"); _opts+=(['recipient-file']="1"); shift ;;
-            --user-text | -u) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-self|--force)$ ) ]] && fail "missing value for --user-text"; _opts+=(['user-text']="$2"); shift 2 ;;
+            --user-text | -u) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --user-text"; _opts+=(['user-text']="$2"); shift 2 ;;
             --user-text=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --user-text"; _opts+=(['user-text']="${_value}"); shift ;;
-            --zone | -z) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-self|--force)$ ) ]] && fail "missing value for --zone"; _opts+=(['zone']="$2"); shift 2 ;;
+            --zone | -z) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --zone"; _opts+=(['zone']="$2"); shift 2 ;;
             --zone=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --zone"; _opts+=(['zone']="${_value}"); shift ;;
             --) shift; _args+=("$@"); break ;;
             *) _args+=("$1"); shift ;;
@@ -299,8 +302,9 @@ archiveCreateCmdUsage() {
     show bold "(.valt.pub) that is safe to share is also created. Your own public key is always a recipient unless"
     show bold "--no-self is given. You will be prompted for the passphrase that protects your private key."
     echo
-    show "Usage:" bold blue "valt archive create" "[INPUT...] [-f] [-i IDENTITY] [-n NAME] [--no-self] [-o OUTPUT-DIR]"
-    echo "                           [-r RECIPIENT]... [-R RECIPIENT-FILE]... [-u USER-TEXT] [-z ZONE]"
+    show "Usage:" bold blue "valt archive create" "[INPUT...] [-f] [-i IDENTITY] [-n NAME] [--no-mac-metadata] [--no-self]"
+    echo "                           [-o OUTPUT-DIR] [-r RECIPIENT]... [-R RECIPIENT-FILE]... [-u USER-TEXT]"
+    echo "                           [-z ZONE]"
     echo
     option "INPUT..." "Files and directories to add. '-C DIR' changes to DIR" 41
     option "" "before processing the inputs that follow it; an '@'" 41
@@ -321,6 +325,10 @@ archiveCreateCmdUsage() {
     option "-o, --output-dir OUTPUT-DIR" "The directory to write the archive to (default: the current" 41
     option "" "directory)." 41
     option "-f, --force" "Overwrite an existing archive." 41
+    option "--no-mac-metadata" "Do not keep the macOS metadata (extended attributes such as" 41
+    option "" "Finder tags, ACLs and file flags) of the files added. It is" 41
+    option "" "kept by default, but only macOS tar restores it; other" 41
+    option "" "tars, e.g. on Linux, may warn about it." 41
     option "-h, --help" "Print this help message." 41
     declare -F archiveCreateCmdUsageExtra > /dev/null && archiveCreateCmdUsageExtra
     bye "$@"
@@ -1014,6 +1022,7 @@ archiveCreateCmd() {
     [[ -n ${_opts['user-text']} ]] && args+=(-u "${_opts['user-text']}")
     [[ -n ${_opts['output-dir']} ]] && args+=(-o "${_opts['output-dir']}")
     (( _opts['force'] )) && args+=(-f)
+    (( _opts['no-mac-metadata'] )) && args+=(--no-mac-metadata)
 
     local archive; archive="${ newSecureArchive "${args[@]}"; }" || fail
     show "Created secure archive" bold "${ tildePath "${archive}"; }"

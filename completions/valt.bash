@@ -30,7 +30,7 @@ __valtComplete() {
 
     case "${words[1]} ${words[2]:-}" in
         "archive create")
-            [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--force --help --identity --name --no-self --output-dir --recipient --recipient-file --user-text --zone -f -h -i -n -o -r -R -u -z" -- "${cur}")); return; }
+            [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--force --help --identity --name --no-mac-metadata --no-self --output-dir --recipient --recipient-file --user-text --zone -f -h -i -n -o -r -R -u -z" -- "${cur}")); return; }
             case "${prev}" in
                 --identity|-i) COMPREPLY=($(compgen -f -- "${cur}")); return ;;
                 --output-dir|-o) COMPREPLY=($(compgen -d -- "${cur}")); return ;;

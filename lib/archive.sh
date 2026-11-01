@@ -9,6 +9,7 @@
 # · USAGE
 #
 #   newSecureArchive ([-C DIR] INPUT...) -i PATH (-r RECIPIENT | -R PATH)... [-f] [-n NAME] [-z ZONE] [-u TEXT] [-o DIR]
+#                    [--no-mac-metadata]
 #
 #   -i, --identity PATH        The valt.key file used to sign the archive.
 #   -r, --recipient RECIPIENT  Encrypt to the specified RECIPIENT. See the recipient() function in 'valt/keys'.
@@ -21,6 +22,9 @@
 #                              zone name such as 'America/Los_Angeles' (default: local).
 #   -u, --user-text TEXT       User text to include in readme. Can contain '\n'.
 #   -o, --output-dir DIR       Specify the archive destination directory path (default: ${PWD}).
+#   --no-mac-metadata          Do not keep the macOS metadata (extended attributes such as Finder tags, ACLs and file
+#                              flags) of the INPUT files. It is kept by default, but only macOS tar restores it; other
+#                              tars may warn about it. Metadata is never kept for the archive's own files.
 #   -C DIR                     Change to the specified directory before processing the remaining relative INPUT paths.
 #   INPUT...                   File, directory or @<archive> paths to add. An '@' prefixed file path is treated as a tar archive
 #                              whose contents should be extracted and added.
@@ -85,6 +89,7 @@ newSecureArchive() {
     local force=0
     local userReadmeText
     local currentDir="${PWD}"
+    local stripMetadata=0
 
     # Parse options
 
@@ -98,6 +103,7 @@ newSecureArchive() {
             -z | --zone) shift; timeZoneName="$1" ;;
             -u | --user-text) shift; userReadmeText="$1" ;;
             -o | --output-dir) shift; assertDirectory "$1"; destDir="$1" ;;
+            --no-mac-metadata) stripMetadata=1 ;;
             -C ) shift; tarArgs+=(-C "$1"); [[ "$1" == /* ]] && currentDir="$1" || currentDir="${PWD}/$1" ;;
             *) tarArgs+=("$1"); [[ "$1" == /* ]] && inputPaths+=("$1") || inputPaths+=("${currentDir}/$1") ;;
         esac
@@ -158,12 +164,12 @@ newSecureArchive() {
 
     # Create the payload file and sign it
 
-    tar cJ "${tarArgs[@]}" > "${workDir}/${_archivePayloadName}" || fail
+    _tarCreate ${stripMetadata} "${tarArgs[@]}" > "${workDir}/${_archivePayloadName}" || fail
     signFile "${privateKey}" "${workDir}/${_archivePayloadName}" || fail
 
     # Create the encrypted tar and sign it
 
-    tar cJ -C "${workDir}" "${_archiveEncryptedFiles[@]}" | encrypt "${encryptArgs[@]}" -o "${workDir}/${_archiveEncryptedName}" || fail
+    _tarCreate 1 -C "${workDir}" "${_archiveEncryptedFiles[@]}" | encrypt "${encryptArgs[@]}" -o "${workDir}/${_archiveEncryptedName}" || fail
     signFile "${privateKey}" "${workDir}/${_archiveEncryptedName}" || fail
 
     # Remove the payload files so we only have the encrypted forms
@@ -176,8 +182,8 @@ newSecureArchive() {
 
     # Create the archive files
 
-    tar cJ -C "${workDir}" "${_archiveFiles[@]}" > ${archiveFile} || fail
-    tar cJ -C "${workDir}" "${_archivePubFiles[@]}" > ${archivePubFile} || fail
+    _tarCreate 1 -C "${workDir}" "${_archiveFiles[@]}" > ${archiveFile} || fail
+    _tarCreate 1 -C "${workDir}" "${_archivePubFiles[@]}" > ${archivePubFile} || fail
 
     # Finally, return the archive file name via stdout
 
@@ -316,7 +322,7 @@ extractPublicArchive() {
     local publicArchive="${privateArchive}.pub"
     local tmpDir; tmpDir="${ makeTempDir; }"
     tar xJf "${privateArchive}" -C "${tmpDir}" "${_archivePubFiles[@]}" || fail
-    tar cJ -C "${tmpDir}" "${_archivePubFiles[@]}" > "${publicArchive}" || fail
+    _tarCreate 1 -C "${tmpDir}" "${_archivePubFiles[@]}" > "${publicArchive}" || fail
 }
 
 
@@ -325,6 +331,10 @@ PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/archive' PRIVA
 
 _init_valt_archive() {
     require 'valt/keys' 'valt/password' 'valt/decrypt' 'valt/sign' 'rayvn/prompt'
+
+    # macOS tar (bsdtar) records macOS metadata by default; GNU tar does not unless asked
+
+    declare -gri _bsdTar=${ tar --version 2> /dev/null | grep -q bsdtar && echo 1 || echo 0; }
 
     # File names
     #
@@ -453,5 +463,16 @@ _assertArchiveRecipient() {
     fi
 }
 
+# Create an xz compressed tar archive (writing to stdout unless -f is in args), without macOS metadata (extended
+# attributes, ACLs and file flags) if strip is 1. Only macOS tar (bsdtar) records it by default.
+# Args: strip tarArgs...
 
-
+_tarCreate() {
+    local strip=$1; shift
+    local -a metadataArgs=()
+    if (( strip && _bsdTar )); then
+        metadataArgs=(--no-xattrs --no-acls --no-fflags)
+        (( onMacOS )) && metadataArgs+=(--no-mac-metadata)
+    fi
+    tar cJ "${metadataArgs[@]}" "$@"
+}

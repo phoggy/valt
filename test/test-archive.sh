@@ -30,6 +30,8 @@ main() {
     testNoForceFailsOnConflict
     testCustomName
     testDefaultTimeZoneIsLocal
+    testMacMetadataKeptByDefault
+    testNoMacMetadata
     testCustomOutputDir
 
     # Extract
@@ -302,6 +304,37 @@ testDefaultTimeZoneIsLocal() {
     local outputDir; outputDir="${ makeTempDir; }"
     local file; file="${ newSecureArchive -C "${testInputDir}" file1.txt -i "${keyFile}" -R "${pubFile}" -n zone -o "${outputDir}"; }"
     [[ ${file} == "${outputDir}"/zone-*_"${ date '+%Z'; }".valt ]] || fail "the archive name must use the local time zone: ${file}"
+}
+
+# macOS metadata (here a Finder tag) of the INPUT files is kept unless --no-mac-metadata, and never kept for the
+# archive's own files. macOS only: other systems' tar does not record it.
+
+newTaggedArchive() {
+    local -n taggedArchiveRef=$1; shift
+    local inputDir; inputDir="${ makeTempDir; }"
+    echo 'tagged' > "${inputDir}/tagged.txt"
+    xattr -w com.apple.metadata:_kMDItemUserTags '("Red\n6")' "${inputDir}/tagged.txt" || fail
+    local outputDir; outputDir="${ makeTempDir; }"
+    taggedArchiveRef="${ newSecureArchive -C "${inputDir}" tagged.txt -i "${keyFile}" -R "${pubFile}" -n tagged -o "${outputDir}" "$@"; }"
+    local metadataHeaders; metadataHeaders="${ xz -dc "${taggedArchiveRef}" | LC_ALL=C grep -ac 'LIBARCHIVE.xattr'; }"
+    assertEqual 0 "${metadataHeaders}" "the archive's own files must have no macOS metadata"
+}
+
+testMacMetadataKeptByDefault() {
+    (( onMacOS )) && command -v xattr > /dev/null || return 0
+    local archive; newTaggedArchive archive
+    local destDir; destDir="${ makeTempDir; }"
+    extractSecureArchive -i "${keyFile}" -o "${destDir}" "${archive}" > /dev/null 2>&1 || fail "extract failed"
+    assertContains '_kMDItemUserTags' "${ xattr "${destDir}/tagged.txt"; }" "the Finder tag must be kept by default"
+}
+
+testNoMacMetadata() {
+    (( onMacOS )) && command -v xattr > /dev/null || return 0
+    local archive; newTaggedArchive archive --no-mac-metadata
+    local destDir; destDir="${ makeTempDir; }"
+    extractSecureArchive -i "${keyFile}" -o "${destDir}" "${archive}" > /dev/null 2>&1 || fail "extract failed"
+    assertEqual 'tagged' "${ cat "${destDir}/tagged.txt"; }"
+    [[ ${ xattr "${destDir}/tagged.txt"; } != *_kMDItemUserTags* ]] || fail "--no-mac-metadata must drop the Finder tag"
 }
 
 testCustomName() {

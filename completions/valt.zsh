@@ -50,6 +50,7 @@ _valt() {
                                     '(--help -h)'{--help,-h}'[Print this help message.]' \
                                     '(--identity -i)'{--identity,-i}'[Your private key file, used to sign and to find your public key (the .pub file next to it); default: the default key (see '\''valt default-key'\'').]:identity:_files' \
                                     '(--name -n)'{--name,-n}'[The archive file name prefix (default: your user name).]:name:' \
+                                    '(--no-mac-metadata)'--no-mac-metadata'[Do not keep the macOS metadata (extended attributes such as Finder tags, ACLs and file flags) of the files added. It is kept by default, but only macOS tar restores it; other tars, e.g. on Linux, may warn about it.]' \
                                     '(--no-self)'--no-self'[Do not include your own public key as a recipient.]' \
                                     '(--output-dir -o)'{--output-dir,-o}'[The directory to write the archive to (default: the current directory).]:output-dir:_files -/' \
                                     '*'{--recipient,-r}'[Also encrypt to this recipient (an age public key). Can be repeated.]:recipient:' \
