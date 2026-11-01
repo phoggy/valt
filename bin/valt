@@ -1196,10 +1196,16 @@ createKeys() {
     # existing keys in place.
 
     if (( replace )); then
-        local stagingDir; stagingDir="${ makeTempDir; }"
-        newValtKeys "${name}" "${stagingDir}" || fail
-        mv -f "${stagingDir}/${name}.${valtPublicKeySuffix}" "${publicKeyFile}" || fail
-        mv -f "${stagingDir}/${name}.${valtPrivateKeySuffix}" "${privateKeyFile}" || fail
+
+        # Stage in the output directory, so that the move is a rename on the same file system
+
+        declare -g keysStagingDir="${outputDir}/.${name}-new-$$"
+        addExitHandler removeKeysStagingDir
+        withUmask 0077 mkdir "${keysStagingDir}" || fail "could not create ${keysStagingDir}"
+        newValtKeys "${name}" "${keysStagingDir}" || fail
+        mv -f "${keysStagingDir}/${name}.${valtPublicKeySuffix}" "${publicKeyFile}" || fail
+        mv -f "${keysStagingDir}/${name}.${valtPrivateKeySuffix}" "${privateKeyFile}" || fail
+        removeKeysStagingDir
     else
         newValtKeys "${name}" "${outputDir}" || fail
     fi
@@ -1210,7 +1216,6 @@ createKeys() {
     if (( verify )); then
         header 2 "Verifying keys"
         verifyValtKeys "${publicKeyFile}" "${privateKeyFile}"
-        echo
         show bold "Verified" glue ":"
         echo
         show "  · A file encrypted with" cyan "${name}.pub" "decrypts with passphrase and the" cyan "${name}.key" "private key. ${successCheckMark}"
@@ -1240,7 +1245,6 @@ generatePaperKey() {
     local paperKeyFile
     newPaperKey "${privateKeyFile}" paperKeyFile "${keyInfoFile}" "${cssFile}" "${templateFile}"
 
-    echo
     show "Paper key file:" cyan "${ tildePath "${paperKeyFile}"; }"
     echo
     show "Print at least one copy," italic "write your passphrase" "on the last page, and" \
@@ -1298,6 +1302,13 @@ extractArchive() {
     show "Verifying and extracting secure archive" cyan "${ tildePath "${file}"; }"
     extractSecureArchive "${file}" -i "${keyFile}" -o "${destDir}" || fail
     show "Extracted to" bold "${ tildePath "${destDir}"; }"
+}
+
+# Removes the directory in which replacement keys are created, if any (also run on exit, e.g. after a failure).
+
+removeKeysStagingDir() {
+    [[ -n ${keysStagingDir:-} && -d ${keysStagingDir} ]] && rm -rf "${keysStagingDir}"
+    return 0
 }
 
 # Opens the paper key PDF for keyFile in the default viewer, only on a terminal (not in scripts or tests), so that it

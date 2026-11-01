@@ -62,13 +62,13 @@ generatePassphrase() {
 
 readConfirmedPassword() {
     local _p1 _p2
-    local _prompt="$1"
+    local _rcpPrompt="$1"
     local -n _resultVarRef="$2"
     local _testUseCase="${3:-}"
     local _testThreatLevel="${4:-}"
     local _timeout="${5:-30}"
-    local _confirmPrompt; _confirmPrompt="${ padString "Confirm" ${#_prompt} before; }"
-    readPassword "${_prompt}" _p1 "${_testUseCase}" "${_testThreatLevel}" "${_timeout}" || return 1
+    local _confirmPrompt; _confirmPrompt="${ padString "Confirm" ${#_rcpPrompt} before; }"
+    readPassword "${_rcpPrompt}" _p1 "${_testUseCase}" "${_testThreatLevel}" "${_timeout}" || return 1
     [[ ${_p1} == '' ]] && fail "cancelled" > ${terminal}
     readPassword "${_confirmPrompt}" _p2 '' '' "${_timeout}" || fail
     [[ ${_p1} == "${_p2}" ]] || fail "entries do not match" > ${terminal}
@@ -100,7 +100,9 @@ readConfirmedPassword() {
 
 readPassword() {
     local _result _count=0 _mask _key
-    local _prompt; _prompt="${ show bold "$1: "; }"
+    # Not named _prompt: rayvn/prompt assigns that name (unscoped), which would replace ours through dynamic scoping
+
+    local _rpPrompt; _rpPrompt="${ show bold "$1: "; }"
     local -n _resultVarRef="$2"
     local _testUseCase="${3:-}"
     local _testThreatLevel="${4:-}"
@@ -114,15 +116,15 @@ readPassword() {
     [[ -v passwordVisibility ]] || declare -gx passwordVisibility='none'
 
     case ${passwordVisibility} in
-        none) _visible=0; _show=0; _prompt="$1" ;;
+        none) _visible=0; _show=0; _rpPrompt="$1" ;;
         hide) _show=0 ;;
         show) _show=1 ;;
         *) fail "unknown visibility mode: ${passwordVisibility}"
     esac
 
     if (( ! _visible )); then
-        secureRequest "${_prompt}" _result true < "${terminal}" || return $?
-        [[ -z ${_testUseCase} ]] && cursorUpToColumn 1 $(( ${#_prompt} + 12 ))  # back to the prompt line
+        secureRequest "${_rpPrompt}" _result true < "${terminal}" || return $?
+        [[ -z ${_testUseCase} ]] && cursorUpToColumn 1 $(( _promptCol + ${#_promptPlainHint} + 3 ))  # back to the prompt line
     else
         _readPassword
         [[ -n ${_testUseCase} ]] && echo > ${terminal} # end the prompt line, so the report starts below it
@@ -275,20 +277,21 @@ _init_valt_password() {
     require 'rayvn/prompt' 'valt/pwned'
 }
 
-# Show a strength summary after the prompt just entered (shown as '? PROMPT [hidden] '), or below it if the line is too
-# narrow. Uses readPassword's _prompt and _visible.
+# Show a strength summary on the line of the hidden prompt just entered, after its '[hidden]' hint, if it fits;
+# otherwise on the next line, indented. Uses readPassword's _visible and the position rayvn/prompt recorded for the
+# hint (_promptCol, _promptPlainHint); on success the prompt leaves the cursor at the start of the next line.
 
 _showStrengthSummary() {
     local summary="$1"
-    local rows=0 cols=0
-    if (( ! _visible )); then
+    if (( ! _visible )) && [[ -n ${_promptCol:-} ]]; then
+        local rows=0 cols=0
         terminalSize rows cols 2> /dev/null || cols=0
-        local visiblePrompt; visiblePrompt="${ stripAnsi "${_prompt}"; }"
         local visibleSummary; visibleSummary="${ stripAnsi "${summary}"; }"
-        local promptEnd=$(( ${#visiblePrompt} + 12 ))
-        if (( cols > 0 && promptEnd + 5 + ${#visibleSummary} <= cols )); then
-            cursorUpToColumn 1 ${promptEnd}
-            echo "  ⮕  ${summary}" > ${terminal}
+        local summaryCol=$(( _promptCol + ${#_promptPlainHint} + 3 )) # after the hint and one space
+        debug "strength summary: promptCol=${_promptCol} hint=${_promptPlainHint} summaryCol=${summaryCol} cols=${cols} length=${#visibleSummary}"
+        if (( cols > 0 && summaryCol + 3 + ${#visibleSummary} <= cols )); then
+            cursorUpToColumn 1 ${summaryCol}
+            echo "⮕  ${summary}" > ${terminal}
             return 0
         fi
     fi
@@ -296,7 +299,7 @@ _showStrengthSummary() {
 }
 
 _readPassword() {
-    echo -n "${_prompt}" > ${terminal}
+    echo -n "${_rpPrompt}" > ${terminal}
     while :; do
         (( _visible )) && echo -n "${_mask}" > ${terminal}
         IFS= read -s -n 1 -t ${_timeout} _key < ${terminal}

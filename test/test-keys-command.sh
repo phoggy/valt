@@ -54,6 +54,13 @@ valtKeys() {
     valt keys -n test -o "${dir}" -q --no-pdf "$@" 2>&1
 }
 
+# Replacement keys are created in a hidden directory next to the old ones, which must always be removed.
+
+assertNoStagingDir() {
+    local staged; staged="${ compgen -G "$1/.test-new-*"; }"
+    assertEqual '' "${staged}" "the staging directory must be removed"
+}
+
 testWeakPassphraseRejected() {
     local dir; dir="${ makeTempDir; }"
     local output; output="${ valtKeys "${weakPassphrase}" "${dir}"; }"
@@ -105,6 +112,7 @@ testForceKeepsKeysWhenRejected() {
     assertContains "Passphrase rejected" "${output}"
     assertEqual "${before}" "${ cat "${dir}/test.pub"; }" "existing keys must be kept when replacement fails"
     assertFile "${dir}/test.key"
+    assertNoStagingDir "${dir}"
 }
 
 testForceReplacesKeys() {
@@ -114,6 +122,8 @@ testForceReplacesKeys() {
     local output; output="${ valtKeys "${strongPassphrase}" "${dir}" --force; }"
     assertEqual 0 $? "--force must succeed: ${output}"
     assertNotEqual "${before}" "${ cat "${dir}/test.pub"; }" "--force must replace the keys"
+    assertNoStagingDir "${dir}"
+    [[ ${output} != *"Operation not permitted"* ]] || fail "replacing keys must not report errors: ${output}"
 }
 
 source rayvn.up 'rayvn/test'
