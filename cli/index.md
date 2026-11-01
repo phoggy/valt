@@ -236,8 +236,9 @@ Create a signed, encrypted secure archive (.valt) from files and directories. A 
 (.valt.pub) that is safe to share is also created. Your own public key is always a recipient unless
 --no-self is given. You will be prompted for the passphrase that protects your private key.
 
-Usage: valt archive create [INPUT...] [-f] [-i IDENTITY] [-n NAME] [--no-self] [-o OUTPUT-DIR]
-                           [-r RECIPIENT]... [-R RECIPIENT-FILE]... [-u USER-TEXT] [-z ZONE]
+Usage: valt archive create [INPUT...] [-f] [-i IDENTITY] [-n NAME] [--no-mac-metadata] [--no-self]
+                           [-o OUTPUT-DIR] [-r RECIPIENT]... [-R RECIPIENT-FILE]... [-u USER-TEXT]
+                           [-z ZONE]
 
     INPUT...                             Files and directories to add. '-C DIR' changes to DIR
                                          before processing the inputs that follow it; an '@'
@@ -258,6 +259,10 @@ Usage: valt archive create [INPUT...] [-f] [-i IDENTITY] [-n NAME] [--no-self] [
     -o, --output-dir OUTPUT-DIR          The directory to write the archive to (default: the current
                                          directory).
     -f, --force                          Overwrite an existing archive.
+    --no-mac-metadata                    Do not keep the macOS metadata (extended attributes such as
+                                         Finder tags, ACLs and file flags) of the files added. It is
+                                         kept by default, but only macOS tar restores it; other
+                                         tars, e.g. on Linux, may warn about it.
     -h, --help                           Print this help message.
 ```
 
