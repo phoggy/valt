@@ -485,7 +485,7 @@ defaultKeyCmdUsage() {
     echo
     show bold "Show or set the default private key file, used by any command when no key is given."
     echo
-    show "Usage:" bold blue "valt defaultKey" "[KEY_FILE] [--clear]"
+    show "Usage:" bold blue "valt default-key" "[KEY_FILE] [--clear]"
     echo
     option "KEY_FILE" "The valt private key file to use by default." 16
     option "--clear" "Remove the setting, so that the built-in default is used." 16
