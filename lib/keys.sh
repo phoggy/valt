@@ -615,7 +615,7 @@ _addRecipientFromKey() {
     local -n _argsArrayRef="$2"
     local -n _hasRecipientRef="$3"
     local recipient; recipient="${ recipient "${keyFile}"; }"
-    _argsArrayRef+=( '-r' "${recipient}" )
+    _hasRecipientValue "${recipient}" "${_argsArrayRef[@]}" || _argsArrayRef+=( '-r' "${recipient}" )
     _hasRecipientRef=1
 }
 
@@ -624,8 +624,20 @@ _addRecipient() {
     local recipient; recipient="$1"
     local -n _argsArrayRef="$2"
     local -n _hasRecipientRef="$3"
-    _argsArrayRef+=( '-r' "${recipient}" )
+    _hasRecipientValue "${recipient}" "${_argsArrayRef[@]}" || _argsArrayRef+=( '-r' "${recipient}" )
     _hasRecipientRef=1
+}
+
+# Succeeds if recipient is already in the args (as '-r RECIPIENT'), so that it is not added twice: age warns about
+# a duplicate recipient, which fails the command. Args: recipient args...
+
+_hasRecipientValue() {
+    local recipient="$1"; shift
+    while (( $# )); do
+        [[ $1 == '-r' && $2 == "${recipient}" ]] && return 0
+        shift
+    done
+    return 1
 }
 
 

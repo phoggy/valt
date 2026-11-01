@@ -10,6 +10,7 @@ main() {
     testEncryptRecipientFiles
     testEncryptNoSelf
     testEncryptRejectsMixedRecipients
+    testEncryptIgnoresDuplicateRecipients
     testEncryptNoSelfRequiresRecipient
     testEncryptMissingSelfPublicKey
     testEncryptRejectsDirectory
@@ -128,6 +129,16 @@ testEncryptRejectsMixedRecipients() {
     assertNotEqual 0 $? "mixing post-quantum and classic recipients must fail"
     assertContains "Cannot encrypt to both post-quantum keys" "${output}"
     assertFileDoesNotExist "${file}.age"
+}
+
+# Naming your own key as well as the automatic self (or any key twice) must work: age warns about duplicates.
+
+testEncryptIgnoresDuplicateRecipients() {
+    local file; newPlainFile file
+    local output; output="${ valt encrypt -i "${keyFile}" -R "${pubFile}" -r "${ recipient "${pubFile}"; }" "${file}" 2>&1; }"
+    assertEqual 0 $? "duplicate recipients must be ignored: ${output}"
+    [[ ${output} != *"duplicate recipient"* ]] || fail "age must not see a duplicate recipient: ${output}"
+    assertTrue "the file must decrypt" decryptsWith "${keyFile}" "${file}.age"
 }
 
 testEncryptNoSelfRequiresRecipient() {
