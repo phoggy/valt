@@ -1214,6 +1214,7 @@ createKeys() {
     show "Private key (aka 'identity') file:" cyan "${ tildePath "${privateKeyFile}"; }" "(includes public key and both signing keys)"
 
     if (( verify )); then
+        echo
         header 2 "Verifying keys"
         verifyValtKeys "${publicKeyFile}" "${privateKeyFile}"
         show bold "Verified" glue ":"
