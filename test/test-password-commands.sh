@@ -82,6 +82,7 @@ testPassphraseOptions() {
 
 testPassphraseHasNoCheck() {
     local output; output="${ valt passphrase --check 2>&1 < /dev/null; }"
+    assertEqual 1 $? "a usage error must exit 1"
     assertContains "unknown argument: --check" "${output}" "passphrase --check must no longer be accepted"
 }
 
