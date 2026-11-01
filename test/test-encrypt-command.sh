@@ -9,6 +9,7 @@ main() {
     testEncryptRecipientBeforeFile
     testEncryptRecipientFiles
     testEncryptNoSelf
+    testEncryptRejectsMixedRecipients
     testEncryptNoSelfRequiresRecipient
     testEncryptMissingSelfPublicKey
     testEncryptRejectsDirectory
@@ -114,6 +115,19 @@ testEncryptNoSelf() {
     assertFalse "self must not be a recipient" decryptsWith "${keyFile}" "${file}.age"
     assertTrue "-r recipient must be a recipient" decryptsWith "${otherKeyFile}" "${file}.age"
     assertTrue "--no-self must still sign with the identity" verifyFileSignature "${keyFile}" "${file}.age"
+}
+
+# age refuses to mix post-quantum (valt) and classic keys; valt must say so before encrypting anything.
+
+testEncryptRejectsMixedRecipients() {
+    local file; newPlainFile file
+    local dir; dir="${ makeTempDir; }"
+    age-keygen -o "${dir}/classic.txt" 2> /dev/null || fail
+    local classic; classic="${ age-keygen -y "${dir}/classic.txt"; }"
+    local output; output="${ valt encrypt -i "${keyFile}" -r "${classic}" "${file}" 2>&1; }"
+    assertNotEqual 0 $? "mixing post-quantum and classic recipients must fail"
+    assertContains "Cannot encrypt to both post-quantum keys" "${output}"
+    assertFileDoesNotExist "${file}.age"
 }
 
 testEncryptNoSelfRequiresRecipient() {

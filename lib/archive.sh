@@ -117,6 +117,7 @@ newSecureArchive() {
 
     [[ -n "${privateKey}" ]] || invalidArgs "signing identity file required"
     (( hasRecipient )) || invalidArgs "one or more recipients required"
+    assertCompatibleRecipients "${encryptArgs[@]}"
     (( ${#inputPaths[@]} )) || invalidArgs "one or more files required"
 
     # Check output file conflict

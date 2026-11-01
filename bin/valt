@@ -955,6 +955,7 @@ encryptCmd() {
     local keyFile; keyFile="${ identityKeyFile; }"
     local -a recipientArgs=()
     addRecipientArgs recipientArgs "${keyFile}" encryptCmdUsage
+    assertCompatibleRecipients "${recipientArgs[@]}"
 
     # Signing and verification both decrypt the private key, so ask for its passphrase once.
     # Shadow with a local so that it goes out of scope when we return.
@@ -995,6 +996,7 @@ archiveCreateCmd() {
     assertFile "${keyFile}" "private key file"
     local -a recipientArgs=()
     addRecipientArgs recipientArgs "${keyFile}" archiveCreateCmdUsage
+    assertCompatibleRecipients "${recipientArgs[@]}"
 
     local -a args=("${_args[@]}" -i "${keyFile}" "${recipientArgs[@]}")
     [[ -n ${_opts['name']} ]] && args+=(-n "${_opts['name']}")

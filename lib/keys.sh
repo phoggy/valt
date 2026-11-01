@@ -378,6 +378,39 @@ armorKeyFile() {
     printf '%s\n' "${_agePemEnd}"
 }
 
+# ◇ Fail if the recipients mix post-quantum (age1pq1...) and classic age keys, which age refuses to encrypt to (the
+#   file would be open to quantum computers). Recipient files are read for their recipients; others are ignored.
+#
+# · USAGE
+#
+#   assertCompatibleRecipients (-r RECIPIENT | -R PATH)...
+#
+#   -r RECIPIENT  A recipient (age public key).
+#   -R PATH       A file of recipients, e.g. a valt .pub file.
+
+assertCompatibleRecipients() {
+    local -a recipients=() postQuantum=() classic=()
+    local recipient
+    while (( $# )); do
+        case "$1" in
+            -r | --recipient) recipients+=("$2"); shift ;;
+            -R | --recipient-file) [[ -f "$2" ]] && mapfile -t -O ${#recipients[@]} recipients < <(grep -E '^(age1|ssh-)' "$2"); shift ;;
+        esac
+        shift
+    done
+    for recipient in "${recipients[@]}"; do
+        if [[ ${recipient} == age1pq1* ]]; then
+            postQuantum+=("${recipient}")
+        else
+            classic+=("${recipient:0:20}...")
+        fi
+    done
+    (( ${#postQuantum[@]} && ${#classic[@]} )) || return 0
+    fail "Cannot encrypt to both post-quantum keys (such as valt keys) and classic age keys, since the result would" \
+         "be open to quantum computers. Classic keys: ${classic[*]}. Use only post-quantum keys, or --no-self" \
+         "to leave out your own valt key."
+}
+
 # ◇ Output the path of the default valt private key file, used when no key is specified: VALT_KEY_FILE if set, else the
 #   defaultKeyFile setting in valt.conf in the valt config directory (see setDefaultValtKeyFile), else valt.key in the
 #   valt config directory.
