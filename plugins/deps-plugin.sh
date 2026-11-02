@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-# Valt deps plugin: scans node/*.js files for npm dependencies and updates node/package.json.
-# Invoked automatically by 'rayvn deps valt' via the plugins/deps-plugin.sh convention.
+# Valt deps plugin: scans node/*.js files for npm dependencies and reports any missing from node/package.json, adding
+# them in fix mode. Invoked automatically by 'rayvn deps valt' via the plugins/deps-plugin.sh convention.
 
 findProjectDeps() {
-    local projectName="$1" projectRoot="$2"
-    # fixMode="$3" flakeFile="$4" available if needed
+    local projectName="$1" projectRoot="$2" fixMode="$3"
+    # flakeFile="$4" available if needed
     local nodeDir="${projectRoot}/node"
     [[ -d "${nodeDir}" ]] || return 0
 
@@ -35,17 +35,30 @@ findProjectDeps() {
         local existingPkg ver
         while IFS='=' read -r existingPkg ver; do
             [[ -n ${existingPkg} ]] && existingDeps["${existingPkg}"]="${ver}"
-        done < <( node -e "
-            const p = require('${packageJsonFile}');
-            Object.entries(p.dependencies||{}).forEach(([k,v])=>console.log(k+'='+v)); # lint-ok
-        " 2> /dev/null )
+        done < <( jq -r '.dependencies // {} | to_entries[] | "\(.key)=\(.value)"' "${packageJsonFile}" ) \
+            || fail "could not read ${packageJsonFile}"
+    fi
+
+    # Report the packages that are missing, unless fixing
+
+    local -a missing=()
+    for pkg in "${packages[@]}"; do
+        [[ ${existingDeps[${pkg}]+defined} ]] || missing+=("${pkg}")
+    done
+    if (( ! ${#missing[@]} )); then
+        show success "All npm packages already present in node/package.json"
+        return 0
+    fi
+    if [[ ${fixMode} != fix ]]; then
+        show error "Missing from node/package.json: ${missing[*]}"
+        show "Add them with" primary "rayvn deps --fix ${projectName}" glue "."
+        return 1
     fi
 
     # Query npm for versions of new packages
     local -A newDeps=()
     local versionOut
-    for pkg in "${packages[@]}"; do
-        [[ ${existingDeps[${pkg}]+defined} ]] && continue
+    for pkg in "${missing[@]}"; do
         versionOut=${ npm view "${pkg}" version 2> /dev/null; }
         if [[ -z "${versionOut}" ]]; then
             warn "Could not find npm version for '${pkg}', skipping"
