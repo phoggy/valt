@@ -1281,6 +1281,11 @@ decryptFile() {
     fi
     [[ ${output} == '-' ]] || assertCanWrite "${output}"
 
+    # Verifying a signature and decrypting both decrypt the private key, so ask for its passphrase once. Shadow with a
+    # local so that it goes out of scope when we return.
+
+    local rayvnTest_ValtKeyPassphrase="${rayvnTest_ValtKeyPassphrase}"
+    [[ -f "${file}.${_signatureFileSuffix}" ]] && _prepareKey "${keyFile}"
     verifySignatureIfPresent "${file}" "${keyFile}"
 
     if [[ ${output} == '-' ]]; then

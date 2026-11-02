@@ -231,16 +231,16 @@ verifySecureArchive() {
     local outerDir; outerDir="${ makeTempDir; }"
     tar xJf "${archiveFile}" -C "${outerDir}" || fail
 
+    # Verifying each signature and decrypting all decrypt the private key, so ask for its passphrase once, before the
+    # first. Shadow with a local variable so that it will go out of scope when we exit.
+
+    local rayvnTest_ValtKeyPassphrase="${rayvnTest_ValtKeyPassphrase}"
+    _prepareKey "${keyFile}"
+
     # Verify outer signature
 
     verifyFileSignature "${keyFile}" "${outerDir}/${_archiveEncryptedName}" \
                         "${outerDir}/${_archiveEncryptedSigName}"
-
-    # Since we will do multiple operations that require decrypting the private key, prepare for it once. Shadow with a local
-    # variable so that it will go out of scope when we exit.
-
-    local rayvnTest_ValtKeyPassphrase="${rayvnTest_ValtKeyPassphrase}"
-    _prepareKey "${keyFile}"
 
     # Decrypt and expand inner archive to a secure temp dir
 
@@ -286,20 +286,16 @@ extractSecureArchive() {
     local outerDir; outerDir="${ makeTempDir; }"
     tar xJf "${archiveFile}" -C "${outerDir}" || fail
 
+    # Verifying each signature and decrypting all decrypt the private key, so ask for its passphrase once, before the
+    # first. Shadow with a local variable so that it will go out of scope when we exit.
+
+    local rayvnTest_ValtKeyPassphrase="${rayvnTest_ValtKeyPassphrase}"
+    _prepareKey "${keyFile}"
+
     # Verify outer signature
 
     verifyFileSignature "${keyFile}" "${outerDir}/${_archiveEncryptedName}" \
                         "${outerDir}/${_archiveEncryptedSigName}"
-
-    # Get key passphrase once for both decrypt and inner verify
-
-    local rayvnTest_ValtKeyPassphrase="${rayvnTest_ValtKeyPassphrase}"
-    if [[ -z ${rayvnTest_ValtKeyPassphrase} ]]; then
-        local path; path="${ tildePath "${keyFile}"; }"
-        local prompt; prompt="${ show "Enter passphrase for" blue "${path}"; }"
-        readPassword "${prompt}" rayvnTest_ValtKeyPassphrase || fail
-        cursorUpOneAndEraseLine
-    fi
 
     # Decrypt and expand inner archive to a secure temp dir
 
