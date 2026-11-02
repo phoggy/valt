@@ -24,6 +24,9 @@ main() {
     testPaperReplacesPdf
     testPaperRelativePaths
     testPaperUsesTemplate
+    testPaperUsesStyle
+    testPaperDocumentData
+    testTypstVersionCheck
     testPaperIncompleteKeyInfo
     testPaperRejectsNameAndKeyFile
     testPaperMissingKeyFile
@@ -187,10 +190,64 @@ testPaperRelativePaths() {
 
 testPaperUsesTemplate() {
     local key; newKeyCopy key
-    local template="${testDir}/template.html"
-    echo '<html><body>${UNDEFINED_TEST_VAR}</body></html>' > "${template}"
+    local template="${testDir}/template.typ"
+    echo '#let data = json("data.json")
+#data.undefinedTestVar' > "${template}"
     local output; output="${ valt paper -k "${completedInfoFile}" -t "${template}" "${key}" 2>&1; }"
-    assertContains "UNDEFINED_TEST_VAR not set in" "${output}" "custom template must be used"
+    assertNotEqual 0 $? "a template using an undefined value must fail"
+    assertContains "undefinedTestVar" "${output}" "custom template must be used"
+    assertContains "could not generate the paper key PDF from ${ tildePath "${template}"; }" "${output}"
+}
+
+testPaperUsesStyle() {
+    local key; newKeyCopy key
+    local style="${testDir}/style.typ"
+    echo '#let style(doc) = { set text(fill: undefinedTestColor); doc }' > "${style}"
+    local output; output="${ valt paper -k "${completedInfoFile}" -c "${style}" "${key}" 2>&1; }"
+    assertNotEqual 0 $? "a style using an undefined value must fail"
+    assertContains "undefinedTestColor" "${output}" "the style file must be used"
+    assertContains "style.typ is ${ tildePath "${style}"; }" "${output}"
+
+    echo '#let style(doc) = { show heading: set text(fill: rgb("#7852ee")); doc }' > "${style}"
+    output="${ valt paper -k "${completedInfoFile}" -c "${style}" "${key}" 2>&1; }"
+    assertEqual 0 $? "a valid style must succeed: ${output}"
+    assertFile "${ _paperKeyFile "${key}"; }"
+}
+
+# typst 0.15 or later is required, for the variable fonts.
+
+testTypstVersionCheck() {
+    local fakeVersion # not 'version', which the fake would see as _assertTypstVersion's own local
+    for fakeVersion in 0.15.0 0.15.1 0.16.0 1.0.0; do
+        typst() { echo "typst ${fakeVersion} (abcdef12)"; }
+        ( _assertTypstVersion ) > /dev/null 2>&1 || fail "typst ${fakeVersion} must be accepted"
+    done
+    typst() { echo 'typst 0.14.2 (abcdef12)'; }
+    local output; output="${ ( _assertTypstVersion ) 2>&1; }"
+    assertNotEqual 0 $? "typst 0.14 must be rejected"
+    assertContains 'typst 0.14.2 is too old' "${output}"
+    unset -f typst
+}
+
+# The template's data: every key.info variable (arrays as JSON arrays, notes always an array), plus generated values.
+
+testPaperDocumentData() {
+    local info="${testDir}/data.info"
+    cp "${completedInfoFile}" "${info}" || fail
+    printf '%s\n' "notes=\"Look in the safe.\"" "favoriteColor='blue'" "pets=('cat' 'dog')" >> "${info}"
+    local jsonFile="${testDir}/data.json"
+    (
+        sourceConfigFile "${info}"
+        _writeDocumentData "${info}" 0123456789abcdef "${jsonFile}"
+    ) || fail "could not write the document data"
+    assertEqual 'Bob Barker' "${ jq -r '.author' "${jsonFile}"; }"
+    assertEqual 2 "${ jq '.contacts | length' "${jsonFile}"; }"
+    assertEqual '["Look in the safe."]' "${ jq -c '.notes' "${jsonFile}"; }"
+    assertEqual 'blue' "${ jq -r '.favoriteColor' "${jsonFile}"; }"
+    assertEqual '["cat","dog"]' "${ jq -c '.pets' "${jsonFile}"; }"
+    assertEqual 'null' "${ jq '.completed' "${jsonFile}"; }" "completed is not passed to the template"
+    assertEqual '0123456789abcdef' "${ jq -r '.generated.checksum' "${jsonFile}"; }"
+    assertEqual 'key.pem' "${ jq -r '.generated.armoredKey' "${jsonFile}"; }"
 }
 
 testPaperIncompleteKeyInfo() {

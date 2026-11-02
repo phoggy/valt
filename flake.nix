@@ -23,23 +23,35 @@
         rayvnPkg = rayvn.packages.${system}.default;
         mrldPkg = mrld.packages.${system}.default;
 
-        # Build puppeteer node_modules at derivation time (no runtime npm install).
-        # PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1: on Linux we use pkgs.chromium; on macOS
-        # pkgs.chromium is unavailable so pdf.sh detects a system browser at runtime.
-        pdfNodeDeps = pkgs.buildNpmPackage {
-          name = "valt-pdf-node-deps";
-          src = ./node;
-          npmDepsHash = "sha256-F9ofvmPKcFZJi9VN5Rb2jk8fv2Wnzmrqh9c/KxzLqAc=";
-          dontNpmBuild = true;
-          npmInstallFlags = [ "--production" ];
-          env = {
-            PUPPETEER_SKIP_DOWNLOAD = "1";
-            PUPPETEER_SKIP_CHROME_DOWNLOAD = "1";
+        # The paper key PDF needs typst 0.15 or later, the first to support variable fonts (see etc/fonts), but
+        # nixpkgs 26.05 has 0.14. Use typst's release binary until nixpkgs catches up, then switch to pkgs.typst.
+        typstVersion = "0.15.1";
+        typstReleases = {
+          x86_64-darwin = { target = "x86_64-apple-darwin"; hash = "sha256-f5/dlYSGYkXemnngrdj5I2+ub0CopF4sR3HMwU204Po="; };
+          aarch64-darwin = { target = "aarch64-apple-darwin"; hash = "sha256-SPYu0DSqOnl4MJV5rGygAEXi7w2nMRToryfP2OdNwFo="; };
+          x86_64-linux = { target = "x86_64-unknown-linux-musl"; hash = "sha256-ptB30Kle7VouunFbLa4GvpVPYkzL+FdYoD84ne0zEYw="; };
+          aarch64-linux = { target = "aarch64-unknown-linux-musl"; hash = "sha256-WqjXSj2QbmDqEqZqwvN/ju8bFMutcYKnReOToQwj3O4="; };
+        };
+        typstPkg = let release = typstReleases.${system}; in pkgs.stdenv.mkDerivation {
+          pname = "typst";
+          version = typstVersion;
+          src = pkgs.fetchurl {
+            url = "https://github.com/typst/typst/releases/download/v${typstVersion}/typst-${release.target}.tar.xz";
+            inherit (release) hash;
           };
+          sourceRoot = "typst-${release.target}";
+          dontConfigure = true;
+          dontBuild = true;
           installPhase = ''
-            mkdir -p $out
-            cp -r node_modules $out/
+            install -Dm755 typst "$out/bin/typst"
+            install -Dm644 LICENSE "$out/share/licenses/typst/LICENSE"
           '';
+          meta = with pkgs.lib; {
+            description = "Markup-based typesetting system";
+            homepage = "https://typst.app";
+            license = licenses.asl20;
+            platforms = builtins.attrNames typstReleases;
+          };
         };
 
         # Runtime dependencies
@@ -56,13 +68,10 @@
           pkgs.phraze
           mrldPkg
           pkgs.curl
-          pkgs.nodejs
           pkgs.jq
           pkgs.minisign
-        ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
-          pkgs.chromium
-        ] ++ [
           pkgs.qrtool
+          typstPkg
           pkgs.exiftool
           pkgs.qpdf
         ];
@@ -79,11 +88,6 @@
           pkgs.coreutils
           pkgs.gnutar
           pkgs.xz
-        ];
-
-        # Fonts for PDF generation
-        fonts = [
-          pkgs.google-fonts  # Includes Indie Flower and Fira Code
         ];
 
         valt = pkgs.stdenv.mkDerivation {
@@ -110,10 +114,6 @@
             mkdir -p "$out/share/valt/etc"
             cp -r etc/* "$out/share/valt/etc/"
 
-            # Install node/
-            mkdir -p "$out/share/valt/node"
-            cp node/*.js "$out/share/valt/node/"
-
             # Install shell completions
             install -Dm644 completions/valt.bash "$out/share/bash-completion/completions/valt"
             install -Dm644 completions/valt.zsh "$out/share/zsh/site-functions/_valt"
@@ -131,14 +131,10 @@ projectBuildRev='${self.shortRev or "dev"}'
 projectNixpkgsRev='${nixpkgs.shortRev}'
 EOF
 
-            # Wrap valt with runtime dependencies on PATH and font config.
-            # Include $out/bin so rayvn.up can find 'rayvn.up' and 'valt' via
-            # PATH lookup for project root resolution.
+            # Wrap valt with runtime dependencies on PATH. Include $out/bin so rayvn.up can find 'rayvn.up' and 'valt'
+            # via PATH lookup for project root resolution. The paper key PDF uses the fonts in etc/fonts.
             wrapProgram "$out/bin/valt" \
-              --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath runtimeDeps}" \
-              --set FONTCONFIG_FILE "${pkgs.makeFontsConf { fontDirectories = fonts; }}" \
-              ${pkgs.lib.optionalString pkgs.stdenv.isLinux "--set PUPPETEER_EXECUTABLE_PATH \"${pkgs.chromium}/bin/chromium\""} \
-              --set VALT_PDF_DEPS_HOME "${pdfNodeDeps}"
+              --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath runtimeDeps}"
 
             # Wrap valt-pinentry similarly
             wrapProgram "$out/bin/valt-pinentry" \
@@ -186,8 +182,10 @@ EOF
             mkdir -p "$out/share/valt/lib"
             cp lib/*.sh "$out/share/valt/lib/"
 
+            # etc/ without the fonts, which only the paper key PDF uses
             mkdir -p "$out/share/valt/etc"
             cp -r etc/* "$out/share/valt/etc/"
+            rm -rf "$out/share/valt/etc/fonts"
 
             # Install rayvn.pkg with version metadata
             sed '/^projectVersion=/d; /^projectReleaseDate=/d; /^projectFlake=/d; /^projectBuildRev=/d; /^projectNixpkgsRev=/d' \
@@ -210,7 +208,7 @@ EOF
             wrapProgram "$out/bin/valt-pinentry" \
               --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath recoverDeps}"
 
-            # For decoding the paper key QR code (see etc/key-doc-template.html).
+            # For decoding the paper key QR code (see etc/key-doc-template.typ).
             ln -s "${pkgs.qrtool}/bin/qrtool" "$out/bin/qrtool"
 
             runHook postInstall
@@ -259,7 +257,7 @@ EOF
         };
 
         devShells.default = pkgs.mkShell {
-          buildInputs = runtimeDeps ++ fonts ++ [
+          buildInputs = runtimeDeps ++ [
             pkgs.shellcheck
           ];
           shellHook = ''

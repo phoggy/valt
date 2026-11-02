@@ -81,26 +81,24 @@ paperKeyCommand() {
 #   privateKeyFile (string)   Path to the private key file.
 #   resultVarRef   (string)   Name of the variable to receive the output paper key file path.
 #   [keyInfoFile]  (string)   Path to the key info file (default: ${valtConfigDir}/key.info).
-#   [cssOverride]  (string)   Path to an optional CSS override file.
-#   [htmlTemplate] (string)   Path to an HTML template file
-#                             (default: ${valtHome}/etc/key-doc-template.html).
+#   [styleFile]    (string)   Path to an optional typst style override file (see etc/key-doc-style.typ).
+#   [templateFile] (string)   Path to a typst template file (default: ${valtHome}/etc/key-doc-template.typ).
 
 newPaperKey() {
-    require 'valt/pdf' # deferred: installs node modules and requires a browser, so load only when generating
     _assertValtKey "$1"
     local privateKeyFile="$1"
     local -n resultVarRef="$2"
     local keyInfoFile="${3:-${_defaultKeyInfoFile}}"
-    local cssOverrideFile="${4:-}"
-    local htmlTemplateFile="${5:-}"
+    local styleFile="${4:-}"
+    local templateFile="${5:-}"
     local _paperKeyFile; _paperKeyFile="${ _paperKeyFile "${privateKeyFile}"; }"
     local workDir; _initSecureTempDir workDir
 
-    [[ -n "${cssOverrideFile}" ]] && assertFile "${cssOverrideFile}"
-    [[ -n "${htmlTemplateFile}" ]] && assertFile "${htmlTemplateFile}" || htmlTemplateFile="${_defaultHtmlTemplateFile}"
+    [[ -n "${styleFile}" ]] && assertFile "${styleFile}"
+    [[ -n "${templateFile}" ]] && assertFile "${templateFile}" || templateFile="${_defaultTemplateFile}"
 
     _loadKeyInfo "${keyInfoFile}"
-    _newPaperKey "${privateKeyFile}" "${keyInfoFile}" "${htmlTemplateFile}" "${workDir}" "${_paperKeyFile}"
+    _newPaperKey "${privateKeyFile}" "${keyInfoFile}" "${templateFile}" "${styleFile}" "${workDir}" "${_paperKeyFile}"
     resultVarRef="${_paperKeyFile}"
 }
 
@@ -113,14 +111,21 @@ _init_valt_paper-keys() {
     local configDir; configDir="${ configDirPath; }"
     declare -gr valtConfigDir="${configDir}"
     declare -gr _defaultKeyInfoFile="${valtConfigDir}/key.info"
-    declare -gr _defaultHtmlTemplateFile="${valtHome}/etc/key-doc-template.html"
+    declare -gr _defaultTemplateFile="${valtHome}/etc/key-doc-template.typ"
+    declare -gr _defaultStyleFile="${valtHome}/etc/key-doc-style.typ"
     declare -gr _keyInfoTemplateFile="${valtHome}/etc/key-info-template.sh"
-    declare -gr _cssMainFileName="key-doc.css"
-    declare -gr _logoFileName="phoggy.png"
-    declare -gr _assetFiles=("${_cssMainFileName}" "${_logoFileName}")
-    declare -gr _cssOverrideFileName='override.css'
-    declare -gr _htmlFileName='note.html'
+    declare -gr _fontsDir="${valtHome}/etc/fonts"
+    declare -gr _logoFile="${valtHome}/etc/phoggy.png"
+
+    # File names in the work dir, where the template finds them (the template and style names are fixed, since the
+    # template imports the style file)
+
+    declare -gr _templateFileName='template.typ'
+    declare -gr _styleFileName='style.typ'
+    declare -gr _dataFileName='data.json'
+    declare -gr _logoFileName='logo.png'
     declare -gr _qrCodeFileName='qr.svg'
+    declare -gr _armoredKeyFileName='key.pem'
 }
 
 _paperKeyFile() {
@@ -175,9 +180,7 @@ _assertKeyInfoArrayVar() {
     local name="$2"
     declare -p "${name}" &> /dev/null || bye "The '${name}' array variable is missing in ${file}."
 
-    if ! declare -p "${name}" 2> /dev/null | grep -q '^declare \-a'; then
-    bye "The '${name}' variable must be an array in ${file}."
-    fi
+    [[ ${ declare -p "${name}" 2> /dev/null; } =~ ^declare\ -[A-Za-z]*a ]] || bye "The '${name}' variable must be an array in ${file}."
 
     local -n nameRef="${name}"
     (( ${#nameRef[@]} > 0 )) || bye "The '${name}' array variable cannot be empty in ${file}."
@@ -186,20 +189,16 @@ _assertKeyInfoArrayVar() {
 _newPaperKey() {
     local keyFile="$1"
     local keyInfoFile="$2"
-    local htmlTemplateFile="$3"
-    local workDir="$4"
-    local outputFile="$5"
+    local templateFile="$3"
+    local styleFile="$4"
+    local workDir="$5"
+    local outputFile="$6"
 
-    # Copy asset files
+    # Copy the template, style and logo files to the work dir
 
-    local assetFile
-    for assetFile in "${_assetFiles[@]}"; do
-        cp "${valtHome}/etc/${assetFile}" "${workDir}/${assetFile}" || fail
-    done
-
-    if [[ -n ${cssOverrideFile} ]]; then
-        cp "${cssOverrideFile}" "${workDir}/${_cssOverrideFileName}" || fail
-    fi
+    cp "${templateFile}" "${workDir}/${_templateFileName}" || fail
+    cp "${styleFile:-${_defaultStyleFile}}" "${workDir}/${_styleFileName}" || fail
+    cp "${_logoFile}" "${workDir}/${_logoFileName}" || fail
 
     # Create QR code using the best error correction level we can given the file size
 
@@ -207,38 +206,28 @@ _newPaperKey() {
     _createQRCodeSvg "${keyFile}" "${qrCodeFile}"
     assertFileExists "${qrCodeFile}"
 
-    # Get the key in armored form and checksum to include as a backup in case of QR code issues
+    # Write the key in armored form, and a checksum, as a backup in case of QR code issues
 
-    local armoredKey; armoredKey="${ armorKeyFile ${keyFile}; }"
-    _CHECKSUM="${ sha256sum ${keyFile} | head -c 16; }"
+    armorKeyFile "${keyFile}" > "${workDir}/${_armoredKeyFileName}" || fail
+    local checksum; checksum="${ sha256sum "${keyFile}" | head -c 16; }"
 
-    # Generate substituted html file and footer template
+    # Write the document data (key.info values and generated values) and compile the PDF. System fonts are ignored
+    # (the bundled ones are used) unless a style file is given, which may use any installed font.
 
-    htmlFile="${workDir}/${_htmlFileName}"
-    _generateHtml "${keyFile}" "${keyInfoFile}" "${htmlTemplateFile}" "${htmlFile}"
-    assertFileExists "${htmlFile}"
-    local footerTemplate; footerTemplate="${ _generateFooterTemplate; }"
+    _writeDocumentData "${keyInfoFile}" "${checksum}" "${workDir}/${_dataFileName}"
+    _assertTypstVersion
+    local -a typstArgs=(--root "${workDir}" --font-path "${_fontsDir}")
+    [[ -z ${styleFile} ]] && typstArgs+=(--ignore-system-fonts)
+    if ! typst compile "${typstArgs[@]}" "${workDir}/${_templateFileName}" "${outputFile}"; then
+        local sources; sources="${ tildePath "${templateFile}"; }"
+        [[ -n ${styleFile} ]] && sources+=" (${_styleFileName} is ${ tildePath "${styleFile}"; })"
+        fail "could not generate the paper key PDF from ${sources}; see the errors above"
+    fi
 
-    # Move to work dir so that relative paths in html work correctly and generate the pdf
+    # Set the creator (typst sets the title, author, subject and keywords from the template)
 
-    cd ${workDir} || fail
-    generatePdf "${htmlFile}" "${outputFile}" "${footerTemplate}" > /dev/null || fail
-
-    # Set metadata and encrypt with a strong password
-
-    local title='Private Key Pair Backup & Usage Instructions'
     local creator; creator="${ projectVersion valt; }, ${valtProjectUrl}"
-    local subject="File decryption."
-    local keywords; keywords="${author}, valt, private key, backup, encryption, decryption, security"
-
-    exiftool \
-      -Title="${title}" \
-      -Author="${author}" \
-      -Subject="${subject}" \
-      -Keywords="${keywords}" \
-      -Creator="${creator}" \
-      -overwrite_original \
-      "${outputFile}"  > /dev/null || fail
+    exiftool -Creator="${creator}" -overwrite_original "${outputFile}" > /dev/null || fail
 
     # Encrypt with a strong owner password so that permissions cannot be changed, ensuring
     # that the user password is empty so viewing does not require a password. The owner
@@ -251,6 +240,55 @@ _newPaperKey() {
     qpdf ${outputFile} \
       --encrypt "${userPW}" "${ownerPW}" 256 --modify=none -- \
       --replace-input  || fail
+}
+
+# Fails unless typst 0.15 or later, the first to support the variable fonts in etc/fonts, is installed.
+
+_assertTypstVersion() {
+    local version major minor rest
+    version="${ typst --version 2> /dev/null; }" || fail "typst is required to generate the paper key PDF"
+    version="${version#typst }"
+    version="${version%% *}"
+    IFS=. read -r major minor rest <<< "${version}"
+    (( major > 0 || minor >= 15 )) || fail "typst ${version} is too old: the paper key PDF needs typst 0.15 or later"
+}
+
+# Writes the data the template reads: every variable set in key.info (an array as a JSON array, e.g. contacts, otherwise
+# a string; 'notes' is always an array), plus a 'generated' object with the date, the key checksum and the work dir names
+# of the logo, QR code and armored key files.
+
+_writeDocumentData() {
+    local keyInfoFile="$1"
+    local checksum="$2"
+    local outputFile="$3"
+    local -a names=()
+    local line name
+    while IFS= read -r line; do
+        [[ ${line} =~ ^([A-Za-z][A-Za-z0-9_]*)= ]] || continue
+        name="${BASH_REMATCH[1]}"
+        [[ ${name} == completed ]] || memberOf "${name}" names || names+=("${name}")
+    done < "${keyInfoFile}"
+
+    local json; json="${ jq -n \
+        --arg date "${ date '+%B %-d, %Y'; }" --arg checksum "${checksum}" --arg logo "${_logoFileName}" \
+        --arg qrCode "${_qrCodeFileName}" --arg armoredKey "${_armoredKeyFileName}" \
+        '{generated: {date: $date, checksum: $checksum, logo: $logo, qrCode: $qrCode, armoredKey: $armoredKey}}'; }" || fail
+    local value
+    for name in "${names[@]}"; do
+        [[ -v ${name} ]] || continue
+        if [[ ${ declare -p "${name}" 2> /dev/null; } =~ ^declare\ -[A-Za-z]*a ]]; then # an indexed array
+            local -n arrayRef="${name}"
+            value="${ jq -n '$ARGS.positional | map(select(length > 0))' --args "${arrayRef[@]}"; }" || fail
+            unset -n arrayRef
+        elif [[ ${name} == notes ]]; then
+            value="${ jq -n --arg note "${!name}" 'if $note == "" then [] else [$note] end'; }" || fail
+        else
+            value="${ jq -n --arg value "${!name}" '$value'; }" || fail
+        fi
+        json="${ jq --arg name "${name}" --argjson value "${value}" '.[$name] = $value' <<< "${json}"; }" || fail
+    done
+    [[ -v notes ]] || json="${ jq '.notes = []' <<< "${json}"; }"
+    echo "${json}" > "${outputFile}" || fail
 }
 
 _createQRCodeSvg() {
@@ -286,133 +324,5 @@ _createQRCodeSvg() {
         fail "cannot construct QR code, data size too large"
     fi
     qrtool encode -r "${inputFile}" -l "${level}" -t svg -o "${outputFile}" || fail
-}
-
-_generateFooterTemplate() {
-    local footerClass; footerClass="${ gawk '
-        /^[[:space:]]*\.footer[[:space:]]*\{/ {
-            print
-            brace_count = 1
-            while (( getline line) > 0) {
-                print line
-                # Count opening and closing braces
-                temp1 = line
-                gsub(/[^{]/, "", temp1)
-                opening = length(temp1)
-                temp2 = line
-                gsub(/[^}]/, "", temp2)
-                closing = length(temp2)
-                brace_count += opening - closing
-                if (brace_count == 0) break
-            }
-            exit
-        }
-        ' "${valtHome}/etc/key-doc.css"; }"
-
-    # lint-skip-start
-    cat <<- EOF
-		<style>
-		    ${footerClass}
-		    .page-info .pageNumber::after {
-		        content: " / ";
-		    }
-		</style>
-		<div class="footer">
-		    <span> ${author} Private Key</span>
-		    <span> ${ date '+%B %e, %Y'; }</span>
-		    <span class="page-info"> <span class="pageNumber"> </span> <span class="totalPages"> </span> </span>
-		</div>
-	EOF
-    # lint-skip-end
-}
-
-_passphraseGridHtml() {
-    # lint-skip-start
-    cat <<- EOF
-		<passphrase-grid length="140"> </passphrase-grid>
-		<script>
-		    class PassphraseGrid extends HTMLElement {
-		        connectedCallback() {
-		            const length = this.getAttribute('length') || 80;
-		            this.render(length);
-		        }
-		        render(length) {
-		            let html = '<div class="grid-container">';
-		            for (let i = 0; i < length; i++) {
-		                html += '<div class="char-box"></div>';
-		            }
-		            html += '</div>';
-		            this.innerHTML = html;
-		        }
-		    }
-		    customElements.define('passphrase-grid', PassphraseGrid);
-		</script>
-	EOF
-    # lint-skip-end
-}
-
-_generateHtml() {
-    local keyFile="$1"
-    local keyInfoFile="$2"
-    local templateFile="$3"
-    local outputFile="$4"
-    local html contact note value
-    readFile "${templateFile}" html || fail
-
-    # Get the key in armored form and checksum to include as a backup in case of QR code issues
-
-    local armoredKey; armoredKey="${ armorKeyFile ${keyFile}; }"
-    _CHECKSUM="${ sha256sum ${keyFile} | head -c 16; }"
-
-    # Set built-in substitution values (clobbering any that the user might have defined)
-
-    local _GREETING="${greeting}"
-    local _DATE; _DATE="${ date "+%B %d, %Y %r %Z"; }"
-    local _CSS_PATH="${_cssMainFileName}"
-    local _LOGO_PATH="${_logoFileName}"
-    local _QR_CODE_PATH="${_qrCodeFileName}"
-    local _ARMORED_KEY="${armoredKey}"
-    local _CSS_OVERRIDE='<!-- placeholder -->'
-    if [[ -n ${cssOverrideFile} ]]; then
-        _CSS_OVERRIDE="<link rel="stylesheet" href="${_cssOverrideFileName}">"
-    fi
-
-    # Transform contacts into list items
-
-    local _CONTACTS_LIST=
-    for contact in "${contacts[@]}"; do
-        _CONTACTS_LIST+="<li>${contact}</li>"
-    done
-
-    # Grid for handwriting passphrase
-
-    local _PASSPHRASE_SECTION; _PASSPHRASE_SECTION="${ _passphraseGridHtml; }"
-
-    # Transform notes into paragraphs
-
-    local _NOTES=
-    for note in "${notes[@]}"; do
-        _NOTES+="<p>${note}</p>"
-    done
-
-    # Collect all required substitution keys (consumes tempHtml)
-
-    local tempHtml="${html}"
-    local requiredSubstitutionKeys=()
-
-    while [[ ${tempHtml} =~ \$\{([A-Za-z_][A-Za-z0-9_]*)\}(.*) ]]; do
-        requiredSubstitutionKeys+=("${BASH_REMATCH[1]}")
-        tempHtml="${BASH_REMATCH[2]}"
-    done
-
-    # Perform the substitutions, failing if a required substitution is not defined
-
-    for key in "${requiredSubstitutionKeys[@]}"; do
-        [[ -v ${key} ]] || fail "${key} not set in ${keyInfoFile}"
-        value="${!key}"
-        [[ -n "${value}" ]] || fail "${key} value not set in ${keyInfoFile}"
-        html=${html/\$\{${key}\}/${value}}
-    done
-    echo "${html}" > "${outputFile}"
 }
 
