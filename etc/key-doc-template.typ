@@ -99,8 +99,9 @@
 
 // ---- Letter
 
-#image(generated.logo, width: 1.4in)
-#v(1.5em)
+// The size the HTML template gave the 308 pixel logo: one pixel per 1/96 inch
+#image(generated.logo, width: 308in / 96)
+#v(3em)
 
 #data.greeting
 
