@@ -79,7 +79,8 @@ Usage: valt keys [-d | --no-default] [--allow-weak-passphrase] [-c CSS] [-f] [-k
     --no-default                 Do not make the new key the default key, and do not ask.
     --no-verify                  Do not verify keys.
     --no-advice                  Do not show passphrase advice.
-    -q, --quick                  Same as --no-advice --no-verify.
+    -q, --quick                  Same as --no-advice --no-verify, and the default key is not offered
+                                 (--default still applies).
     --no-pdf                     Do not generate the paper key PDF.
     -k, --key-info KEY-INFO      Key info file to use instead of the default for PDF generation.
     -t, --template TEMPLATE      HTML template file to use instead of the default for PDF
