@@ -56,8 +56,8 @@
 
 #set text(font: bodyFont, fill: textColor, ..fontSize(15))
 #set par(leading: 0.6em, spacing: 1.6em)
-#set list(spacing: 1.1em, indent: 1em)
-#set enum(spacing: 1.1em, indent: 1em)
+#set list(spacing: 1em, indent: 1em)
+#set enum(spacing: 1em, indent: 1em)
 
 #show heading: set text(fill: headingColor)
 #show heading: set block(above: 1.9em, below: 1.1em)
