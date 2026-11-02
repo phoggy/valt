@@ -85,12 +85,13 @@
 
 #let calloutTitle(kind, title) = text(weight: "semibold", fill: calloutColors.at(kind).title, title)
 
-#let passphraseGrid(length) = grid(
-  columns: (0.31in,) * 22,
+// 20 boxes per row, so that the default 140 fill 7 even rows
+#let passphraseGrid(length) = align(center, grid(
+  columns: (0.31in,) * 20,
   rows: 0.31in,
-  gutter: 1pt,
+  gutter: 2pt,
   ..range(length).map(_ => rect(width: 100%, height: 100%, radius: 3pt, stroke: 1.5pt + rgb("#dddddd"))),
-)
+))
 
 #let noteLines(count) = for _ in range(count) {
   block(width: 100%, height: 0.28in, below: 0pt, stroke: (bottom: 0.75pt + rgb("#d8d8d8")))
