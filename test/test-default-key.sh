@@ -13,6 +13,7 @@ main() {
     testKeysSuggestsDefault
     testKeysDefaultOption
     testKeysAlreadyDefault
+    testKeysNoDefault
 
     return 0
 }
@@ -133,6 +134,15 @@ testKeysAlreadyDefault() {
     local output; output="${ valtInTestHome keys -q --no-pdf; }"
     assertEqual 0 $? "keys must succeed: ${output}"
     [[ ${output} != *"default-key"* && ${output} != *"Default key set"* ]] || fail "the built-in default key must not be offered: ${output}"
+}
+
+testKeysNoDefault() {
+    newTestHome
+    local dir; dir="${ makeTempDir; }"
+    local output; output="${ valtInTestHome keys -n new -o "${dir}" -q --no-pdf --no-default; }"
+    assertEqual 0 $? "keys --no-default must succeed: ${output}"
+    [[ ${output} != *"default-key"* && ${output} != *"Default key set"* ]] || fail "--no-default must not offer or suggest: ${output}"
+    assertFileDoesNotExist "${testHome}/.config/valt/valt.conf"
 }
 
 source rayvn.up 'rayvn/test' 'valt/keys'
