@@ -14,7 +14,9 @@ for whoever inherits them.
 - `bin/valt` is a single CLI with a generated parser: after changing `cliSpec` or its doc comments, run `rayvn args valt`.
 - The `recover` Nix package is what heirs run (`nix run github:phoggy/valt#recover`); it must keep working with only the
   tools in `recoverDeps` in `flake.nix`. All runtime tools must be declared in `flake.nix`.
-- The paper key template is `etc/key-doc-template.html`; its instructions are read by non-technical heirs.
+- The paper key template is `etc/key-doc-template.typ`, compiled to PDF by typst with the static fonts in `etc/fonts`
+  (typst does not support variable fonts); its instructions are read by non-technical heirs. Code is set with ligatures
+  off, so that the armored key and options print exactly as typed.
 
 ## Test hooks
 

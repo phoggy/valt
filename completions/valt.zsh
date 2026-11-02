@@ -108,7 +108,6 @@ _valt() {
                 keys)
                     _arguments \
                     '(--allow-weak-passphrase)'--allow-weak-passphrase'[Accept a passphrase that fails the strength and breach check. Not recommended: the passphrase is all that protects the private key.]' \
-                    '(--css -c)'{--css,-c}'[CSS file with style overrides to apply for PDF generation.]:css:_files' \
                     '(--default -d --no-default)'{--default,-d}'[Make the new key the default key (see '\''valt default-key'\'') without asking. Otherwise you are asked, unless it already is the default.]' \
                     '(--force -f)'{--force,-f}'[Replace existing key files, once the new ones have been created.]' \
                     '(--help -h)'{--help,-h}'[Print this help message.]' \
@@ -120,15 +119,16 @@ _valt() {
                     '(--no-verify)'--no-verify'[Do not verify keys.]' \
                     '(--output-dir -o)'{--output-dir,-o}'[Directory for the key files (default: the valt config directory).]:output-dir:_files -/' \
                     '(--quick -q)'{--quick,-q}'[Same as --no-advice --no-verify, and the default key is not offered (--default still applies).]' \
-                    '(--template -t)'{--template,-t}'[HTML template file to use instead of the default for PDF generation.]:template:_files'
+                    '(--style -c)'{--style,-c}'[Typst file with style overrides to apply for PDF generation.]:style:_files' \
+                    '(--template -t)'{--template,-t}'[Typst template file to use instead of the default for PDF generation.]:template:_files'
                     ;;
                 paper)
                     _arguments \
-                    '(--css -c)'{--css,-c}'[CSS file with style overrides to apply.]:css:_files' \
                     '(--help -h)'{--help,-h}'[Print this help message.]' \
                     '(--key-info -k)'{--key-info,-k}'[Key info file to use instead of the default.]:key-info:_files' \
                     '(--name -n)'{--name,-n}'[Use the NAME.key file in the valt config directory, e.g. bob -> bob.key.]:name:' \
-                    '(--template -t)'{--template,-t}'[HTML template file to use instead of the default.]:template:_files' \
+                    '(--style -c)'{--style,-c}'[Typst file with style overrides to apply.]:style:_files' \
+                    '(--template -t)'{--template,-t}'[Typst template file to use instead of the default.]:template:_files' \
                     '1:KEY_FILE:_files'
                     ;;
                 pass-check)

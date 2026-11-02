@@ -9,7 +9,7 @@ docsWorktree='../valt-pages'
 # Brew formula metadata (used by rayvn/dependencies for formula generation and runtime dep checks)
 # gnugrep, coreutils, gnutar and xz are listed in flake.nix because Nix wrappers use a minimal PATH; macOS and Linux
 # already provide them (macOS tar handles .xz itself), so they are not brew dependencies or checked for.
-declare -A nixBrewMap=([nodejs]='node' [phraze]='sts10/phraze/phraze' [gnused]='gnu-sed')
-declare -a nixBrewExclude=(curl chromium gnugrep coreutils gnutar xz)
-declare -A nixBinaryMap=([nodejs]='node' [gnused]='gsed')
+declare -A nixBrewMap=([phraze]='sts10/phraze/phraze' [gnused]='gnu-sed')
+declare -a nixBrewExclude=(curl gnugrep coreutils gnutar xz)
+declare -A nixBinaryMap=([gnused]='gsed')
 declare -A nixPkgTapOverrides=([mrldPkg]='phoggy/mrld/mrld')

@@ -79,19 +79,19 @@ __valtComplete() {
                     local _relIdx=$(( cword - 2 ))
                     ;;
                 keys)
-                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--allow-weak-passphrase --css --default --force --help --key-info --name --no-advice --no-default --no-pdf --no-verify --output-dir --quick --template -c -d -f -h -k -n -o -q -t" -- "${cur}")); return; }
+                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--allow-weak-passphrase --default --force --help --key-info --name --no-advice --no-default --no-pdf --no-verify --output-dir --quick --style --template -c -d -f -h -k -n -o -q -t" -- "${cur}")); return; }
                     case "${prev}" in
-                        --css|-c) COMPREPLY=($(compgen -f -- "${cur}")); return ;;
                         --key-info|-k) COMPREPLY=($(compgen -f -- "${cur}")); return ;;
                         --output-dir|-o) COMPREPLY=($(compgen -d -- "${cur}")); return ;;
+                        --style|-c) COMPREPLY=($(compgen -f -- "${cur}")); return ;;
                         --template|-t) COMPREPLY=($(compgen -f -- "${cur}")); return ;;
                     esac
                     ;;
                 paper)
-                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--css --help --key-info --name --template -c -h -k -n -t" -- "${cur}")); return; }
+                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--help --key-info --name --style --template -c -h -k -n -t" -- "${cur}")); return; }
                     case "${prev}" in
-                        --css|-c) COMPREPLY=($(compgen -f -- "${cur}")); return ;;
                         --key-info|-k) COMPREPLY=($(compgen -f -- "${cur}")); return ;;
+                        --style|-c) COMPREPLY=($(compgen -f -- "${cur}")); return ;;
                         --template|-t) COMPREPLY=($(compgen -f -- "${cur}")); return ;;
                     esac
                     local _relIdx=$(( cword - 2 ))
