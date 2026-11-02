@@ -65,8 +65,8 @@ Generate an age key pair, with the private key encrypted by a passphrase, plus a
 backup documentation. A strong passphrase is highly encouraged; advice and an opportunity to
 generate one will be offered.
 
-Usage: valt keys [--allow-weak-passphrase] [-c CSS] [-d] [-f] [-k KEY-INFO] [-n NAME] [--no-advice]
-                 [--no-pdf] [--no-verify] [-o OUTPUT-DIR] [-q] [-t TEMPLATE]
+Usage: valt keys [-d | --no-default] [--allow-weak-passphrase] [-c CSS] [-f] [-k KEY-INFO] [-n NAME]
+                 [--no-advice] [--no-pdf] [--no-verify] [-o OUTPUT-DIR] [-q] [-t TEMPLATE]
 
     -n, --name NAME              Name to use for key files, e.g. bob -> bob.pub, bob.key. (default:
                                  valt)
@@ -76,6 +76,7 @@ Usage: valt keys [--allow-weak-passphrase] [-c CSS] [-d] [-f] [-k KEY-INFO] [-n 
                                  recommended: the passphrase is all that protects the private key.
     -d, --default                Make the new key the default key (see 'valt default-key') without
                                  asking. Otherwise you are asked, unless it already is the default.
+    --no-default                 Do not make the new key the default key, and do not ask.
     --no-verify                  Do not verify keys.
     --no-advice                  Do not show passphrase advice.
     -q, --quick                  Same as --no-advice --no-verify.
