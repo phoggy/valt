@@ -65,8 +65,9 @@ Generate an age key pair, with the private key encrypted by a passphrase, plus a
 backup documentation. A strong passphrase is highly encouraged; advice and an opportunity to
 generate one will be offered.
 
-Usage: valt keys [-d | --no-default] [--allow-weak-passphrase] [-c CSS] [-f] [-k KEY-INFO] [-n NAME]
-                 [--no-advice] [--no-pdf] [--no-verify] [-o OUTPUT-DIR] [-q] [-t TEMPLATE]
+Usage: valt keys [-d | --no-default] [--allow-weak-passphrase] [-f] [-k KEY-INFO] [-n NAME]
+                 [--no-advice] [--no-pdf] [--no-verify] [-o OUTPUT-DIR] [-q] [-c STYLE]
+                 [-t TEMPLATE]
 
     -n, --name NAME              Name to use for key files, e.g. bob -> bob.pub, bob.key. (default:
                                  valt)
@@ -83,9 +84,9 @@ Usage: valt keys [-d | --no-default] [--allow-weak-passphrase] [-c CSS] [-f] [-k
                                  (--default still applies).
     --no-pdf                     Do not generate the paper key PDF.
     -k, --key-info KEY-INFO      Key info file to use instead of the default for PDF generation.
-    -t, --template TEMPLATE      HTML template file to use instead of the default for PDF
+    -t, --template TEMPLATE      Typst template file to use instead of the default for PDF
                                  generation.
-    -c, --css CSS                CSS file with style overrides to apply for PDF generation.
+    -c, --style STYLE            Typst file with style overrides to apply for PDF generation.
     -h, --help                   Print this help message.
 
 The PDF contains your keys, also in encrypted form, to serve as a backup for you and/or your
@@ -100,10 +101,10 @@ e.g. safe deposit box/fire safe and/or with trusted people!
 
 Document Customization
 
-The HTML template can be changed from the default and CSS style overrides can be applied. The
-default template and primary CSS file can be found in the valt 'etc' directory. Template
-substitutions are performed with variables defined in the key.info file. Note that keys prefixed
-with an underscore are reserved for system use.
+The PDF is typeset by typst (https://typst.app). The template can be replaced, and style overrides
+applied, with typst files: the default template (key-doc-template.typ) and an example style file
+(key-doc-style.typ) are in the valt 'etc' directory. Every variable set in the key.info file is
+available to the template as data.NAME (e.g. data.author); data.generated holds values set by valt.
 ```
 
 ### valt paper
@@ -113,15 +114,15 @@ Generate the paper key PDF for an existing key pair, personalized from the key.i
 written next to the key and replaces any existing one, so this can be re-run whenever key.info
 changes. The passphrase is not required, since the private key is included in its encrypted form.
 
-Usage: valt paper [KEY_FILE] [-c CSS] [-k KEY-INFO] [-n NAME] [-t TEMPLATE]
+Usage: valt paper [KEY_FILE] [-k KEY-INFO] [-n NAME] [-c STYLE] [-t TEMPLATE]
 
     KEY_FILE                 The private key file (default: the default key; see 'valt
                              default-key').
     -n, --name NAME          Use the NAME.key file in the valt config directory, e.g. bob ->
                              bob.key.
     -k, --key-info KEY-INFO  Key info file to use instead of the default.
-    -t, --template TEMPLATE  HTML template file to use instead of the default.
-    -c, --css CSS            CSS file with style overrides to apply.
+    -t, --template TEMPLATE  Typst template file to use instead of the default.
+    -c, --style STYLE        Typst file with style overrides to apply.
     -h, --help               Print this help message.
 
 The PDF is opened when done, so that you can check and print it. Please ensure that you print at
