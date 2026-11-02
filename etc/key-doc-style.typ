@@ -9,6 +9,6 @@
 //     doc
 //   }
 //
-// Fonts must be static (typst does not support variable fonts) and installed, or in valt's etc/fonts directory.
+// Fonts can be any installed font (static or variable), or one in valt's etc/fonts directory.
 
 #let style(doc) = doc

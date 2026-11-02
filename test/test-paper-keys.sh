@@ -26,6 +26,7 @@ main() {
     testPaperUsesTemplate
     testPaperUsesStyle
     testPaperDocumentData
+    testTypstVersionCheck
     testPaperIncompleteKeyInfo
     testPaperRejectsNameAndKeyFile
     testPaperMissingKeyFile
@@ -211,6 +212,21 @@ testPaperUsesStyle() {
     output="${ valt paper -k "${completedInfoFile}" -c "${style}" "${key}" 2>&1; }"
     assertEqual 0 $? "a valid style must succeed: ${output}"
     assertFile "${ _paperKeyFile "${key}"; }"
+}
+
+# typst 0.15 or later is required, for the variable fonts.
+
+testTypstVersionCheck() {
+    local fakeVersion # not 'version', which the fake would see as _assertTypstVersion's own local
+    for fakeVersion in 0.15.0 0.15.1 0.16.0 1.0.0; do
+        typst() { echo "typst ${fakeVersion} (abcdef12)"; }
+        ( _assertTypstVersion ) > /dev/null 2>&1 || fail "typst ${fakeVersion} must be accepted"
+    done
+    typst() { echo 'typst 0.14.2 (abcdef12)'; }
+    local output; output="${ ( _assertTypstVersion ) 2>&1; }"
+    assertNotEqual 0 $? "typst 0.14 must be rejected"
+    assertContains 'typst 0.14.2 is too old' "${output}"
+    unset -f typst
 }
 
 # The template's data: every key.info variable (arrays as JSON arrays, notes always an array), plus generated values.

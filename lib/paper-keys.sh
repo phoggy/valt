@@ -215,6 +215,7 @@ _newPaperKey() {
     # (the bundled ones are used) unless a style file is given, which may use any installed font.
 
     _writeDocumentData "${keyInfoFile}" "${checksum}" "${workDir}/${_dataFileName}"
+    _assertTypstVersion
     local -a typstArgs=(--root "${workDir}" --font-path "${_fontsDir}")
     [[ -z ${styleFile} ]] && typstArgs+=(--ignore-system-fonts)
     if ! typst compile "${typstArgs[@]}" "${workDir}/${_templateFileName}" "${outputFile}"; then
@@ -239,6 +240,17 @@ _newPaperKey() {
     qpdf ${outputFile} \
       --encrypt "${userPW}" "${ownerPW}" 256 --modify=none -- \
       --replace-input  || fail
+}
+
+# Fails unless typst 0.15 or later, the first to support the variable fonts in etc/fonts, is installed.
+
+_assertTypstVersion() {
+    local version major minor rest
+    version="${ typst --version 2> /dev/null; }" || fail "typst is required to generate the paper key PDF"
+    version="${version#typst }"
+    version="${version%% *}"
+    IFS=. read -r major minor rest <<< "${version}"
+    (( major > 0 || minor >= 15 )) || fail "typst ${version} is too old: the paper key PDF needs typst 0.15 or later"
 }
 
 # Writes the data the template reads: every variable set in key.info (an array as a JSON array, e.g. contacts, otherwise

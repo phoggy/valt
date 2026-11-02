@@ -12,4 +12,4 @@ docsWorktree='../valt-pages'
 declare -A nixBrewMap=([phraze]='sts10/phraze/phraze' [gnused]='gnu-sed')
 declare -a nixBrewExclude=(curl gnugrep coreutils gnutar xz)
 declare -A nixBinaryMap=([gnused]='gsed')
-declare -A nixPkgTapOverrides=([mrldPkg]='phoggy/mrld/mrld')
+declare -A nixPkgTapOverrides=([mrldPkg]='phoggy/mrld/mrld' [typstPkg]='typst') # typstPkg: typst's release binary (see flake.nix)

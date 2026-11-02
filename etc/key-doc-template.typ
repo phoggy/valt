@@ -11,7 +11,7 @@
 
 // ---- Theme
 
-#let bodyFont = "Source Sans 3"
+#let bodyFont = "Google Sans Flex"
 #let humanFont = "Shantell Sans"
 #let codeFont = "Fira Code"
 #let textColor = rgb("#222222")

@@ -23,6 +23,37 @@
         rayvnPkg = rayvn.packages.${system}.default;
         mrldPkg = mrld.packages.${system}.default;
 
+        # The paper key PDF needs typst 0.15 or later, the first to support variable fonts (see etc/fonts), but
+        # nixpkgs 26.05 has 0.14. Use typst's release binary until nixpkgs catches up, then switch to pkgs.typst.
+        typstVersion = "0.15.1";
+        typstReleases = {
+          x86_64-darwin = { target = "x86_64-apple-darwin"; hash = "sha256-f5/dlYSGYkXemnngrdj5I2+ub0CopF4sR3HMwU204Po="; };
+          aarch64-darwin = { target = "aarch64-apple-darwin"; hash = "sha256-SPYu0DSqOnl4MJV5rGygAEXi7w2nMRToryfP2OdNwFo="; };
+          x86_64-linux = { target = "x86_64-unknown-linux-musl"; hash = "sha256-ptB30Kle7VouunFbLa4GvpVPYkzL+FdYoD84ne0zEYw="; };
+          aarch64-linux = { target = "aarch64-unknown-linux-musl"; hash = "sha256-WqjXSj2QbmDqEqZqwvN/ju8bFMutcYKnReOToQwj3O4="; };
+        };
+        typstPkg = let release = typstReleases.${system}; in pkgs.stdenv.mkDerivation {
+          pname = "typst";
+          version = typstVersion;
+          src = pkgs.fetchurl {
+            url = "https://github.com/typst/typst/releases/download/v${typstVersion}/typst-${release.target}.tar.xz";
+            inherit (release) hash;
+          };
+          sourceRoot = "typst-${release.target}";
+          dontConfigure = true;
+          dontBuild = true;
+          installPhase = ''
+            install -Dm755 typst "$out/bin/typst"
+            install -Dm644 LICENSE "$out/share/licenses/typst/LICENSE"
+          '';
+          meta = with pkgs.lib; {
+            description = "Markup-based typesetting system";
+            homepage = "https://typst.app";
+            license = licenses.asl20;
+            platforms = builtins.attrNames typstReleases;
+          };
+        };
+
         # Runtime dependencies
         runtimeDeps = [
           pkgs.bash
@@ -40,7 +71,7 @@
           pkgs.jq
           pkgs.minisign
           pkgs.qrtool
-          pkgs.typst
+          typstPkg
           pkgs.exiftool
           pkgs.qpdf
         ];
