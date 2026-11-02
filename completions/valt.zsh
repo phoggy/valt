@@ -119,7 +119,7 @@ _valt() {
                     '(--no-pdf)'--no-pdf'[Do not generate the paper key PDF.]' \
                     '(--no-verify)'--no-verify'[Do not verify keys.]' \
                     '(--output-dir -o)'{--output-dir,-o}'[Directory for the key files (default: the valt config directory).]:output-dir:_files -/' \
-                    '(--quick -q)'{--quick,-q}'[Same as --no-advice --no-verify.]' \
+                    '(--quick -q)'{--quick,-q}'[Same as --no-advice --no-verify, and the default key is not offered (--default still applies).]' \
                     '(--template -t)'{--template,-t}'[HTML template file to use instead of the default for PDF generation.]:template:_files'
                     ;;
                 paper)

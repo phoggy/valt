@@ -246,7 +246,7 @@ testValtHelp() {
 testKeysHelp() {
     local output; output="${ valt keys --help 2>&1; }"
     assertContains "-q, --quick" "${output}"
-    assertContains "Same as --no-advice --no-verify." "${output}"
+    assertContains "Same as --no-advice --no-verify, and the default key is not offered" "${output}"
 }
 
 source rayvn.up 'rayvn/test' 'valt/paper-keys'

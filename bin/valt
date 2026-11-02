@@ -56,7 +56,7 @@ declare -gA cliSpec=(
     #   --no-default  Do not make the new key the default key, and do not ask.
     #   --no-verify   Do not verify keys.
     #   --no-advice   Do not show passphrase advice.
-    #   --quick       Same as --no-advice --no-verify.
+    #   --quick       Same as --no-advice --no-verify, and the default key is not offered (--default still applies).
     #   --no-pdf      Do not generate the paper key PDF.
     #   --key-info    Key info file to use instead of the default for PDF generation.
     #   --template    HTML template file to use instead of the default for PDF generation.
@@ -643,7 +643,8 @@ keysCmdUsage() {
     option "--no-default" "Do not make the new key the default key, and do not ask." 33
     option "--no-verify" "Do not verify keys." 33
     option "--no-advice" "Do not show passphrase advice." 33
-    option "-q, --quick" "Same as --no-advice --no-verify." 33
+    option "-q, --quick" "Same as --no-advice --no-verify, and the default key is not offered" 33
+    option "" "(--default still applies)." 33
     option "--no-pdf" "Do not generate the paper key PDF." 33
     option "-k, --key-info KEY-INFO" "Key info file to use instead of the default for PDF generation." 33
     option "-t, --template TEMPLATE" "HTML template file to use instead of the default for PDF" 33
@@ -902,8 +903,9 @@ keysCmd() {
     local outputDir="${_opts['output-dir']:-${valtConfigDir}}"
     local publicKeyFile="${outputDir}/${name}.${valtPublicKeySuffix}"
     local privateKeyFile="${outputDir}/${name}.${valtPrivateKeySuffix}"
-    local verify=1
+    local verify=1 offerDefault=1
     (( _opts['no-verify'] || _opts['quick'] )) && verify=0
+    (( _opts['no-default'] || ( _opts['quick'] && ! _opts['default'] ) )) && offerDefault=0
     (( _opts['no-advice'] || _opts['quick'] )) && declare -gx skipKeyPassphraseAdvice=1
     (( _opts['allow-weak-passphrase'] )) && declare -gx allowWeakKeyPassphrase=1
 
@@ -913,7 +915,7 @@ keysCmd() {
     fi
 
     createKeys "${name}" "${outputDir}" "${publicKeyFile}" "${privateKeyFile}" ${verify} "${_opts['force']:-0}"
-    (( _opts['no-default'] )) || offerDefaultKey "${privateKeyFile}" "${_opts['default']:-0}"
+    (( offerDefault )) && offerDefaultKey "${privateKeyFile}" "${_opts['default']:-0}"
 
     (( _opts['no-pdf'] )) && return 0
     if isKeyInfoComplete "${_opts['key-info']}"; then

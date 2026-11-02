@@ -14,6 +14,8 @@ main() {
     testKeysDefaultOption
     testKeysAlreadyDefault
     testKeysNoDefault
+    testKeysQuickSkipsDefault
+    testKeysQuickWithDefault
 
     return 0
 }
@@ -113,7 +115,7 @@ testSetRejectsKeyFileAndClear() {
 testKeysSuggestsDefault() {
     newTestHome
     local dir; dir="${ makeTempDir; }"
-    local output; output="${ valtInTestHome keys -n new -o "${dir}" -q --no-pdf; }"
+    local output; output="${ valtInTestHome keys -n new -o "${dir}" --no-advice --no-verify --no-pdf; }"
     assertEqual 0 $? "keys must succeed: ${output}"
     assertContains "valt default-key" "${output}"
     assertFileDoesNotExist "${testHome}/.config/valt/valt.conf"
@@ -143,6 +145,24 @@ testKeysNoDefault() {
     assertEqual 0 $? "keys --no-default must succeed: ${output}"
     [[ ${output} != *"default-key"* && ${output} != *"Default key set"* ]] || fail "--no-default must not offer or suggest: ${output}"
     assertFileDoesNotExist "${testHome}/.config/valt/valt.conf"
+}
+
+testKeysQuickSkipsDefault() {
+    newTestHome
+    local dir; dir="${ makeTempDir; }"
+    local output; output="${ valtInTestHome keys -n new -o "${dir}" -q --no-pdf; }"
+    assertEqual 0 $? "keys -q must succeed: ${output}"
+    [[ ${output} != *"default-key"* && ${output} != *"Default key set"* ]] || fail "-q must not offer or suggest: ${output}"
+    assertFileDoesNotExist "${testHome}/.config/valt/valt.conf"
+}
+
+testKeysQuickWithDefault() {
+    newTestHome
+    local dir; dir="${ makeTempDir; }"
+    dir="${ cd "${dir}" && pwd -P; }"
+    local output; output="${ valtInTestHome keys -n new -o "${dir}" -q -d --no-pdf; }"
+    assertEqual 0 $? "keys -q -d must succeed: ${output}"
+    assertInFile "defaultKeyFile='${dir}/new.key'" "${testHome}/.config/valt/valt.conf"
 }
 
 source rayvn.up 'rayvn/test' 'valt/keys'
