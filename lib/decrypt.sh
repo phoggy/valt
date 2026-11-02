@@ -63,7 +63,7 @@ decrypt() {
 #   file (file)  The file to check.
 
 isAgeEncryptedFile() {
-    head -c 64 "$1" 2> /dev/null | LC_ALL=C grep -qa -e '^age-encryption\.org/' -e '^-----BEGIN AGE ENCRYPTED FILE-----'
+    head -c 64 "$1" 2> /dev/null | grep -qa -e '^age-encryption\.org/' -e '^-----BEGIN AGE ENCRYPTED FILE-----'
 }
 
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/encrypt' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"

@@ -317,7 +317,7 @@ newTaggedArchive() {
     xattr -w com.apple.metadata:_kMDItemUserTags '("Red\n6")' "${inputDir}/tagged.txt" || fail
     local outputDir; outputDir="${ makeTempDir; }"
     taggedArchiveRef="${ newSecureArchive -C "${inputDir}" tagged.txt -i "${keyFile}" -R "${pubFile}" -n tagged -o "${outputDir}" "$@"; }"
-    local metadataHeaders; metadataHeaders="${ xz -dc "${taggedArchiveRef}" | LC_ALL=C grep -ac 'LIBARCHIVE.xattr'; }"
+    local metadataHeaders; metadataHeaders="${ xz -dc "${taggedArchiveRef}" | grep -ac 'LIBARCHIVE.xattr'; }"
     assertEqual 0 "${metadataHeaders}" "the archive's own files must have no macOS metadata"
 }
 
