@@ -56,7 +56,8 @@
 
 #set text(font: bodyFont, fill: textColor, ..fontSize(15))
 #set par(leading: 0.6em, spacing: 1.6em)
-#set list(spacing: 1em, indent: 1em)
+// A disc in the text's color, the size browsers draw (the font's own bullet is much smaller)
+#set list(spacing: 1em, indent: 1em, marker: context box(height: 0.7em, align(horizon, circle(radius: 0.18em, fill: text.fill))))
 #set enum(spacing: 1em, indent: 1em)
 
 #show heading: set text(fill: headingColor)
