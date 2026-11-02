@@ -47,16 +47,23 @@
   },
 )
 
-#set text(font: bodyFont, size: 11pt, fill: textColor)
-#set par(leading: 0.6em, spacing: 1.1em)
-#set list(spacing: 0.8em, indent: 1em)
-#set enum(spacing: 0.8em, indent: 1em)
+// Sizes and spacing follow the HTML version: 15px body text (1px is 0.75pt), 1em between paragraphs and 0.5em
+// between list items (typst spacing runs from a line's baseline to the next block's cap height, so it adds the line
+// leading). Browsers set the optical size to the size in pixels, typst to the size in points, which sets the text
+// wider, so it is set explicitly.
+
+#let fontSize(px) = (size: px * 0.75pt, variations: (opsz: px))
+
+#set text(font: bodyFont, fill: textColor, ..fontSize(15))
+#set par(leading: 0.6em, spacing: 1.6em)
+#set list(spacing: 1.1em, indent: 1em)
+#set enum(spacing: 1.1em, indent: 1em)
 
 #show heading: set text(fill: headingColor)
-#show heading: set block(above: 1.6em, below: 0.9em)
-#show heading.where(level: 1): set text(size: 22pt)
-#show heading.where(level: 2): set text(size: 16.5pt)
-#show heading.where(level: 3): set text(size: 13pt)
+#show heading: set block(above: 1.9em, below: 1.1em)
+#show heading.where(level: 1): set text(..fontSize(30))
+#show heading.where(level: 2): set text(..fontSize(22.5))
+#show heading.where(level: 3): set text(..fontSize(17.55))
 
 #show link: set text(fill: linkColor)
 // No ligatures in code: Fira Code would otherwise join e.g. the dashes in '--option' and the armored key's '-----'
