@@ -67,11 +67,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793554934,
-        "narHash": "sha256-iKG+pikcHCuMBnFnZHEsdJ+yX7NoeF9vZkcAzMrw/7M=",
+        "lastModified": 1793655493,
+        "narHash": "sha256-dDYcs8CsEodmElQgszszc6xJFdFtXX1i80BlftfTj74=",
         "owner": "phoggy",
         "repo": "rayvn",
-        "rev": "1ba4af9595336f9cd5f11eca4aec6a48faeb35a2",
+        "rev": "b121b7c0d3060bdef046acc862dc15a93df5bdc7",
         "type": "github"
       },
       "original": {
