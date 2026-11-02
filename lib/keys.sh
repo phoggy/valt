@@ -363,7 +363,8 @@ signingKeyToTempFile() {
     resultFileRef="${tempFile}"
 }
 
-# ◇ Outputs an ASCII-armored PEM-style encoding of a key file to stdout.
+# ◇ Outputs an ASCII-armored PEM-style encoding of a key file to stdout, in age's armor format: base64 in lines of
+#   exactly 64 characters (but the last), which age requires.
 #
 # · USAGE
 #
@@ -374,8 +375,8 @@ signingKeyToTempFile() {
 armorKeyFile() {
     local keyFile=$1
     printf '%s\n' "${_agePemBegin}"
-    base64 < "${keyFile}" | fold -w 64
-    printf '%s\n' "${_agePemEnd}"
+    base64 < "${keyFile}" | tr -d '\n' | fold -w 64 || fail # GNU base64 wraps at 76 columns, macOS's does not
+    printf '\n%s\n' "${_agePemEnd}"
 }
 
 # ◇ Fail if the recipients mix post-quantum (age1pq1...) and classic age keys, which age refuses to encrypt to (the

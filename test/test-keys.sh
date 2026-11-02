@@ -106,6 +106,37 @@ testArmorKeyFile() {
     armored="${ armorKeyFile "${keyFile}"; }"
     assertContains '-----BEGIN AGE ENCRYPTED FILE-----' "${armored}"
     assertContains '-----END AGE ENCRYPTED FILE-----' "${armored}"
+    assertArmorFormat "${armored}" "with the system base64"
+
+    # GNU base64 wraps its output at 76 columns, which must not change the armor
+
+    base64() { command base64 "$@" | fold -w 76; }
+    armored="${ armorKeyFile "${keyFile}"; }"
+    unset -f base64
+    assertArmorFormat "${armored}" "with a base64 that wraps at 76 columns"
+
+    # age accepts it: the armored key decrypts with its passphrase
+
+    local armoredKeyFile="${testKeyDir}/armored.key"
+    echo "${armored}" > "${armoredKeyFile}"
+    local output; output="${ rayvnTest_ValtKeyPassphrase="${rayvnTest_ValtKeyPassphrase}" valt verify -i "${armoredKeyFile}" 2>&1; }"
+    assertEqual 0 $? "the armored key must decrypt: ${output}"
+}
+
+# Fails unless the armored text is in age's format: base64 lines of exactly 64 characters but the last, which decode to
+# the key file.
+
+assertArmorFormat() {
+    local armored="$1" context="$2"
+    local -a lines=()
+    mapfile -t lines <<< "${armored}"
+    local last=$(( ${#lines[@]} - 2 )) i
+    for (( i = 1; i < last; i++ )); do
+        (( ${#lines[${i}]} == 64 )) || fail "armor line ${i} is ${#lines[${i}]} characters, not 64, ${context}"
+    done
+    (( ${#lines[${last}]} >= 1 && ${#lines[${last}]} <= 64 )) || fail "the last armor line is ${#lines[${last}]} characters, ${context}"
+    local decoded; decoded="${ printf '%s\n' "${lines[@]:1:${last}}" | base64 -d | sha256sum; }"
+    assertEqual "${ sha256sum < "${keyFile}"; }" "${decoded}" "the armor must decode to the key file, ${context}"
 }
 
 source rayvn.up 'rayvn/test' 'valt/keys'
