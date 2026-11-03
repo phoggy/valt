@@ -173,6 +173,22 @@ Each encrypted file must decrypt with the private key (nothing is written), and 
 archive must have both of its signatures verify, as with 'valt archive verify'.
 ```
 
+### valt public-key
+
+```
+Recreate the public key file (.pub) for a private key, e.g. if it was lost. The private key contains
+everything in the public key file, so the result is identical to the one made with the key. You will
+be asked for the private key's passphrase.
+
+Usage: valt public-key [KEY_FILE] [-f] [-o OUTPUT]
+
+    KEY_FILE             The private key file (default: the default key; see 'valt default-key').
+    -o, --output OUTPUT  The public key file to write (default: next to the private key, with a .pub
+                         suffix).
+    -f, --force          Replace an existing public key file.
+    -h, --help           Print this help message.
+```
+
 ### valt default-key
 
 ```
