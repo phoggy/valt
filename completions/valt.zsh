@@ -17,6 +17,7 @@ _valt() {
                 'decrypt:Decrypt an encrypted file, or verify and extract a secure archive (.valt). You will be prompted'
                 'default-key:Show or set the default private key file, used by any command when no key is given.'
                 'encrypt:Encrypt a single file to FILE.age and sign it with your private key (FILE.age.minisig). Your own'
+                'key-info:Fill in the paper key'\''s personal information (the key.info file) in a web page: the letter, the people who can'
                 'keys:Generate an age key pair, with the private key encrypted by a passphrase, plus a PDF paper key as backup'
                 'paper:Generate the paper key PDF for an existing key pair, personalized from the key.info file. The PDF is written'
                 'pass-check:Check a password or passphrase: rate its strength, and look it up in the HaveIBeenPwned'
@@ -104,6 +105,12 @@ _valt() {
                     '*'{--recipient-file,-R}'[Also encrypt to the recipient(s) in this file, e.g. a valt .pub file. Can be repeated.]:recipient-file:_files' \
                     '(--verify)'--verify'[Decrypt the result with your private key and confirm it matches FILE.]' \
                     '1:FILE:'
+                    ;;
+                key-info)
+                    _arguments \
+                    '(--downloads -d)'{--downloads,-d}'[Your browser'\''s downloads directory (default: ~/Downloads).]:downloads:_files -/' \
+                    '(--help -h)'{--help,-h}'[Print this help message.]' \
+                    '(--key-info -k)'{--key-info,-k}'[Key info file to write (default: key.info in the valt config directory).]:key-info:'
                     ;;
                 keys)
                     _arguments \

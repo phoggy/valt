@@ -7,6 +7,7 @@ main() {
     testVerifyWithoutPublicKey
     testVerifyMismatchedPublicKey
     testVerifyWrongPassphrase
+    testVerifyIgnoresAgeProgressNotes
     testVerifyArchive
     testVerifyArchiveFromAnotherKey
     testVerifySignedFile
@@ -73,6 +74,20 @@ testVerifyWrongPassphrase() {
     local output; output="${ rayvnTest_ValtKeyPassphrase='wrong-passphrase' valt verify -i "${keyFile}" 2>&1; }"
     assertNotEqual 0 $? "verify with the wrong passphrase must fail"
     assertContains "incorrect passphrase" "${output}"
+}
+
+# age prints "age: waiting on batchpass plugin..." when its passphrase plugin is slow (e.g. on a busy machine); that
+# must not fail the operation. A stand-in age prints it, then runs the real one.
+
+testVerifyIgnoresAgeProgressNotes() {
+    local binDir; binDir="${ makeTempDir; }"
+    local realAge; realAge="${ command -v age; }"
+    printf '%s\n' '#!/usr/bin/env bash' "echo 'age: waiting on batchpass plugin...' >&2" "exec '${realAge}' \"\$@\"" \
+        > "${binDir}/age" || fail
+    chmod +x "${binDir}/age" || fail
+    local output; output="${ PATH="${binDir}:${PATH}" valt verify -i "${keyFile}" 2>&1; }"
+    assertEqual 0 $? "a slow plugin note must not fail verify: ${output}"
+    assertContains "decrypts with its passphrase" "${output}"
 }
 
 testVerifyArchive() {

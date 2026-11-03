@@ -12,6 +12,7 @@ usage() {
     echo
     echo "    keys         Create a key pair with an encrypted private key and a paper key as backup."
     echo "    paper        Create or regenerate the paper key for an existing key pair."
+    echo "    key-info     Fill in the paper key's personal information in a web page."
     echo "    encrypt      Encrypt and sign a single file."
     echo "    decrypt      Decrypt a file, or verify and extract a secure archive."
     echo "    archive      Create, verify or extract a signed, encrypted archive of files and directories."
@@ -94,6 +95,16 @@ declare -gA cliSpec=(
     # instructions on where to find it in the Notes section). See 'valt keys --help' for document
     # customization details.
     ['paper']='paper(file? --name|-n:str --key-info|-k:file --template|-t:file --style|-c:file --help|-h)'
+
+    # Fill in the paper key's personal information (the key.info file) in a web page: the letter, the people who can
+    # help, and notes. The page opens in your browser with the current values; when you save it, valt imports it into
+    # key.info and offers to regenerate the paper key.
+    #   --key-info   Key info file to write (default: key.info in the valt config directory).
+    #   --downloads  Your browser's downloads directory (default: ~/Downloads).
+    #
+    # The page works offline and sends nothing anywhere: Save downloads valt-key-info.json,
+    # which valt imports and then deletes. key.info can also be edited by hand.
+    ['key-info']='keyInfo(--key-info|-k:str --downloads|-d:dir --help|-h)'
 
     # Decrypt an encrypted file, or verify and extract a secure archive (.valt). You will be prompted
     # for the passphrase that protects the private key.
@@ -227,6 +238,7 @@ parseCommand() {
                 decrypt) shift; parseDecryptArgs "$@"; (( _opts['help'] )) && decryptCmdUsage || decryptCmd ;;
                 default-key) shift; parseDefaultKeyArgs "$@"; (( _opts['help'] )) && defaultKeyCmdUsage || defaultKeyCmd ;;
                 encrypt) shift; parseEncryptArgs "$@"; (( _opts['help'] )) && encryptCmdUsage || encryptCmd ;;
+                key-info) shift; parseKeyInfoArgs "$@"; (( _opts['help'] )) && keyInfoCmdUsage || keyInfoCmd ;;
                 keys) shift; parseKeysArgs "$@"; (( _opts['help'] )) && keysCmdUsage || keysCmd ;;
                 paper) shift; parsePaperArgs "$@"; (( _opts['help'] )) && paperCmdUsage || paperCmd ;;
                 pass-check) shift; parsePassCheckArgs "$@"; (( _opts['help'] )) && passCheckCmdUsage || passCheckCmd ;;
@@ -574,6 +586,44 @@ encryptCmdUsage() {
     option "" "ordinary delete, not a secure erase." 41
     option "-h, --help" "Print this help message." 41
     declare -F encryptCmdUsageExtra > /dev/null && encryptCmdUsageExtra
+    bye "$@"
+}
+
+parseKeyInfoArgs() {
+    local _prevFailHandler="${_failHandler}"
+    declare -g _failHandler=keyInfoCmdUsage
+    local _value
+    while (( $# > 0 )); do
+        case "$1" in
+            --downloads | -d) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(-d|-k|-h|--key-info|--downloads|--help)$ ) ]] && fail "missing value for --downloads"; assertDirectory "$2"; _opts+=(['downloads']="$2"); shift 2 ;;
+            --downloads=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --downloads"; assertDirectory "${_value}"; _opts+=(['downloads']="${_value}"); shift ;;
+            --help | -h) _opts+=(['help']="1"); shift ;;
+            --help=*) fail "--help does not accept a value" ;;
+            --key-info | -k) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(-d|-k|-h|--key-info|--downloads|--help)$ ) ]] && fail "missing value for --key-info"; _opts+=(['key-info']="$2"); shift 2 ;;
+            --key-info=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --key-info"; _opts+=(['key-info']="${_value}"); shift ;;
+            --) shift; (( $# == 0 )) || unknownArg "$1" ;;
+            *) unknownArg "$1" ;;
+        esac
+    done
+    declare -g _failHandler="${_prevFailHandler}"
+}
+
+keyInfoCmdUsage() {
+    echo
+    show bold "Fill in the paper key's personal information (the key.info file) in a web page: the letter, the"
+    show bold "people who can help, and notes. The page opens in your browser with the current values; when you"
+    show bold "save it, valt imports it into key.info and offers to regenerate the paper key."
+    echo
+    show "Usage:" bold blue "valt key-info" "[-d DOWNLOADS] [-k KEY-INFO]"
+    echo
+    option "-k, --key-info KEY-INFO" "Key info file to write (default: key.info in the valt config" 31
+    option "" "directory)." 31
+    option "-d, --downloads DOWNLOADS" "Your browser's downloads directory (default: ~/Downloads)." 31
+    option "-h, --help" "Print this help message." 31
+    echo
+    echo "The page works offline and sends nothing anywhere: Save downloads valt-key-info.json,"
+    echo "which valt imports and then deletes. key.info can also be edited by hand."
+    declare -F keyInfoCmdUsageExtra > /dev/null && keyInfoCmdUsageExtra
     bye "$@"
 }
 
@@ -1417,6 +1467,89 @@ verifyEncryptedFile() {
     show "Verified" bold "${ tildePath "${encryptedFile}"; }" "decrypts to match" cyan "${ tildePath "${originalFile}"; }"
 }
 
+# Opens the key info page, waits for its download, imports it into key.info, and, if that changed it, offers to
+# regenerate the default key's paper key.
+
+keyInfoCmd() {
+    require 'valt/key-info' 'valt/paper-keys' 'rayvn/spinner'
+    local keyInfoFile="${_opts['key-info']:-${valtConfigDir}/key.info}"
+    local downloadsDir="${_opts['downloads']:-${HOME}/Downloads}"
+    [[ -d ${downloadsDir} ]] || keyInfoCmdUsage "There is no ${ tildePath "${downloadsDir}"; } directory; use --downloads."
+
+    # The page goes in the system's per-user temp dir rather than rayvn's, which macOS hides from Finder and browsers
+    # (opening a page from there shows Finder or an empty window). It holds contact details but no secrets, and is
+    # removed on exit.
+
+    declare -g _keyInfoPageDir; _keyInfoPageDir="${ mktemp -d "${TMPDIR:-/tmp}/valt-key-info.XXXXXX"; }" || fail
+    addExitHandler removeKeyInfoPageDir
+    local pageFile; newKeyInfoPage "${keyInfoFile}" "${_keyInfoPageDir}" pageFile
+    local markerFile="${_keyInfoPageDir}/opened"
+    touch "${markerFile}" || fail
+
+    echo
+    if [[ -n ${rayvnTest_KeyInfoNoBrowser:-} ]]; then
+        show "Key info page:" "${pageFile}"
+    elif ! ( openKeyInfoPage "${pageFile}" ) &> /dev/null; then
+        warn "Could not open the page; open it in your browser:" bold "${pageFile}"
+    fi
+    show "Fill in the page in your browser and press" bold "Save" glue "; valt picks up the file from" \
+         blue "${ tildePath "${downloadsDir}"; }" glue "."
+    local spinnerId download
+    startSpinner spinnerId "Waiting for your key info (Ctrl-C to cancel)"
+    download="${ waitForKeyInfoDownload "${downloadsDir}" "${markerFile}"; }"
+    stopSpinner spinnerId "${successCheckMark}"
+
+    local before; before="${ keyInfoValues "${keyInfoFile}"; }"
+    importKeyInfo "${download}" "${keyInfoFile}"
+    local changed=1
+    [[ ${ keyInfoValues "${keyInfoFile}"; } == "${before}" ]] && changed=0
+    if (( changed )); then
+        show "Saved" bold "${ tildePath "${keyInfoFile}"; }" glue "."
+    else
+        show "No changes to" bold "${ tildePath "${keyInfoFile}"; }" glue "."
+    fi
+
+    # The download holds contact details, so remove it; security software may protect Downloads from deletion
+
+    rm -f "${download}" 2> /dev/null
+    if [[ -e ${download} ]]; then
+        warn "Could not delete" bold "${ tildePath "${download}"; }" glue \
+             ", perhaps because security software protects that folder. It holds your contacts' details, so please" \
+             "delete it yourself."
+    fi
+    (( changed )) && offerPaperKeyRegeneration # the paper key is only out of date if key.info changed
+    return 0
+}
+
+# Removes the key info page's temp dir (an exit handler, so that it also happens on Ctrl-C).
+
+removeKeyInfoPageDir() {
+    [[ -n ${_keyInfoPageDir:-} ]] && rm -rf "${_keyInfoPageDir}"
+    return 0
+}
+
+# Offers to regenerate the default key's paper key from the new key.info (only on a terminal); otherwise shows how.
+
+offerPaperKeyRegeneration() {
+    local keyFile; keyFile="${ defaultValtKeyFile; }"
+    [[ -f ${keyFile} ]] || return 0
+    local command; command="${ paperKeyCommand "${keyFile}"; }"
+    [[ -n ${_opts['key-info']} ]] && command+=" -k ${ tildePath "${_opts['key-info']}"; }"
+    if [[ -t 0 && -t 1 ]]; then
+        require 'rayvn/prompt'
+        local choiceIndex=1
+        echo
+        confirm "Regenerate the paper key for ${ tildePath "${keyFile}"; } now?" yes no choiceIndex
+        if (( choiceIndex == 0 )); then
+            generatePaperKey "${keyFile}"
+            openPaperKey "${keyFile}"
+            return 0
+        fi
+    fi
+    echo
+    show "To regenerate the paper key, run:" bold blue "${command}"
+}
+
 # Explains how to generate the paper key for privateKeyFile once key.info is complete.
 
 showPaperKeyDeferred() {
@@ -1430,7 +1563,8 @@ showPaperKeyDeferred() {
     echo
     show bold yellow "Paper key not generated:" "the" blue "${infoFile}" "file has not been completed."
     echo
-    show "Your keys are ready to use now. When you have completed" blue "key.info" glue ", generate the paper key with:"
+    show "Your keys are ready to use now. Fill in" blue "key.info" "with" bold blue "valt key-info" \
+         "(or edit it by hand), then generate the paper key with:"
     echo
     show "    " bold blue "${command[*]}"
 }

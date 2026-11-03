@@ -153,22 +153,35 @@ _age() {
             # then pipe its plain-text output as a -i identity to decrypt the cipher on stdin.
             # The -i <(...) path bypasses EncryptedIdentity (age's interactive-only handler) entirely.
 
-            assertCommand --transform _ageError age "${operation}" -i <(_decryptKey) "${ageArgs[@]}"
+            assertCommand --transform _ageError _runAge "${operation}" -i <(_decryptKey) "${ageArgs[@]}"
 
         else
-            AGE_PASSPHRASE_FD="${passFd}" assertCommand --transform _ageError age ${operation} "${ageArgs[@]}" -j batchpass
+            AGE_PASSPHRASE_FD="${passFd}" assertCommand --transform _ageError _runAge ${operation} "${ageArgs[@]}" -j batchpass
         fi
 
         exec {passFd}<&- # close the fd
         eraseVars phraze
 
     else
-        assertCommand --transform _ageError age ${operation} "${ageArgs[@]}"
+        assertCommand --transform _ageError _runAge ${operation} "${ageArgs[@]}"
     fi
 }
 
 _decryptKey() {
-    AGE_PASSPHRASE_FD="${passFd}" assertCommand --transform _ageError age --decrypt -j batchpass < "${keyFile}"
+    AGE_PASSPHRASE_FD="${passFd}" assertCommand --transform _ageError _runAge --decrypt -j batchpass < "${keyFile}"
+}
+
+# Runs age, dropping the progress notes it prints when a plugin is slow to respond, e.g. "age: waiting on batchpass
+# plugin..." while scrypt runs on a busy machine. assertCommand treats any stderr as an error, so they would otherwise
+# fail an operation that is about to succeed. Other stderr output is passed on.
+
+_runAge() {
+    local errorFile; errorFile="${ makeTempFile 'age-stderr-XXXXXX'; }"
+    age "$@" 2> "${errorFile}"
+    local result=$?
+    grep -v -E '^age: waiting on [A-Za-z0-9._-]+ plugin\.\.\.$' "${errorFile}" >&2
+    rm -f "${errorFile}"
+    return ${result}
 }
 
 _ageError() {

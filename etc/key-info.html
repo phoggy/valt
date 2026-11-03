@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<!-- The form 'valt key-info' opens to fill in key.info. valt replaces the JSON in #key-info-data with the current values
+     and opens a copy of this page; Save downloads valt-key-info.json, which valt imports into key.info. No network. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>valt: paper key information</title>
+<style>
+    :root {
+        --text: #222; --muted: #666; --heading: #1d3e81; --accent: #086ddd; --border: #d0d4da;
+        --field: #fff; --page: #f4f5f7; --card: #fff; --error: #c01c28; --ok: #1a7f37;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --text: #e6e6e6; --muted: #a0a0a0; --heading: #8fb4ff; --accent: #6ea8ff; --border: #3a3f47;
+            --field: #1e2228; --page: #121418; --card: #1a1d22; --error: #ff6b6b; --ok: #4cc06a;
+        }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--page); color: var(--text); font: 15px/1.5 system-ui, -apple-system, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+    h1 { color: var(--heading); font-size: 26px; margin: 0 0 4px; }
+    h2 { color: var(--heading); font-size: 18px; margin: 0 0 4px; }
+    p.lead, p.hint { color: var(--muted); margin: 4px 0 16px; }
+    section { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin: 18px 0; }
+    label { display: block; font-weight: 600; margin: 12px 0 4px; }
+    input, textarea {
+        width: 100%; padding: 8px 10px; font: inherit; color: var(--text); background: var(--field);
+        border: 1px solid var(--border); border-radius: 6px;
+    }
+    textarea { min-height: 70px; resize: vertical; }
+    input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .invalid { border-color: var(--error); }
+    .contact { border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin: 12px 0; }
+    .contact-head { display: flex; align-items: center; gap: 8px; }
+    .contact-head strong { flex: 1; }
+    button {
+        font: inherit; border: 1px solid var(--border); background: var(--field); color: var(--text);
+        border-radius: 6px; padding: 6px 12px; cursor: pointer;
+    }
+    button:hover { border-color: var(--accent); }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; padding: 10px 22px; }
+    button.small { padding: 2px 8px; font-size: 13px; }
+    .actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    #status { font-weight: 600; }
+    #status.error { color: var(--error); }
+    #status.ok { color: var(--ok); }
+    .preview { font-size: 14px; }
+    .preview .closing { font-style: italic; margin-top: 18px; }
+    .preview .signature { font-size: 20px; margin-top: 6px; }
+    .preview ol { padding-left: 22px; }
+    .preview .empty { color: var(--muted); font-style: italic; }
+</style>
+</head>
+<body>
+<main>
+    <h1>Paper key information</h1>
+    <p class="lead">This personalizes your paper key: a letter to whoever may need it, the people who can help them,
+        and any notes. Nothing leaves this page until you save, and then only to your Downloads folder, where valt
+        picks it up.</p>
+
+    <section>
+        <h2>The letter</h2>
+        <p class="hint">The first page of the paper key is a short letter from you.</p>
+        <label for="greeting">Greeting</label>
+        <input id="greeting" placeholder="e.g. Greetings,">
+        <label for="closing">Closing line</label>
+        <input id="closing" placeholder="e.g. I hope you never need this!">
+        <label for="author">Your name (the signature)</label>
+        <input id="author" placeholder="e.g. Bob Barker">
+    </section>
+
+    <section>
+        <h2>People who can help</h2>
+        <p class="hint">If you are unavailable, whoever has the paper key may need help with the technical steps. Add at
+            least one person with computer skills (the command line on macOS or Linux) who has agreed to help, with
+            ways to reach them.</p>
+        <div id="contacts"></div>
+        <button type="button" id="add-contact">Add a person</button>
+    </section>
+
+    <section>
+        <h2>Notes</h2>
+        <p class="hint">Anything else the reader should know, one item per line. If you will not write your passphrase
+            on the paper key, say here where to find it.</p>
+        <textarea id="notes" placeholder="e.g. The passphrase is in the envelope in the fire safe."></textarea>
+    </section>
+
+    <section class="preview">
+        <h2>Preview</h2>
+        <p class="hint">Roughly how this appears on the paper key.</p>
+        <div id="preview"></div>
+    </section>
+
+    <div class="actions">
+        <button type="button" class="primary" id="save">Save</button>
+        <span id="status" role="status"></span>
+    </div>
+</main>
+
+<script id="key-info-data" type="application/json">{}</script>
+<script>
+    "use strict";
+
+    const initial = JSON.parse(document.getElementById("key-info-data").textContent || "{}");
+    const field = (id) => document.getElementById(id);
+    const contactsEl = field("contacts");
+
+    // A contact is stored as one string, "Name: details"; split it at the first ': ' to edit the parts
+
+    function splitContact(text) {
+        const at = text.indexOf(": ");
+        return at > 0 ? { name: text.slice(0, at), details: text.slice(at + 2) } : { name: "", details: text };
+    }
+
+    function joinContact(contact) {
+        const name = contact.name.trim(), details = contact.details.trim().replace(/\s*\n\s*/g, ", ");
+        return name && details ? `${name}: ${details}` : name || details;
+    }
+
+    function addContact(contact = { name: "", details: "" }) {
+        const el = document.createElement("div");
+        el.className = "contact";
+        el.innerHTML = `
+            <div class="contact-head">
+                <strong></strong>
+                <button type="button" class="small" data-move="-1" title="Move up">↑</button>
+                <button type="button" class="small" data-move="1" title="Move down">↓</button>
+                <button type="button" class="small" data-remove title="Remove">Remove</button>
+            </div>
+            <label>Name</label>
+            <input class="contact-name" placeholder="e.g. Aunt Martha">
+            <label>How to reach them</label>
+            <textarea class="contact-details"
+                placeholder="Phone, email, address, social handles: e.g. +44 791 112 4456, martha@example.com"></textarea>`;
+        el.querySelector(".contact-name").value = contact.name;
+        el.querySelector(".contact-details").value = contact.details;
+        el.addEventListener("input", update);
+        el.querySelector("[data-remove]").addEventListener("click", () => { el.remove(); update(); });
+        el.querySelectorAll("[data-move]").forEach((button) => button.addEventListener("click", () => {
+            const sibling = button.dataset.move < 0 ? el.previousElementSibling : el.nextElementSibling;
+            if (sibling) button.dataset.move < 0 ? sibling.before(el) : sibling.after(el);
+            update();
+        }));
+        contactsEl.append(el);
+        update();
+    }
+
+    function currentInfo() {
+        const contacts = [...contactsEl.querySelectorAll(".contact")].map((el) => ({
+            name: el.querySelector(".contact-name").value, details: el.querySelector(".contact-details").value,
+        }));
+        return {
+            greeting: field("greeting").value.trim(),
+            closing: field("closing").value.trim(),
+            author: field("author").value.trim(),
+            contacts: contacts.map(joinContact).filter((text) => text),
+            notes: field("notes").value.split("\n").map((line) => line.trim()).filter((line) => line),
+            contactParts: contacts,
+        };
+    }
+
+    function escapeHtml(text) {
+        return text.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    }
+
+    function update() {
+        const info = currentInfo();
+        contactsEl.querySelectorAll(".contact").forEach((el, i) => {
+            el.querySelector("strong").textContent = `${i + 1}. ${el.querySelector(".contact-name").value || "New person"}`;
+        });
+        const or = (text, empty) => text ? escapeHtml(text) : `<span class="empty">${empty}</span>`;
+        field("preview").innerHTML = `
+            <p>${or(info.greeting, "(greeting)")}</p>
+            <p>This document contains a private key that can unlock files encrypted with the associated public key…</p>
+            <div class="closing">${or(info.closing, "(closing line)")}</div>
+            <div class="signature">${or(info.author, "(your name)")}</div>
+            <p><strong>Getting Help</strong>: the following are contacts that I trust and who have agreed to help if
+                needed:</p>
+            ${info.contacts.length ? `<ol>${info.contacts.map((c) => `<li>${escapeHtml(c)}</li>`).join("")}</ol>`
+                                   : `<p class="empty">(no one yet)</p>`}
+            <p><strong>Notes</strong></p>
+            ${info.notes.length ? info.notes.map((n) => `<p>${escapeHtml(n)}</p>`).join("")
+                                : `<p class="empty">(none)</p>`}`;
+        setStatus("");
+    }
+
+    function setStatus(text, kind = "") {
+        const status = field("status");
+        status.textContent = text;
+        status.className = kind;
+    }
+
+    // Returns the problems that must be fixed before saving, marking the fields
+
+    function problems(info) {
+        const found = [];
+        document.querySelectorAll(".invalid").forEach((el) => el.classList.remove("invalid"));
+        for (const [id, what] of [["greeting", "a greeting"], ["closing", "a closing line"], ["author", "your name"]]) {
+            if (!info[id]) { field(id).classList.add("invalid"); found.push(what); }
+        }
+        if (!info.contacts.length) found.push("at least one person who can help");
+        contactsEl.querySelectorAll(".contact").forEach((el, i) => {
+            const part = info.contactParts[i];
+            if (!part.name.trim()) el.querySelector(".contact-name").classList.add("invalid");
+            if (!part.details.trim()) el.querySelector(".contact-details").classList.add("invalid");
+            if (!part.name.trim() || !part.details.trim()) found.push(`a name and how to reach person ${i + 1}`);
+        });
+        return found;
+    }
+
+    function save() {
+        const info = currentInfo();
+        const found = problems(info);
+        if (found.length) {
+            setStatus(`Please add ${found.join(", ")}.`, "error");
+            return;
+        }
+        const data = { greeting: info.greeting, closing: info.closing, author: info.author,
+                       contacts: info.contacts, notes: info.notes };
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+        link.download = "valt-key-info.json";
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 10000); // revoking at once can cancel the download
+
+        // Clear the page, and the values valt embedded in it, leaving only the saved message
+
+        document.getElementById("key-info-data").textContent = "";
+        document.querySelector("main").innerHTML = `
+            <h1>Paper key information</h1>
+            <section>
+                <h2>Saved</h2>
+                <p>valt picks up <strong>valt-key-info.json</strong> from your Downloads folder and saves it to
+                    key.info. You can close this page.</p>
+            </section>`;
+    }
+
+    field("greeting").value = initial.greeting || "";
+    field("closing").value = initial.closing || "";
+    field("author").value = initial.author || "";
+    field("notes").value = (initial.notes || []).join("\n");
+    (initial.contacts || []).forEach((c) => addContact(splitContact(c)));
+    if (!contactsEl.children.length) addContact();
+    ["greeting", "closing", "author", "notes"].forEach((id) => field(id).addEventListener("input", update));
+    field("add-contact").addEventListener("click", () => addContact());
+    field("save").addEventListener("click", save);
+    update();
+</script>
+</body>
+</html>

@@ -15,7 +15,7 @@ __valtComplete() {
     fi
 
     if (( cword == 1 )); then
-        COMPREPLY=($(compgen -W "decrypt default-key encrypt keys paper pass-check passphrase password verify archive -v --version -h --help" -- "${cur}"))
+        COMPREPLY=($(compgen -W "decrypt default-key encrypt key-info keys paper pass-check passphrase password verify archive -v --version -h --help" -- "${cur}"))
         return
     fi
 
@@ -77,6 +77,12 @@ __valtComplete() {
                         --recipient-file|-R) COMPREPLY=($(compgen -f -- "${cur}")); return ;;
                     esac
                     local _relIdx=$(( cword - 2 ))
+                    ;;
+                key-info)
+                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--downloads --help --key-info -d -h -k" -- "${cur}")); return; }
+                    case "${prev}" in
+                        --downloads|-d) COMPREPLY=($(compgen -d -- "${cur}")); return ;;
+                    esac
                     ;;
                 keys)
                     [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--allow-weak-passphrase --default --force --help --key-info --name --no-advice --no-default --no-pdf --no-verify --output-dir --quick --style --template -c -d -f -h -k -n -o -q -t" -- "${cur}")); return; }
