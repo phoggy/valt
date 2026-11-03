@@ -17,6 +17,7 @@ usage() {
     echo "    decrypt      Decrypt a file, or verify and extract a secure archive."
     echo "    archive      Create, verify or extract a signed, encrypted archive of files and directories."
     echo "    verify       Verify a key pair, and optionally files encrypted or archived with it."
+    echo "    public-key   Recreate a public key file (.pub) from its private key."
     echo "    default-key  Show or set the default private key file, used when no key is given."
     echo "    passphrase   Generate random passphrases."
     echo "    password     Generate random passwords."
@@ -213,6 +214,14 @@ declare -gA cliSpec=(
     # archive must have both of its signatures verify, as with 'valt archive verify'.
     ['verify']='verify(--identity|-i:file --help|-h *)'
 
+    # Recreate the public key file (.pub) for a private key, e.g. if it was lost. The private key contains
+    # everything in the public key file, so the result is identical to the one made with the key. You will be
+    # asked for the private key's passphrase.
+    #   KEY_FILE  The private key file (default: the default key; see 'valt default-key').
+    #   --output  The public key file to write (default: next to the private key, with a .pub suffix).
+    #   --force   Replace an existing public key file.
+    ['public-key']='publicKey(file? --output|-o:str --force|-f --help|-h)'
+
     # Show or set the default private key file, used by any command when no key is given.
     #   KEY_FILE  The valt private key file to use by default.
     #   --clear   Remove the setting, so that the built-in default is used.
@@ -244,6 +253,7 @@ parseCommand() {
                 pass-check) shift; parsePassCheckArgs "$@"; (( _opts['help'] )) && passCheckCmdUsage || passCheckCmd ;;
                 passphrase) shift; parsePassphraseArgs "$@"; (( _opts['help'] )) && passphraseCmdUsage || passphraseCmd ;;
                 password) shift; parsePasswordArgs "$@"; (( _opts['help'] )) && passwordCmdUsage || passwordCmd ;;
+                public-key) shift; parsePublicKeyArgs "$@"; (( _opts['help'] )) && publicKeyCmdUsage || publicKeyCmd ;;
                 verify) shift; parseVerifyArgs "$@"; (( _opts['help'] )) && verifyCmdUsage || verifyCmd ;;
                 archive)
                     case "${2:-}" in
@@ -901,6 +911,46 @@ passwordCmdUsage() {
     bye "$@"
 }
 
+parsePublicKeyArgs() {
+    local _prevFailHandler="${_failHandler}"
+    declare -g _failHandler=publicKeyCmdUsage
+    local _argIndex=0 _value
+    while (( $# > 0 )); do
+        case "$1" in
+            --force | -f) _opts+=(['force']="1"); shift ;;
+            --force=*) fail "--force does not accept a value" ;;
+            --help | -h) _opts+=(['help']="1"); shift ;;
+            --help=*) fail "--help does not accept a value" ;;
+            --output | -o) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--output|-f|-o|-h|--help|--force)$ ) ]] && fail "missing value for --output"; _opts+=(['output']="$2"); shift 2 ;;
+            --output=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --output"; _opts+=(['output']="${_value}"); shift ;;
+            --) shift
+                while (( $# > 0 )); do
+                    (( _argIndex == 0 )) && assertFile "$1" || unknownArg "$1"
+                    _args+=("$1"); (( _argIndex++ )); shift
+                done ;;
+            *) (( _argIndex == 0 )) && assertFile "$1" || unknownArg "$1"; _args+=("$1"); (( _argIndex++ )); shift ;;
+        esac
+    done
+    declare -g _failHandler="${_prevFailHandler}"
+}
+
+publicKeyCmdUsage() {
+    echo
+    show bold "Recreate the public key file (.pub) for a private key, e.g. if it was lost. The private key contains"
+    show bold "everything in the public key file, so the result is identical to the one made with the key. You will"
+    show bold "be asked for the private key's passphrase."
+    echo
+    show "Usage:" bold blue "valt public-key" "[KEY_FILE] [-f] [-o OUTPUT]"
+    echo
+    option "KEY_FILE" "The private key file (default: the default key; see 'valt default-key')." 25
+    option "-o, --output OUTPUT" "The public key file to write (default: next to the private key, with a .pub" 25
+    option "" "suffix)." 25
+    option "-f, --force" "Replace an existing public key file." 25
+    option "-h, --help" "Print this help message." 25
+    declare -F publicKeyCmdUsageExtra > /dev/null && publicKeyCmdUsageExtra
+    bye "$@"
+}
+
 parseVerifyArgs() {
     local _prevFailHandler="${_failHandler}"
     declare -g _failHandler=verifyCmdUsage
@@ -1140,6 +1190,17 @@ passCheckCmd() {
             return 1
             ;;
     esac
+}
+
+publicKeyCmd() {
+    local keyFile="${_args[0]:-${ defaultValtKeyFile; }}"
+    assertFile "${keyFile}" "private key file"
+    local pubFile="${_opts['output']:-${keyFile%.${valtPrivateKeySuffix}}.${valtPublicKeySuffix}}"
+    if [[ -e ${pubFile} ]] && (( ! _opts['force'] )); then
+        publicKeyCmdUsage "${ tildePath "${pubFile}"; } already exists; use --force to replace it, or 'valt verify' to check it."
+    fi
+    writeValtPublicKey "${keyFile}" "${pubFile}"
+    show "Wrote" bold "${ tildePath "${pubFile}"; }" "from" bold "${ tildePath "${keyFile}"; }" glue "."
 }
 
 verifyCmd() {
@@ -1437,8 +1498,8 @@ addRecipientArgs() {
     local keyFile="$2" usageFunction="$3"
     if (( ! _opts['no-self'] )); then
         local publicKeyFile="${keyFile%.${valtPrivateKeySuffix}}.${valtPublicKeySuffix}"
-        [[ -f "${publicKeyFile}" ]] || fail "No public key found at ${ tildePath "${publicKeyFile}"; }; create one with" \
-                                            "'valt keys', or use --no-self with --recipient or --recipient-file."
+        [[ -f "${publicKeyFile}" ]] || fail "No public key found at ${ tildePath "${publicKeyFile}"; }; recreate it with" \
+            "'valt public-key ${ tildePath "${keyFile}"; }', or use --no-self with --recipient or --recipient-file."
         recipientArgsRef+=(-R "${publicKeyFile}")
     fi
     local recipient

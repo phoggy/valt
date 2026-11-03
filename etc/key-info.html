@@ -11,12 +11,14 @@
         --text: #222; --muted: #666; --heading: #1d3e81; --accent: #086ddd; --border: #d0d4da;
         --field: #fff; --page: #f4f5f7; --card: #fff; --error: #c01c28; --ok: #1a7f37;
         --alpha: #1d3e81; --digit: #c45a00; --special: #b5179e;
+        --code-bg: #eef1f6; --code-border: #d9dee7; --code-text: #1d3e81;
     }
     @media (prefers-color-scheme: dark) {
         :root {
             --text: #e6e6e6; --muted: #a0a0a0; --heading: #8fb4ff; --accent: #6ea8ff; --border: #3a3f47;
             --field: #1e2228; --page: #121418; --card: #1a1d22; --error: #ff6b6b; --ok: #4cc06a;
             --alpha: #8fb4ff; --digit: #ffa94d; --special: #f783ac;
+            --code-bg: #262b33; --code-border: #39404a; --code-text: #b8cdf5;
         }
     }
     * { box-sizing: border-box; }
@@ -87,7 +89,11 @@
     .pw .special { color: var(--special); }
     blockquote { margin: 12px 0; padding-left: 14px; border-left: 3px solid var(--border); font-style: italic; }
     blockquote cite { display: block; margin-top: 4px; font-style: normal; color: var(--muted); }
-    code { font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+    code {
+        font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: var(--code-text);
+        background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 4px;
+        padding: 1px 5px; white-space: nowrap;
+    }
     [hidden] { display: none !important; }
 </style>
 </head>
@@ -124,6 +130,9 @@
                     a stolen copy of the key file is useless on its own.</li>
                 <li>A passphrase is simply a password made of several words: easier to remember, and much harder to
                     guess. See <a href="#strength" data-tab="strength">Strong passphrases</a>.</li>
+                <li>Your private key also contains your public key, so the public key can always be recreated from it
+                    (with the passphrase): if you lose the public key file, <code>valt public-key</code> makes it again.
+                    The private key is the one that matters.</li>
             </ul>
         </section>
 

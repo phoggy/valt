@@ -305,6 +305,43 @@ recipient() {
     _extractKey "${keyFile}" true "${_agePublicKeyPrefix}" 1
 }
 
+# ◇ Writes the public key file (.pub) for a valt private key, recreating it from the private key, which contains
+#   everything in it: the created line, the public signing key and the public encryption key. The result is identical
+#   to the .pub file made with the key. Requires the private key's passphrase.
+#
+# · USAGE
+#
+#   writeValtPublicKey keyFile pubFile
+#
+#   keyFile (file)    Path to the valt private key file.
+#   pubFile (string)  Path to the public key file to write; it is replaced if it exists.
+
+writeValtPublicKey() {
+    local keyFile="$1" pubFile="$2"
+    _assertValtKey "${keyFile}"
+    local plainRaw; plainRaw="${ _age --decrypt --passphrase-for "${keyFile}" < "${keyFile}"; }" || fail
+    local -a plain=()
+    mapfile -t plain <<< "${plainRaw}"
+    eraseVars plainRaw
+
+    # The common lines come first, up to the private signing key; the public encryption key is in the age key's comment
+
+    local -a pubLines=()
+    local line agePublicKey='' inCommon=1
+    for line in "${plain[@]}"; do
+        [[ ${line} == "${_signingPrivateKeyPrefix}"* ]] && inCommon=0
+        (( inCommon )) && pubLines+=("${line}")
+        [[ ${line} == "${_agePublicKeyPrefix}"* ]] && agePublicKey="${line:${#_agePublicKeyPrefix}}"
+    done
+    eraseVars plain
+    [[ -n ${agePublicKey} ]] && (( ${#pubLines[@]} > 1 )) \
+        || fail "${ tildePath "${keyFile}"; } does not contain a valt public key"
+    pubLines+=("${agePublicKey}")
+
+    local temp="${pubFile}.new"
+    printf '%s\n' "${pubLines[@]}" > "${temp}" && mv "${temp}" "${pubFile}" || fail "could not write ${pubFile}"
+}
+
 # ◇ Convert one or more valt key files into a recipients file. Will accept private keys; each will require passphrase input to
 #   decrypt.
 #

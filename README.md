@@ -95,6 +95,7 @@ nix run github:phoggy/valt#recover -- decrypt FILE -i KEY_FILE
 | `valt archive verify ARCHIVE` | Verify both signatures of a secure archive without extracting it. |
 | `valt archive extract ARCHIVE` | Verify and extract a secure archive. |
 | `valt verify [FILE...]` | Verify a key pair (the private key decrypts, and matches its public key), and optionally encrypted files and secure archives. |
+| `valt public-key [KEY_FILE]` | Recreate a lost public key file (`.pub`) from its private key. |
 | `valt default-key [KEY_FILE]` | Show or set the default private key file, used when no key is given. |
 | `valt passphrase` | Generate random passphrases. |
 | `valt password` | Generate random passwords. |

@@ -154,6 +154,7 @@ testEncryptMissingSelfPublicKey() {
     local file; newPlainFile file
     local output; output="${ valt encrypt -i "${dir}/lonely.key" "${file}" 2>&1; }"
     assertContains "No public key found" "${output}"
+    assertContains "valt public-key" "${output}" "a missing .pub must point to valt public-key"
 }
 
 testEncryptRejectsDirectory() {

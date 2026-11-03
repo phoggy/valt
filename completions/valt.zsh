@@ -23,6 +23,7 @@ _valt() {
                 'pass-check:Check a password or passphrase: rate its strength, and look it up in the HaveIBeenPwned'
                 'passphrase:Generate random passphrases. Passphrases are made of words chosen at random from a list of'
                 'password:Generate random passwords, using letters, digits and symbols, with a random length between'
+                'public-key:Recreate the public key file (.pub) for a private key, e.g. if it was lost. The private key contains'
                 'verify:Verify a key pair, and optionally files encrypted or archived with it. You will be prompted for the'
                 'archive:'
             )
@@ -158,6 +159,13 @@ _valt() {
                     '(--help -h)'{--help,-h}'[Print this help message.]' \
                     '(--max)'--max'[The maximum length.]:max:' \
                     '(--min)'--min'[The minimum length.]:min:'
+                    ;;
+                public-key)
+                    _arguments \
+                    '(--force -f)'{--force,-f}'[Replace an existing public key file.]' \
+                    '(--help -h)'{--help,-h}'[Print this help message.]' \
+                    '(--output -o)'{--output,-o}'[The public key file to write (default: next to the private key, with a .pub suffix).]:output:' \
+                    '1:KEY_FILE:_files'
                     ;;
                 verify)
                     _arguments \
