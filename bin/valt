@@ -1342,7 +1342,8 @@ openPaperKey() {
 }
 
 # Makes keyFile the default key if makeDefault, or if the user agrees when asked (only on a terminal), unless it is
-# already the default; otherwise shows how to do so later.
+# already the default; otherwise shows how to do so later. The question preselects yes when there is no default key
+# yet, and no when another one exists, so that a quick test key does not replace it by accident.
 
 offerDefaultKey() {
     local keyFile; keyFile="${ cd "${ dirname "$1"; }" && pwd -P; }/${ basename "$1"; }"
@@ -1354,9 +1355,10 @@ offerDefaultKey() {
     local path; path="${ tildePath "${keyFile}"; }"
     if (( ! makeDefault )) && [[ -t 0 && -t 1 ]]; then
         require 'rayvn/prompt'
-        local choiceIndex=1
+        local choiceIndex=1 preselectNo=false
+        [[ -f "${defaultKey}" ]] && preselectNo=true
         echo
-        confirm "Use ${path} as your default key, when no key is given?" yes no choiceIndex
+        confirm "Use ${path} as your default key, when no key is given?" yes no choiceIndex "${preselectNo}"
         (( choiceIndex == 0 )) && makeDefault=1
     fi
 

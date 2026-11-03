@@ -31,12 +31,20 @@ isKeyInfoComplete() {
 }
 
 # ◇ Warns if a valt private key has no paper key, or if its paper key is older than the key or
-#   the key.info file. Does nothing for files that are not valt private keys.
+#   the key.info file. Otherwise, when at a terminal, asks whether the paper key has been printed
+#   and its copies stored securely, offering to be reminded in a number of days or to stop asking.
+#   The answers are kept per paper key, so a regenerated paper key is asked about again. Does
+#   nothing for files that are not valt private keys.
 #
 # · ARGS
 #
 #   keyFile (string)        Path to a private key file.
 #   [keyInfoFile] (string)  Path to the key info file (default: ${valtConfigDir}/key.info)
+#
+# · ENV VARS
+#
+#   rayvnTest_PaperKeyAnswers  Test hook: answers to use instead of prompting, in order, separated
+#                              by spaces: 'yes', 'stop', 'remind:DAYS' or 'timeout'.
 
 remindPaperKey() {
     local keyFile="$1"
@@ -55,6 +63,8 @@ remindPaperKey() {
     elif [[ "${keyInfoFile}" -nt "${paperKeyFile}" ]]; then
         warn "key.info has changed since the paper key for" bold "${key}" "was generated; regenerate it with" \
              bold blue "${command}"
+    elif [[ -n ${rayvnTest_PaperKeyAnswers:-} ]] || [[ -t 0 && -t 1 ]]; then
+        _askAboutPaperKey "${paperKeyFile}"
     fi
     return 0
 }
@@ -114,6 +124,7 @@ _init_valt_paper-keys() {
     declare -gr _defaultTemplateFile="${valtHome}/etc/key-doc-template.typ"
     declare -gr _defaultStyleFile="${valtHome}/etc/key-doc-style.typ"
     declare -gr _keyInfoTemplateFile="${valtHome}/etc/key-info-template.sh"
+    declare -gr _paperKeyStateFile="${valtConfigDir}/paper-keys.state" # answers to the printed and stored questions
     declare -gr _fontsDir="${valtHome}/etc/fonts"
     declare -gr _logoFile="${valtHome}/etc/phoggy.png"
 
@@ -126,6 +137,163 @@ _init_valt_paper-keys() {
     declare -gr _logoFileName='logo.png'
     declare -gr _qrCodeFileName='qr.svg'
     declare -gr _armoredKeyFileName='key.pem'
+}
+
+# Asks whether the paper key has been printed, whether the passphrase is written on the copies (or where to find it is
+# noted), and whether the copies are stored securely, starting from the first not yet answered yes, unless all are done,
+# the user stopped the questions, or the reminder date they chose has not passed. Answers are kept in the state file.
+
+_askAboutPaperKey() {
+    local pdfFile="$1"
+    local state remindAfter reminder
+    _readPaperKeyState "${pdfFile}" state remindAfter
+    [[ ${state} == stored || ${state} == stopped ]] && return 0
+    (( remindAfter > EPOCHSECONDS )) && return 0
+
+    require 'rayvn/prompt'
+    local path; path="${ tildePath "${pdfFile}"; }"
+    header -u 5 "Paper Key Reminder 📅" "${ show "File" blue "${path}"; }"
+
+    if [[ ${state} == new ]]; then
+        reminder="Have you printed copies of your paper key?"
+        _askPaperKeyQuestion "${pdfFile}" new "${reminder}" || return 0
+        _writePaperKeyState "${pdfFile}" printed 0
+        state=printed
+    fi
+    if [[ ${state} == printed ]]; then
+        reminder="Have you written your passphrase on the last page of the copies, or added notes saying where to find it?"
+        _askPaperKeyQuestion "${pdfFile}" printed "${reminder}" || return 0
+        _writePaperKeyState "${pdfFile}" noted 0
+    fi
+    reminder="Have you stored your paper key copies somewhere secure, e.g. a safe deposit box, fire safe and/or with people you trust?"
+    _askPaperKeyQuestion "${pdfFile}" noted "${reminder}" || return 0
+    _writePaperKeyState "${pdfFile}" stored 0
+    show nl "Great. Your paper keys are now ready if ever needed."
+}
+
+# Asks a yes / remind me / stop asking question about the paper key, in its current state. Succeeds on yes; otherwise
+# records the reminder date (asking for the number of days) or that the user stopped the questions, and fails. No
+# answer (a timeout, or ESC) means remind tomorrow.
+
+_askPaperKeyQuestion() {
+    local pdfFile="$1" state="$2" question="$3"
+    local answer days=1
+    if [[ -n ${rayvnTest_PaperKeyAnswers:-} ]]; then
+        answer="${rayvnTest_PaperKeyAnswers%% *}"
+        rayvnTest_PaperKeyAnswers="${rayvnTest_PaperKeyAnswers#"${answer}"}"
+        rayvnTest_PaperKeyAnswers="${rayvnTest_PaperKeyAnswers# }"
+        [[ ${answer} == remind:* ]] && { days="${answer#remind:}"; answer=remind; }
+    else
+        local -a choices=('yes' 'remind me later' 'stop asking')
+        local choice
+        if choose "${ echo "${question}"; }" choices choice; then
+            answer="${ case ${choice} in 0) echo yes ;; 1) echo remind ;; 2) echo stop ;; esac; }"
+            [[ ${answer} == remind ]] && _askReminderDays days
+        else
+            answer=timeout
+        fi
+    fi
+
+    case ${answer} in
+        yes) return 0 ;;
+        stop)
+            _writePaperKeyState "${pdfFile}" stopped 0
+            show nl "OK, no more questions about this paper key. Regenerating it will ask again."
+            ;;
+        *)
+            _writePaperKeyState "${pdfFile}" "${state}" $(( EPOCHSECONDS + days * 86400 ))
+            if (( days == 0 )); then
+                show nl "OK, I'll ask again the next time you run" bold "valt encrypt" "or" bold "valt archive create" glue "."
+            else
+                show nl "OK, I'll ask again the next time you run" bold "valt encrypt" "or" bold "valt archive create" \
+                    "after ${ _countOf ${days} day; }."
+            fi
+            ;;
+    esac
+    return 1
+}
+
+# Asks for a number of days until the next reminder (default 7; 0 means the next time it applies), setting the named
+# var. No answer means 1.
+
+_askReminderDays() {
+    local -n _ardDaysRef=$1
+    local input
+    while true; do
+        request "Remind you in how many days? (default 7, enter 0 for the next time)" input false || { _ardDaysRef=1; return 0; }
+        [[ -z ${input} ]] && input=7
+        if [[ ${input} =~ ^[0-9]+$ ]]; then
+            _ardDaysRef=$(( 10#${input} )) # 10#: so that e.g. 07 is not read as octal
+            return 0
+        fi
+        warn "Please enter a whole number of days."
+    done
+}
+
+# Prints the count and noun, adding an 's' unless the count is 1, e.g. '1 day', '7 days'.
+
+_countOf() {
+    local count=$1 noun="$2"
+    (( count == 1 )) && echo "${count} ${noun}" || echo "${count} ${noun}s"
+}
+
+# Sets the named vars to the paper key's state ('new', 'printed', 'noted' (the passphrase, or where to find it, is on the
+# copies), 'stored' or 'stopped') and the epoch seconds before which not to ask again. The state is 'new' unless
+# recorded for this PDF's current contents, so a regenerated paper key starts over.
+
+_readPaperKeyState() {
+    local pdfFile="$1"
+    local -n _rpksStateRef=$2
+    local -n _rpksRemindAfterRef=$3
+    _rpksStateRef=new
+    _rpksRemindAfterRef=0
+    [[ -f ${_paperKeyStateFile} ]] || return 0
+    local fingerprint; fingerprint="${ _paperKeyFingerprint "${pdfFile}"; }"
+    # (record* names, so as not to hide the caller's vars from the namerefs, e.g. 'state')
+    local recordPath recordPrint recordState recordRemindAfter
+    while IFS=$'\t' read -r recordPath recordPrint recordState recordRemindAfter; do
+        if [[ ${recordPath} == "${pdfFile}" && ${recordPrint} == "${fingerprint}" ]]; then
+            _rpksStateRef="${recordState}"
+            _rpksRemindAfterRef="${recordRemindAfter:-0}"
+        fi
+    done < "${_paperKeyStateFile}"
+}
+
+# Records the paper key's state and reminder time, replacing any earlier record for its path.
+
+_writePaperKeyState() {
+    local pdfFile="$1" state="$2" remindAfter="$3"
+    local fingerprint; fingerprint="${ _paperKeyFingerprint "${pdfFile}"; }"
+    local -a lines=()
+    local line
+    if [[ -f ${_paperKeyStateFile} ]]; then
+        while IFS= read -r line; do
+            [[ ${line%%$'\t'*} == "${pdfFile}" ]] || lines+=("${line}")
+        done < "${_paperKeyStateFile}"
+    fi
+    lines+=("${pdfFile}"$'\t'"${fingerprint}"$'\t'"${state}"$'\t'"${remindAfter}")
+    printf '%s\n' "${lines[@]}" > "${_paperKeyStateFile}" || fail "could not write ${_paperKeyStateFile}"
+}
+
+# Forgets the answers for a paper key, so that its questions are asked again.
+
+_clearPaperKeyState() {
+    local pdfFile="$1"
+    [[ -f ${_paperKeyStateFile} ]] || return 0
+    local -a lines=()
+    local line
+    while IFS= read -r line; do
+        [[ ${line%%$'\t'*} == "${pdfFile}" ]] || lines+=("${line}")
+    done < "${_paperKeyStateFile}"
+    if (( ${#lines[@]} )); then
+        printf '%s\n' "${lines[@]}" > "${_paperKeyStateFile}" || fail "could not write ${_paperKeyStateFile}"
+    else
+        rm -f "${_paperKeyStateFile}" || fail
+    fi
+}
+
+_paperKeyFingerprint() {
+    sha256sum < "$1" | head -c 16
 }
 
 _paperKeyFile() {
