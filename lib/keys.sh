@@ -504,7 +504,6 @@ _init_valt_keys() {
     declare -grx valtPublicKeySuffix='pub'
     declare -grx valtPrivateKeySuffix='key'
 
-    declare -grx _xkcdPasswordsUrl="https://xkcd.com/936/"
     declare -grx _valtPublicKeyType='valt.pub'
     declare -grx _valtPrivateKeyType='valt.key'
     declare -grx _ageFileExtension='age'
@@ -699,7 +698,7 @@ _maybeOfferPassphraseAdvice() {
                     _setAdviceCount 1
                     bye
                 fi
-                show nl "Good." primary italic "Keep this passphrase someplace secure!" nl
+                show nl "Good." primary italic "Keep this passphrase someplace secure   !" nl
                 echo "Ok, now you'll need to enter it for your new keys."
                 _setAdviceCount 2
             fi
@@ -709,36 +708,15 @@ _maybeOfferPassphraseAdvice() {
 
 _showPrivateKeyPassphraseAdvice() {
     echo "Normally you will need only a single key pair for all your file encryption needs. Your new private key will itself"
-    show "be encrypted so that it can be safely stored anywhere: the password you enter here will be" italic "required" "to use it."
-    echo "You'll be prompted to enter it twice for verification during key generation."
+    show "be encrypted, so it can be stored anywhere: the passphrase you enter here will be" italic "required" "to use it. You'll be"
+    echo "asked for it twice."
     echo
-    show "Rather than a typical password, a multi word 'passphrase' is a" italic "much" "better choice since it is far easier to"
-    show "remember. Just as with a password manager, the idea is that you remember" bold "one" "secret that gives you access to"
-    show "all of your encrypted data. Since human memory" bold italic "is" "fallible, it is extremely important that you keep"
-    show "copies on paper somewhere secure (e.g. a safe-deposit box, home safe, trusted family or friend) in case you forget or"
-    show "become incapacitated. Your private key (valt.key) can be printed and stored along with it."
+    show "Use a passphrase of several" italic "random" "words rather than a password: it is far easier to remember, and much harder"
+    echo "to crack. Since human memory is fallible, keep it on paper too: the paper key valt makes for your key has room for"
+    show "it. If the passphrase is lost, so is" bold "everything" "encrypted with this key."
     echo
-    show "If you use a password manager (" glue italic "strongly recommended" glue "), definitely store the keys and password in it!"
-    echo
-    echo "When you create a key pair, valt will generate a document containing your private key along with instructions for use."
-    echo "This document is intended to be the 'paper copy' that you store somewhere secure. It will contain your passphrase, "
-    echo "automatically if sent directly to your printer, or space for you to write it if not."
-    echo
-    echo "The following are examples of passwords and passphrases, with rough estimates of 'crack' times using modern systems:"
-    echo
-    show "  " bold cyan "My dog Oscar" "                    ⮕ " bold green "easy" "to remember" red "non-random" "&" red "short" ":  6 days to crack"
-    show "  " bold cyan "BkZB&XWGj%3Tx" "                   ⮕ " bold red "hard" "to remember random password:     31 years to crack"
-    show "  " bold cyan "repossess thursday flaky lazy" "   ⮕ " bold "fair" "to remember random passphrase:   centuries to crack"
-    echo
-    show "A good passphrase requires randomness, and we humans are very bad at that. There's a famous" magenta "xkcd" "comic on"
-    show "this subject" blue "${_xkcdPasswordsUrl}" "that ends with this gem:"
-    echo
-    echo "     Through 20 years of effort, we've successfully trained everyone to use passwords that"
-    echo "     are hard for humans to remember, but easy for computers to guess."
-    echo "                                                                           — Randall Munroe"
-    echo
-    echo "That comic makes another important point in the last cell: creating a mental scene to represent your passphrase is an"
-    show italic "excellent" "way to help remember it."
+    show "For more about keys, passphrases and the paper key, run" bold blue "valt key-info" glue ", which also lets you fill in the paper"
+    echo "key's personal information."
     echo
 }
 

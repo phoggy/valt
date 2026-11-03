@@ -23,7 +23,7 @@
     }
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--page); color: var(--text); font: 15px/1.5 system-ui, -apple-system, sans-serif; }
-    main { max-width: 920px; margin: 0 auto; padding: 32px 16px 64px; }
+    main { max-width: 1060px; margin: 0 auto; padding: 32px 16px 64px; }
     h1 { color: var(--heading); font-size: 26px; margin: 0 0 4px; }
     h2 { color: var(--heading); font-size: 18px; margin: 0 0 4px; }
     p.lead, p.hint { color: var(--muted); margin: 4px 0 16px; }
@@ -75,7 +75,8 @@
     }
     table.examples td { padding: 9px 18px 9px 0; vertical-align: middle; border-bottom: 1px solid var(--border); }
     table.examples td:last-child, table.examples th:last-child { text-align: right; padding-right: 0; }
-    table.examples td:nth-child(n+3) { white-space: nowrap; font-weight: 600; }
+    table.examples td:nth-child(n+2) { white-space: nowrap; }
+    table.examples td:nth-child(n+4) { font-weight: 600; }
     table.examples th .sub { font-weight: 400; text-transform: none; letter-spacing: 0; }
     dl { margin: 8px 0; }
     dt { font-family: ui-monospace, Menlo, monospace; font-weight: 600; color: var(--heading); margin-top: 10px; }
@@ -209,16 +210,16 @@
                  The lines the rating is based on are underlined in a terminal. Last updated 2026-11-03. -->
             <div class="table-scroll">
             <table class="examples">
-                <tr><th>Example</th><th>To remember</th><th>Online account, if breached<br><span class="sub">slow / fast
-                    hashing</span></th><th>valt key</th></tr>
+                <tr><th>Example</th><th>Kind</th><th>To remember</th><th>Online account, if breached<br><span class="sub">slow
+                    / fast hashing</span></th><th>valt key</th></tr>
                 <tr><td><span class="pw">My dog Oscar</span></td>
-                    <td><strong>easy</strong>, but not random, and short</td>
+                    <td>short phrase</td><td><strong>easy</strong></td>
                     <td>6 days / under a second</td><td>2 months</td></tr>
                 <tr><td><span class="pw">BkZB&amp;XWGj%3Tx</span></td>
-                    <td><strong>hard</strong>: a random password</td>
+                    <td>random password</td><td><strong>hard</strong></td>
                     <td>31 years / 16 minutes</td><td>303 years</td></tr>
                 <tr><td><span class="pw">repossess thursday flaky lazy</span></td>
-                    <td><strong>fair</strong>: a random passphrase</td>
+                    <td>random passphrase</td><td><strong>fair</strong></td>
                     <td>57 million years / 57 years</td><td>560 million years</td></tr>
             </table>
             </div>
