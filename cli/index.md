@@ -131,6 +131,24 @@ instructions on where to find it in the Notes section). See 'valt keys --help' f
 customization details.
 ```
 
+### valt key-info
+
+```
+Fill in the paper key's personal information (the key.info file) in a web page: the letter, the
+people who can help, and notes. The page opens in your browser with the current values; when you
+save it, valt imports it into key.info and offers to regenerate the paper key.
+
+Usage: valt key-info [-d DOWNLOADS] [-k KEY-INFO]
+
+    -k, --key-info KEY-INFO    Key info file to write (default: key.info in the valt config
+                               directory).
+    -d, --downloads DOWNLOADS  Your browser's downloads directory (default: ~/Downloads).
+    -h, --help                 Print this help message.
+
+The page works offline and sends nothing anywhere: Save downloads valt-key-info.json,
+which valt imports and then deletes. key.info can also be edited by hand.
+```
+
 ### valt verify
 
 ```
