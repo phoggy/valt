@@ -10,16 +10,18 @@
     :root {
         --text: #222; --muted: #666; --heading: #1d3e81; --accent: #086ddd; --border: #d0d4da;
         --field: #fff; --page: #f4f5f7; --card: #fff; --error: #c01c28; --ok: #1a7f37;
+        --alpha: #1d3e81; --digit: #c45a00; --special: #b5179e;
     }
     @media (prefers-color-scheme: dark) {
         :root {
             --text: #e6e6e6; --muted: #a0a0a0; --heading: #8fb4ff; --accent: #6ea8ff; --border: #3a3f47;
             --field: #1e2228; --page: #121418; --card: #1a1d22; --error: #ff6b6b; --ok: #4cc06a;
+            --alpha: #8fb4ff; --digit: #ffa94d; --special: #f783ac;
         }
     }
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--page); color: var(--text); font: 15px/1.5 system-ui, -apple-system, sans-serif; }
-    main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+    main { max-width: 920px; margin: 0 auto; padding: 32px 16px 64px; }
     h1 { color: var(--heading); font-size: 26px; margin: 0 0 4px; }
     h2 { color: var(--heading); font-size: 18px; margin: 0 0 4px; }
     p.lead, p.hint { color: var(--muted); margin: 4px 0 16px; }
@@ -51,15 +53,258 @@
     .preview .signature { font-size: 20px; margin-top: 6px; }
     .preview ol { padding-left: 22px; }
     .preview .empty { color: var(--muted); font-style: italic; }
+    nav.tabs { display: flex; gap: 6px; margin: 20px 0 4px; border-bottom: 1px solid var(--border); }
+    nav.tabs button {
+        border: 1px solid transparent; border-bottom: none; border-radius: 8px 8px 0 0; background: none;
+        padding: 8px 16px; margin-bottom: -1px; color: var(--muted); font-weight: 600;
+    }
+    nav.tabs button[aria-selected="true"] { background: var(--card); border-color: var(--border); color: var(--heading); }
+    .skip { margin: 14px 0 0; }
+    .skip a, a { color: var(--accent); }
+    .understand h2 { margin-top: 2px; }
+    .understand ul { padding-left: 22px; margin: 8px 0; }
+    .understand li { margin: 6px 0; }
+    .understand .warning { border-left: 4px solid var(--error); padding-left: 12px; }
+    .table-scroll { overflow-x: auto; } /* a narrow window scrolls the table rather than overflowing its box */
+    table.examples { border-collapse: collapse; margin: 12px 0 14px 18px; }
+    table.examples th {
+        text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+        color: var(--muted); padding: 0 18px 6px 0; border-bottom: 1px solid var(--border);
+    }
+    table.examples td { padding: 9px 18px 9px 0; vertical-align: middle; border-bottom: 1px solid var(--border); }
+    table.examples td:last-child, table.examples th:last-child { text-align: right; padding-right: 0; }
+    table.examples td:nth-child(n+3) { white-space: nowrap; font-weight: 600; }
+    table.examples th .sub { font-weight: 400; text-transform: none; letter-spacing: 0; }
+    dl { margin: 8px 0; }
+    dt { font-family: ui-monospace, Menlo, monospace; font-weight: 600; color: var(--heading); margin-top: 10px; }
+    dd { margin: 2px 0 0 18px; }
+    .pw {
+        font-family: ui-monospace, Menlo, monospace; font-size: 14px; white-space: pre; padding: 3px 9px;
+        background: var(--field); border: 1px solid var(--border); border-radius: 6px;
+    }
+    .pw .alpha { color: var(--alpha); }
+    .pw .digit { color: var(--digit); }
+    .pw .special { color: var(--special); }
+    blockquote { margin: 12px 0; padding-left: 14px; border-left: 3px solid var(--border); font-style: italic; }
+    blockquote cite { display: block; margin-top: 4px; font-style: normal; color: var(--muted); }
+    code { font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+    [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 <main>
-    <h1>Paper key information</h1>
+    <h1>Your valt key and paper key</h1>
+
+    <nav class="tabs" role="tablist">
+        <button type="button" role="tab" id="tab-understand" aria-controls="understand">1. How it works</button>
+        <button type="button" role="tab" id="tab-strength" aria-controls="strength">2. Strong passphrases</button>
+        <button type="button" role="tab" id="tab-detail" aria-controls="detail">3. Strength in detail</button>
+        <button type="button" role="tab" id="tab-info" aria-controls="info">4. Your information</button>
+    </nav>
+
+    <div id="understand" class="understand" role="tabpanel">
+        <p class="skip">Already know how valt works? <a href="#info" data-tab="info">Skip to your information →</a></p>
+
+        <section>
+            <h2>One key pair</h2>
+            <p>Normally you will need only a single key pair for all your file encryption needs: a public key and a
+                private key.</p>
+            <ul>
+                <li>valt locks (encrypts) files with your <strong>public key</strong>. It is safe to share: it can
+                    only lock files, not unlock them.</li>
+                <li>Only your <strong>private key</strong> can unlock them. valt also signs what it locks, so any
+                    tampering is detected.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Your private key and its passphrase</h2>
+            <ul>
+                <li>Your private key is itself locked with a <strong>passphrase</strong>, so it can be stored anywhere:
+                    a stolen copy of the key file is useless on its own.</li>
+                <li>A passphrase is simply a password made of several words: easier to remember, and much harder to
+                    guess. See <a href="#strength" data-tab="strength">Strong passphrases</a>.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>The paper key</h2>
+            <p>The paper key is a printed backup, for you and for whoever you would want to recover your files if
+                you cannot: family, or an executor. It contains:</p>
+            <ul>
+                <li>your private key, as a QR code and as text, both still locked by the passphrase;</li>
+                <li>space to write the passphrase by hand, or notes saying where to find it;</li>
+                <li>step-by-step instructions for unlocking your files, and the people who can help with them.</li>
+            </ul>
+            <p>To make it useful:</p>
+            <ul>
+                <li><strong>Include at least one person who can help</strong> with the technical steps, who has agreed
+                    to help, with ways to reach them.</li>
+                <li><strong>Print several copies</strong>, and write the passphrase on them, or say in the notes where
+                    to find it. Anyone with a copy that includes the passphrase can unlock your files.</li>
+                <li><strong>Keep them in separate secure places</strong>, such as a safe deposit box, a fire safe, or
+                    with people you trust.</li>
+                <li><strong>Regenerate it whenever this information changes</strong>, and destroy the old copies.
+                    valt will remind you to print and store it.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>If the passphrase is lost</h2>
+            <p class="warning">If the passphrase is lost, and no paper key has it written on it (or notes saying
+                where to find it), the files locked to your key <strong>cannot be recovered</strong>, by you or anyone
+                else. There is no reset and no back door: that is what keeps them safe.</p>
+        </section>
+
+        <div class="actions">
+            <button type="button" class="primary" data-tab="strength">Next: strong passphrases</button>
+        </div>
+    </div>
+
+    <div id="strength" class="understand" role="tabpanel">
+        <p class="skip"><a href="#info" data-tab="info">Skip to your information →</a></p>
+
+        <section>
+            <h2>Why a passphrase</h2>
+            <p>Rather than a typical password, a multi-word <strong>passphrase</strong> is a <em>much</em> better
+                choice, since it is far easier to remember. Just as with a password manager, the idea is that you
+                remember <strong>one</strong> secret that gives you access to all of your encrypted data.</p>
+            <p>Since human memory <em>is</em> fallible, it is extremely important that you keep it on paper somewhere
+                secure, in case you forget it or become incapacitated: that is what the paper key is for. If you use a
+                password manager (<em>strongly recommended</em>), store your keys and passphrase in it too.</p>
+        </section>
+
+        <section>
+            <h2>Strength depends on what it protects</h2>
+            <p>How long a password takes to crack depends on how an attacker can try guesses:</p>
+            <ul>
+                <li><strong>An online account</strong>: guesses are slow while they go through the site, which can
+                    limit them, but if the site's password database is ever stolen they can be tried offline,
+                    quickly or very quickly depending on how the site stored it. That is out of your control.</li>
+                <li><strong>An encrypted file or private key</strong>: someone with a copy can guess offline, as fast
+                    as their hardware allows, but each guess is deliberately slow. <a href="https://age-encryption.org">age</a>, the encryption tool valt
+                    uses, locks the key with <a href="https://en.wikipedia.org/wiki/Scrypt">scrypt</a>, a computation designed to take a lot of time and memory for
+                    every single guess.</li>
+            </ul>
+            <p>Your valt key is always the second case. valt judges its passphrase against a <strong>professional
+                attacker</strong>: one with purpose-built hardware.</p>
+        </section>
+
+        <section>
+            <h2>What makes one strong</h2>
+            <p>Estimates from valt's strength checker, against a professional attacker:</p>
+            <!-- These estimates are copied by hand from valt pass-check (the default threat level, professional), so
+                 update them if its estimates change. For each example:
+                     printf '%s' 'EXAMPLE' | valt pass-check -u account   (the two "if the account is breached" lines)
+                     printf '%s' 'EXAMPLE' | valt pass-check -u file      (the 1024 cores line)
+                 The lines the rating is based on are underlined in a terminal. Last updated 2026-11-03. -->
+            <div class="table-scroll">
+            <table class="examples">
+                <tr><th>Example</th><th>To remember</th><th>Online account, if breached<br><span class="sub">slow / fast
+                    hashing</span></th><th>valt key</th></tr>
+                <tr><td><span class="pw">My dog Oscar</span></td>
+                    <td><strong>easy</strong>, but not random, and short</td>
+                    <td>6 days / under a second</td><td>2 months</td></tr>
+                <tr><td><span class="pw">BkZB&amp;XWGj%3Tx</span></td>
+                    <td><strong>hard</strong>: a random password</td>
+                    <td>31 years / 16 minutes</td><td>303 years</td></tr>
+                <tr><td><span class="pw">repossess thursday flaky lazy</span></td>
+                    <td><strong>fair</strong>: a random passphrase</td>
+                    <td>57 million years / 57 years</td><td>560 million years</td></tr>
+            </table>
+            </div>
+            <p>A good passphrase requires randomness, and we humans are very bad at that. There's a famous
+                <a href="https://xkcd.com/936/">xkcd comic</a> on this subject that ends with this gem:</p>
+            <blockquote>Through 20 years of effort, we've successfully trained everyone to use passwords that are hard
+                for humans to remember, but easy for computers to guess.<cite>Randall Munroe</cite></blockquote>
+            <p>That comic makes another important point in its last panel: creating a mental scene to represent your
+                passphrase is an <em>excellent</em> way to help remember it.</p>
+            <p>For how these estimates are made, see <a href="#detail" data-tab="detail">Strength in detail</a>.</p>
+        </section>
+
+        <section>
+            <h2>How valt helps</h2>
+            <ul>
+                <li><code>valt passphrase</code> generates strong random passphrases to choose from.</li>
+                <li>valt checks how long a well-equipped attacker would need to guess yours, and rejects weak ones.
+                    It also checks a database of passwords exposed in data breaches; only the first 5 characters of a
+                    one-way hash of it are sent, never the passphrase itself.</li>
+                <li><code>valt pass-check</code> checks any password or passphrase the same way.</li>
+            </ul>
+        </section>
+
+        <div class="actions">
+            <button type="button" class="primary" data-tab="info">Next: your information</button>
+        </div>
+    </div>
+
+    <div id="detail" class="understand" role="tabpanel">
+        <p class="skip"><a href="#info" data-tab="info">Skip to your information →</a></p>
+
+        <section>
+            <h2>Use cases</h2>
+            <p>Every strength check is made for one of two use cases, which decide the attacks that apply:</p>
+            <dl>
+                <dt>account</dt>
+                <dd>A password for an online account whose password hashing isn't under your control. Covers online
+                    login attempts (rate-limited and unrestricted) and, if the account's password database were ever
+                    breached, offline cracking under either a slow or a fast hashing scheme.</dd>
+                <dt>file</dt>
+                <dd>A password or passphrase protecting an encrypted file or private key, cracked entirely offline at
+                    a fixed, deliberately slow cost per guess (the <a href="https://en.wikipedia.org/wiki/Scrypt">scrypt</a> computation that <a href="https://age-encryption.org">age</a>, the encryption tool
+                    valt uses, applies to every guess), with attacker compute ranging from a single processor core to
+                    a large cluster. <strong>Your valt key is always this case.</strong></dd>
+            </dl>
+        </section>
+
+        <section>
+            <h2>Threat levels</h2>
+            <p>The strength rating is judged against one of four attackers, least to most capable:</p>
+            <dl>
+                <dt>casual</dt><dd>An opportunistic attacker with minimal resources.</dd>
+                <dt>motivated</dt><dd>An individual attacker with a real, focused effort behind it.</dd>
+                <dt>professional</dt><dd>An attacker with resourced, purpose-built hardware. <strong>valt checks key
+                    passphrases against this level.</strong></dd>
+                <dt>nation-state</dt><dd>An attacker with the largest realistic guessing power modeled.</dd>
+            </dl>
+            <p>Each report lists crack times for a range of attack scenarios, and bases its rating on those that fit
+                the threat level. For a valt key against a professional attacker, that is an offline attack on
+                1,024 processor cores. A passphrase that is strong enough there takes far longer on smaller hardware,
+                and the report also shows the time against a nation-state cluster.</p>
+        </section>
+
+        <section>
+            <h2>Breached passwords</h2>
+            <p>Every check also looks the password up in the <a href="https://haveibeenpwned.com/Passwords">Have I
+                Been Pwned</a> database of passwords exposed in data breaches. A password found there is unsafe
+                whatever its estimated strength, since attackers try those first.</p>
+            <p>valt does this without revealing the password. It hashes the password on your computer with
+                <a href="https://en.wikipedia.org/wiki/SHA-1">SHA-1</a> (a one-way function: the hash cannot be turned
+                back into the password) and sends only the first five characters of the hash. The service returns
+                every breached password hash that starts with those characters, and valt looks for a match itself, on
+                your computer. The password, and even its full hash, never leave your computer. (This is the
+                service's <a href="https://haveibeenpwned.com/API/v3#PwnedPasswords">range search</a>, designed for
+                exactly this.)</p>
+        </section>
+
+        <section>
+            <h2>Try it</h2>
+            <p><code>valt pass-check</code> rates any password or passphrase. Choose the use case and threat level with
+                <code>-u account|file</code> and <code>-t casual|motivated|professional|nation-state</code>; the
+                defaults are <code>account</code> and <code>professional</code>. For how the estimates are calculated,
+                see <a href="https://github.com/phoggy/mrld#methodology-and-sources">mrld's methodology and
+                sources</a>.</p>
+        </section>
+
+        <div class="actions">
+            <button type="button" class="primary" data-tab="info">Next: your information</button>
+        </div>
+    </div>
+
+    <div id="info" role="tabpanel">
     <p class="lead">This personalizes your paper key: a letter to whoever may need it, the people who can help them,
         and any notes. Nothing leaves this page until you save, and then only to your Downloads folder, where valt
         picks it up.</p>
-
     <section>
         <h2>The letter</h2>
         <p class="hint">The first page of the paper key is a short letter from you.</p>
@@ -96,6 +341,7 @@
     <div class="actions">
         <button type="button" class="primary" id="save">Save</button>
         <span id="status" role="status"></span>
+    </div>
     </div>
 </main>
 
@@ -229,7 +475,7 @@
 
         document.getElementById("key-info-data").textContent = "";
         document.querySelector("main").innerHTML = `
-            <h1>Paper key information</h1>
+            <h1>Your valt key and paper key</h1>
             <section>
                 <h2>Saved</h2>
                 <p>valt picks up <strong>valt-key-info.json</strong> from your Downloads folder and saves it to
@@ -247,6 +493,39 @@
     field("add-contact").addEventListener("click", () => addContact());
     field("save").addEventListener("click", save);
     update();
+
+    // Color each character of the example passwords by kind: letters, digits and special characters
+
+    document.querySelectorAll(".pw").forEach((el) => {
+        const text = el.textContent;
+        el.textContent = "";
+        for (const c of text) {
+            const span = document.createElement("span");
+            span.className = /[A-Za-z]/.test(c) ? "alpha" : /[0-9]/.test(c) ? "digit" : c === " " ? "" : "special";
+            span.textContent = c;
+            el.append(span);
+        }
+    });
+
+    function showTab(name) {
+        for (const tab of ["understand", "strength", "detail", "info"]) {
+            field(tab).hidden = tab !== name;
+            field(`tab-${tab}`).setAttribute("aria-selected", tab === name ? "true" : "false");
+        }
+        history.replaceState(null, "", `#${name}`);
+        window.scrollTo(0, 0);
+    }
+
+    document.querySelectorAll("[data-tab]").forEach((el) => el.addEventListener("click", (event) => {
+        event.preventDefault();
+        showTab(el.dataset.tab);
+    }));
+    for (const tab of ["understand", "strength", "detail", "info"]) {
+        field(`tab-${tab}`).addEventListener("click", () => showTab(tab));
+    }
+    const editing = Boolean(initial.author || initial.greeting || (initial.contacts || []).length);
+    const requested = location.hash.slice(1);
+    showTab(["understand", "strength", "detail", "info"].includes(requested) ? requested : editing ? "info" : "understand");
 </script>
 </body>
 </html>
