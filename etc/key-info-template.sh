@@ -23,9 +23,10 @@ contacts=(
     "Aunt Martha: +44 791 112 4456, @aunt_martha1, martha@aol.com. 221B Baker Street, London, NW1 6XE UNITED KINGDOM"
 )
 
-# Include any additional information here. If you use the --no-passphrase
-# option, you SHOULD include hints or instructions here to inform the reader
-# how to access the passphrase and you cannot leave this value empty.
+# Include any additional information here. If you will not write your
+# passphrase on the paper key (the more secure choice), say here where to
+# find it, e.g. a password manager with emergency access, or a sealed
+# envelope held by your executor or attorney.
 #
 # Each entry in the array will be printed as a separate line. Long lines
 # can be split by appending '\' without closing the quote.

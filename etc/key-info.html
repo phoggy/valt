@@ -161,12 +161,33 @@
             <ul>
                 <li><strong>Include at least one person who can help</strong> with the technical steps, who has agreed
                     to help, with ways to reach them.</li>
-                <li><strong>Print several copies</strong>, and write the passphrase on them, or say in the notes where
-                    to find it. Anyone with a copy that includes the passphrase can decrypt your files.</li>
+                <li><strong>Print several copies</strong>, and decide where the passphrase goes: see below.</li>
                 <li><strong>Keep them in separate secure places</strong>, such as a safe deposit box, a fire safe, or
                     with people you trust.</li>
                 <li><strong>Regenerate it whenever this information changes</strong>, and destroy the old copies.
                     valt will remind you to print and store it.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Where to keep the passphrase</h2>
+            <p>Whoever recovers your files will need the passphrase as well as the paper key. There are two ways to
+                make sure they can find it:</p>
+            <ul>
+                <li><strong>Write it on the paper key.</strong> It cannot be missed, but every copy with it written on is
+                    a complete key: anyone who holds that copy, and can reach your encrypted files, can decrypt
+                    them.</li>
+                <li><strong>Keep it somewhere else, and say where in the notes</strong> (more secure). A copy on its own
+                    is then useless, so copies can be given out more freely. But that place has to last, and stay
+                    findable by the right people.</li>
+            </ul>
+            <p>Some good places to keep it:</p>
+            <ul>
+                <li>a password manager with emergency access: Bitwarden and 1Password let a person you choose request
+                    access, which you can refuse within a waiting period;</li>
+                <li>a sealed envelope held by your estate attorney or executor, to be released with your will;</li>
+                <li>a mix: one copy with the passphrase written on it in your most secure place, such as a safe deposit
+                    box, and copies with a note instead everywhere else.</li>
             </ul>
         </section>
 
@@ -349,7 +370,8 @@
     <section>
         <h2>Notes</h2>
         <p class="hint">Anything else the reader should know, one item per line. If you will not write your passphrase
-            on the paper key, say here where to find it.</p>
+            on the paper key (the more secure choice), say here where to find it: see
+            <a href="#understand" data-tab="understand">Where to keep the passphrase</a>.</p>
         <textarea id="notes" placeholder="e.g. The passphrase is in the envelope in the fire safe."></textarea>
     </section>
 

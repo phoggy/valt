@@ -124,7 +124,8 @@ showPaperKeyNextSteps() {
     local replacing=${1:-0}
     local -a steps=(
         "${ show bold "Print" italic primary "at least" bold "one copy."; }"
-        "${ show bold "Write your passphrase" "on the last page, or leave it blank and say in the Notes where to find it."; }"
+        "${ show bold "Decide on your passphrase:" "write it on the last page, or, more securely, say in the Notes" \
+               "where to find it."; }"
         "${ show bold "Store copies in secure locations" glue ", e.g. a safe deposit box or fire safe, and/or with" \
                "trusted people."; }"
     )
@@ -132,6 +133,9 @@ showPaperKeyNextSteps() {
                                     ", so that its outdated information is not relied upon."; }")
     header 2 "Important Next Steps"
     printList "${steps[@]}"
+    echo
+    echo "Both passphrase choices have trade-offs. These, and some good places to keep a passphrase, are described in"
+    show bold "Where to keep the passphrase" "on the" bold "How it works" "tab of the" bold blue "valt key-info" "page."
     echo
     echo "To remind you of these critical steps, valt will ask whether you have done them the next time you use it,"
     echo "until you confirm them."

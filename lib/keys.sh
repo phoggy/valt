@@ -712,8 +712,8 @@ _showPrivateKeyPassphraseAdvice() {
     echo "asked for it twice."
     echo
     show "Use a passphrase of several" italic "random" "words rather than a password: it is far easier to remember, and much harder"
-    echo "to crack. Since human memory is fallible, keep it on paper too: the paper key valt makes for your key has room for"
-    show "it. If the passphrase is lost, so is" bold "everything" "encrypted with this key."
+    echo "to crack. Since human memory is fallible, keep a record of it: on the paper key valt makes for your key or, more"
+    show "securely, somewhere its notes point to. If the passphrase is lost, so is" bold "everything" "encrypted with this key."
     echo
     show "For more about keys, passphrases and the paper key, run" bold blue "valt key-info" glue ", which also lets you fill in the paper"
     echo "key's personal information."

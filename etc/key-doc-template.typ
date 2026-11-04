@@ -119,10 +119,9 @@ a backup so *must* be kept in at least one secure place, e.g. a safe-deposit box
 member. Instructions for using the key to unlock a file are provided. The instructions are a bit technical, so it
 includes some ways to get help if needed.
 
-Know that the key _itself_ is encrypted, so it *cannot* be used without the passphrase used to create it. The last page
-has space for the passphrase to be hand written. If not there, the notes below should provide some information to help
-find the passphrase. If you don't have or can't get the passphrase, so sorry but there is nothing you can do but stop
-here.
+Know that the key _itself_ is encrypted, so it *cannot* be used without the passphrase used to create it. The
+passphrase may be written on the last page. If it is not, the Notes on that page say where to find it. If you don't
+have or can't get the passphrase, so sorry but there is nothing you can do but stop here.
 
 Welcome to the modern world of digital security.
 
@@ -246,8 +245,8 @@ on a USB/thumb drive or in a file (it should have a '.key' file suffix). If you 
 forms of backup: a QR code and ("`PEM`" formatted) text, both containing the encrypted private key. Instructions for
 recreating the digital key from these are provided.
 
-The passphrase used when the key was created is likely printed on the Passphrase page of this document, but it may be
-stored separately. In the latter case, there may be hints on where to find it in the Notes section.
+The passphrase used when the key was created is either written on the Passphrase page of this document, or kept
+separately, in which case the Notes section says where to find it.
 
 You need one of the following:
 
