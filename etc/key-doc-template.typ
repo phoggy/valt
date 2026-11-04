@@ -12,7 +12,8 @@
 // ---- Theme
 
 #let bodyFont = "Google Sans Flex"
-#let humanFont = "Shantell Sans"
+#let humanFont = "Shantell Sans" // the letter's closing line and the notes: handwritten in feel, but easy to read
+#let signatureFont = "Yellowtail" // the letter's signature
 #let codeFont = "Fira Code"
 #let textColor = rgb("#222222")
 #let headingColor = rgb("#1d3e81")
@@ -130,7 +131,7 @@ If all of this has you thinking _"uh… what?"_, please see #link(<getting-help>
 #v(2.5em)
 #text(font: humanFont, size: 13.5pt, style: "italic", data.closing)
 #v(1.5em)
-#text(font: humanFont, size: 18pt, tracking: 1pt, data.author)
+#text(font: signatureFont, size: 22pt, data.author)
 
 #pagebreak()
 
