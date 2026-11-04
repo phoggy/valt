@@ -43,7 +43,8 @@ openKeyInfoPage() {
 }
 
 # ◇ Waits for the key info page's download (valt-key-info.json, or a browser's renamed copy such as
-#   'valt-key-info (1).json') to appear in a directory after a marker file was created, and outputs its path.
+#   'valt-key-info (1).json') to appear in a directory after a marker file was created, and outputs its path. If there
+#   are several since then, the most recently modified is used; older ones are ignored.
 #
 # · ARGS
 #
@@ -52,13 +53,19 @@ openKeyInfoPage() {
 
 waitForKeyInfoDownload() {
     local downloadsDir="$1" markerFile="$2"
-    local found
+    local file newest
     while true; do
-        found="${ find "${downloadsDir}" -maxdepth 1 -type f -name 'valt-key-info*.json' -newer "${markerFile}" 2> /dev/null \
-                  | head -n 1; }"
-        if [[ -n ${found} ]]; then
+
+        # The most recently modified of the downloads made since the marker, e.g. if the page was saved twice
+
+        newest=''
+        while IFS= read -r -d '' file; do
+            [[ -z ${newest} || ${file} -nt ${newest} ]] && newest="${file}"
+        done < <(find "${downloadsDir}" -maxdepth 1 -type f -name 'valt-key-info*.json' -newer "${markerFile}" -print0 \
+                     2> /dev/null)
+        if [[ -n ${newest} ]]; then
             sleep 0.5 # let the browser finish writing it
-            echo "${found}"
+            echo "${newest}"
             return 0
         fi
         sleep 0.5

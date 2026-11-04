@@ -14,6 +14,7 @@ main() {
     testImportedFileIsPrivate
     testCommandImportsDownload
     testCommandIgnoresOlderDownload
+    testWaitPicksNewestDownload
     testCommandWarnsWhenDownloadKept
     testValuesIgnoreLayout
     testCommandOffersRegenerationOnlyOnChange
@@ -170,6 +171,21 @@ testCommandIgnoresOlderDownload() {
     assertContains 'author="New Download"' "${ ( sourceConfigFile "${info}"; declare -p author ); }" \
         "a download from before the page was opened must be ignored"
     assertFile "${downloads}/valt-key-info.json"
+}
+
+# With several downloads since the page was opened, the most recently modified is used; older ones are ignored.
+
+testWaitPicksNewestDownload() {
+    local downloads="${testDir}/downloads5" marker="${testDir}/marker5"
+    mkdir -p "${downloads}" || fail
+    echo '{}' > "${downloads}/valt-key-info (2).json"
+    touch -t 202001010000 "${downloads}/valt-key-info (2).json"   # before the page: ignored, though named last
+    touch -t 202001020000 "${marker}"
+    echo '{}' > "${downloads}/valt-key-info.json"
+    echo '{}' > "${downloads}/valt-key-info (1).json"
+    touch -t 202001030000 "${downloads}/valt-key-info.json"
+    touch -t 202001040000 "${downloads}/valt-key-info (1).json"    # the newest
+    assertEqual "${downloads}/valt-key-info (1).json" "${ waitForKeyInfoDownload "${downloads}" "${marker}"; }"
 }
 
 # When the download cannot be deleted (e.g. security software protects Downloads), valt says so. A read-only downloads

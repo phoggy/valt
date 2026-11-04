@@ -117,9 +117,10 @@
             <p>Normally you will need only a single key pair for all your file encryption needs: a public key and a
                 private key.</p>
             <ul>
-                <li>valt locks (encrypts) files with your <strong>public key</strong>. It is safe to share: it can
-                    only lock files, not unlock them.</li>
-                <li>Only your <strong>private key</strong> can unlock them. valt also signs what it locks, so any
+                <li>valt encrypts (locks) files with your <strong>public key</strong>. It is safe to share: it can
+                    only encrypt files, not decrypt them.</li>
+                <li>Only your <strong>private key</strong> can decrypt (unlock) them. valt also signs what it
+                    encrypts, so any
                     tampering is detected.</li>
             </ul>
         </section>
@@ -127,7 +128,7 @@
         <section>
             <h2>Your private key and its passphrase</h2>
             <ul>
-                <li>Your private key is itself locked with a <strong>passphrase</strong>, so it can be stored anywhere:
+                <li>Your private key is itself encrypted with a <strong>passphrase</strong>, so it can be stored anywhere:
                     a stolen copy of the key file is useless on its own.</li>
                 <li>A passphrase is simply a password made of several words: easier to remember, and much harder to
                     guess. See <a href="#strength" data-tab="strength">Strong passphrases</a>.</li>
@@ -142,16 +143,16 @@
             <p>The paper key is a printed backup, for you and for whoever you would want to recover your files if
                 you cannot: family, or an executor. It contains:</p>
             <ul>
-                <li>your private key, as a QR code and as text, both still locked by the passphrase;</li>
+                <li>your private key, as a QR code and as text, both still encrypted with the passphrase;</li>
                 <li>space to write the passphrase by hand, or notes saying where to find it;</li>
-                <li>step-by-step instructions for unlocking your files, and the people who can help with them.</li>
+                <li>step-by-step instructions for decrypting your files, and the people who can help with them.</li>
             </ul>
             <p>To make it useful:</p>
             <ul>
                 <li><strong>Include at least one person who can help</strong> with the technical steps, who has agreed
                     to help, with ways to reach them.</li>
                 <li><strong>Print several copies</strong>, and write the passphrase on them, or say in the notes where
-                    to find it. Anyone with a copy that includes the passphrase can unlock your files.</li>
+                    to find it. Anyone with a copy that includes the passphrase can decrypt your files.</li>
                 <li><strong>Keep them in separate secure places</strong>, such as a safe deposit box, a fire safe, or
                     with people you trust.</li>
                 <li><strong>Regenerate it whenever this information changes</strong>, and destroy the old copies.
@@ -162,7 +163,7 @@
         <section>
             <h2>If the passphrase is lost</h2>
             <p class="warning">If the passphrase is lost, and no paper key has it written on it (or notes saying
-                where to find it), the files locked to your key <strong>cannot be recovered</strong>, by you or anyone
+                where to find it), the files encrypted to your key <strong>cannot be recovered</strong>, by you or anyone
                 else. There is no reset and no back door: that is what keeps them safe.</p>
         </section>
 
@@ -193,7 +194,7 @@
                     quickly or very quickly depending on how the site stored it. That is out of your control.</li>
                 <li><strong>An encrypted file or private key</strong>: someone with a copy can guess offline, as fast
                     as their hardware allows, but each guess is deliberately slow. <a href="https://age-encryption.org">age</a>, the encryption tool valt
-                    uses, locks the key with <a href="https://en.wikipedia.org/wiki/Scrypt">scrypt</a>, a computation designed to take a lot of time and memory for
+                    uses, encrypts the key using <a href="https://en.wikipedia.org/wiki/Scrypt">scrypt</a>, a computation designed to take a lot of time and memory for
                     every single guess.</li>
             </ul>
             <p>Your valt key is always the second case. valt judges its passphrase against a <strong>professional
