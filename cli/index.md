@@ -95,9 +95,9 @@ a text format (often called "paper keys"). Content is personalized from a key.in
 not been completed, the PDF is skipped and can be generated later with 'valt paper'.
 
 The PDF is opened when done, so that you can check and print it. Please ensure that you print at
-least one copy and write your passphrase on the last page (or leave the passphrase blank and add
-instructions on where to find it in the Notes section), then store copies in secure locations,
-e.g. safe deposit box/fire safe and/or with trusted people!
+least one copy, then either write your passphrase on the last page or, more securely, say in the
+Notes section where to find it, and store copies in secure locations, e.g. safe deposit box/fire
+safe and/or with trusted people!
 
 Document Customization
 
@@ -126,8 +126,8 @@ Usage: valt paper [KEY_FILE] [-k KEY-INFO] [-n NAME] [-c STYLE] [-t TEMPLATE]
     -h, --help               Print this help message.
 
 The PDF is opened when done, so that you can check and print it. Please ensure that you print at
-least one copy and write your passphrase on the last page (or leave the passphrase blank and add
-instructions on where to find it in the Notes section). See 'valt keys --help' for document
+least one copy, then either write your passphrase on the last page or, more securely, say in the
+Notes section where to find it. See 'valt keys --help' for document
 customization details.
 ```
 
