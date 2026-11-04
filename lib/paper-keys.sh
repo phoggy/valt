@@ -112,6 +112,31 @@ newPaperKey() {
     resultVarRef="${_paperKeyFile}"
 }
 
+# ◇ Shows the steps to take after a paper key is generated, as a numbered list, and that valt will ask about them
+#   later (see remindPaperKey).
+#
+# · ARGS
+#
+#   [replacing] (bool)  1 if the paper key replaced an earlier one, adding a step to destroy its printed copies
+#                       (default: 0).
+
+showPaperKeyNextSteps() {
+    local replacing=${1:-0}
+    local -a steps=(
+        "${ show bold "Print" italic primary "at least" bold "one copy."; }"
+        "${ show bold "Write your passphrase" "on the last page, or leave it blank and say in the Notes where to find it."; }"
+        "${ show bold "Store copies in secure locations" glue ", e.g. a safe deposit box or fire safe, and/or with" \
+               "trusted people."; }"
+    )
+    (( replacing )) && steps+=("${ show bold "Destroy any printed copies of the previous paper key" glue \
+                                    ", so that its outdated information is not relied upon."; }")
+    header 2 "Important Next Steps"
+    printList "${steps[@]}"
+    echo
+    echo "To remind you of these critical steps, valt will ask whether you have done them the next time you use it,"
+    echo "until you confirm them."
+}
+
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/paper-keys' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_paper-keys() {
@@ -203,10 +228,9 @@ _askPaperKeyQuestion() {
         *)
             _writePaperKeyState "${pdfFile}" "${state}" $(( EPOCHSECONDS + days * 86400 ))
             if (( days == 0 )); then
-                show nl "OK, I'll ask again the next time you run" bold "valt encrypt" "or" bold "valt archive create" glue "."
+                show nl "OK, I'll ask again the next time you use valt."
             else
-                show nl "OK, I'll ask again the next time you run" bold "valt encrypt" "or" bold "valt archive create" \
-                    "after ${ _countOf ${days} day; }."
+                show nl "OK, I'll ask again the next time you use valt after ${ _countOf ${days} day; }."
             fi
             ;;
     esac

@@ -68,6 +68,7 @@
           pkgs.phraze
           mrldPkg
           pkgs.curl
+          pkgs.openssl
           pkgs.jq
           pkgs.minisign
           pkgs.qrtool
@@ -201,9 +202,11 @@ projectNixpkgsRev='${nixpkgs.shortRev}'
 EOF
 
             # Wrap with minimal deps for recovery.
-            # Include $out/bin for rayvn.up project root resolution.
+            # Include $out/bin for rayvn.up project root resolution. Heirs recover with another's key, so they are
+            # not reminded about paper keys.
             wrapProgram "$out/bin/valt" \
-              --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath recoverDeps}"
+              --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath recoverDeps}" \
+              --set VALT_NO_PAPER_KEY_REMINDERS 1
 
             wrapProgram "$out/bin/valt-pinentry" \
               --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath recoverDeps}"

@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <!-- The form 'valt key-info' opens to fill in key.info. valt replaces the JSON in #key-info-data with the current values
-     and opens a copy of this page; Save downloads valt-key-info.json, which valt imports into key.info. No network. -->
+     and #key-info-keys with a unique id and one-time keys, and opens a copy of this page. Save downloads
+     valt-key-info-ID.json, encrypted
+     with those keys (AES-256-CBC, then HMAC-SHA256 of "IV_HEX.CIPHERTEXT_BASE64"), so that a copy left in Downloads, or
+     caught by a backup, is useless; valt decrypts and imports it into key.info. No network. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -96,11 +99,18 @@
         padding: 1px 5px; white-space: nowrap;
     }
     [hidden] { display: none !important; }
+    .countdown {
+        margin: 10px 0 0; padding: 10px 14px; border-radius: 8px; font-size: 14px;
+        background: var(--code-bg); border: 1px solid var(--code-border); border-left: 4px solid var(--accent);
+    }
+    .countdown.soon { border-left-color: var(--error); color: var(--error); }
+    .countdown .left { font-weight: 600; white-space: nowrap; }
 </style>
 </head>
 <body>
 <main>
     <h1>Your valt key and paper key</h1>
+    <p id="countdown" class="countdown" role="status" hidden></p>
 
     <nav class="tabs" role="tablist">
         <button type="button" role="tab" id="tab-understand" aria-controls="understand">1. How it works</button>
@@ -314,8 +324,8 @@
 
     <div id="info" role="tabpanel">
     <p class="lead">This personalizes your paper key: a letter to whoever may need it, the people who can help them,
-        and any notes. Nothing leaves this page until you save, and then only to your Downloads folder, where valt
-        picks it up.</p>
+        and any notes. Nothing leaves this page until you save, and then only to your Downloads folder, encrypted,
+        where valt picks it up.</p>
     <section>
         <h2>The letter</h2>
         <p class="hint">The first page of the paper key is a short letter from you.</p>
@@ -351,16 +361,19 @@
 
     <div class="actions">
         <button type="button" class="primary" id="save">Save</button>
+        <button type="button" id="cancel">Cancel</button>
         <span id="status" role="status"></span>
     </div>
     </div>
 </main>
 
 <script id="key-info-data" type="application/json">{}</script>
+<script id="key-info-keys" type="application/json">{}</script>
 <script>
     "use strict";
 
     const initial = JSON.parse(document.getElementById("key-info-data").textContent || "{}");
+    const keys = JSON.parse(document.getElementById("key-info-keys").textContent || "{}");
     const field = (id) => document.getElementById(id);
     const contactsEl = field("contacts");
 
@@ -467,7 +480,100 @@
         return found;
     }
 
-    function save() {
+    // Encrypts the text with the one-time keys from valt, outputting the downloaded file's JSON
+
+    async function encryptForValt(text) {
+        const hex = (bytes) => [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, "0")).join("");
+        const unhex = (text) => new Uint8Array(text.match(/../g).map((pair) => parseInt(pair, 16)));
+        const encoder = new TextEncoder();
+        const iv = crypto.getRandomValues(new Uint8Array(16));
+        const key = await crypto.subtle.importKey("raw", unhex(keys.encryptionKey), "AES-CBC", false, ["encrypt"]);
+        const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-CBC", iv }, key, encoder.encode(text)));
+        const ivHex = hex(iv), ciphertextBase64 = btoa(String.fromCharCode(...ciphertext));
+        const macKey = await crypto.subtle.importKey("raw", encoder.encode(keys.macKey),
+                                                     { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+        const mac = hex(await crypto.subtle.sign("HMAC", macKey, encoder.encode(`${ivHex}.${ciphertextBase64}`)));
+        return JSON.stringify({ format: "valt-key-info-encrypted", version: 1, iv: ivHex,
+                                ciphertext: ciphertextBase64, mac });
+    }
+
+    // Replaces the page with a message, clearing the values and keys valt embedded in it
+
+    function finish(title, message) {
+        document.getElementById("key-info-data").textContent = "";
+        document.getElementById("key-info-keys").textContent = "";
+        keys.id = keys.encryptionKey = keys.macKey = "";
+        clearInterval(expiryTimer);
+        document.querySelector("main").innerHTML = `
+            <h1>Your valt key and paper key</h1>
+            <section>
+                <h2>${title}</h2>
+                ${message}
+            </section>`;
+    }
+
+    function expired() {
+        return Date.now() >= keys.expires * 1000;
+    }
+
+    function expire() {
+        finish("Expired", `<p>valt stopped waiting for this page, so it can no longer save. Run
+            <code>valt key-info</code> again when you are ready.</p>`);
+    }
+
+    // Shows how long valt will keep waiting, and expires the page when it stops
+
+    function updateCountdown() {
+        if (!keys.expires) return;
+        if (expired()) return expire();
+        const minutes = Math.ceil((keys.expires * 1000 - Date.now()) / 60000);
+        const countdown = field("countdown");
+        countdown.hidden = false;
+        countdown.innerHTML = `⏳ valt is waiting for you to press <strong>Save</strong> or <strong>Cancel</strong> on
+            the <a href="#info" data-tab="info">Your information</a> tab:
+            <span class="left">${minutes} ${minutes === 1 ? "minute" : "minutes"} left</span>`;
+        countdown.querySelector("[data-tab]").addEventListener("click", (event) => {
+            event.preventDefault();
+            showTab("info");
+        });
+        countdown.classList.toggle("soon", minutes <= 5);
+    }
+
+    const expiryTimer = setInterval(updateCountdown, 15000);
+    updateCountdown();
+
+    // Downloads data encrypted for valt, as the page's file
+
+    async function download(data) {
+        if (!window.crypto || !crypto.subtle || !keys.id || !keys.encryptionKey || !keys.macKey) {
+            setStatus("This browser cannot encrypt the file, so nothing was saved. Please open the page in another.",
+                      "error");
+            return null;
+        }
+        let encrypted;
+        try {
+            encrypted = await encryptForValt(JSON.stringify(data));
+        } catch (error) {
+            setStatus(`Could not encrypt the file, so nothing was saved: ${error.message}`, "error");
+            return null;
+        }
+        const fileName = `valt-key-info-${keys.id}.json`;
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(new Blob([encrypted], { type: "application/json" }));
+        link.download = fileName;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 10000); // revoking at once can cancel the download
+        return fileName;
+    }
+
+    async function cancel() {
+        if (expired()) return expire();
+        if (await download({ cancelled: true }) === null) return;
+        finish("Cancelled", "<p>Nothing was saved, and key.info is unchanged. You can close this page.</p>");
+    }
+
+    async function save() {
+        if (expired()) return expire();
         const info = currentInfo();
         const found = problems(info);
         if (found.length) {
@@ -476,22 +582,13 @@
         }
         const data = { greeting: info.greeting, closing: info.closing, author: info.author,
                        contacts: info.contacts, notes: info.notes };
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
-        link.download = "valt-key-info.json";
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(link.href), 10000); // revoking at once can cancel the download
-
-        // Clear the page, and the values valt embedded in it, leaving only the saved message
-
-        document.getElementById("key-info-data").textContent = "";
-        document.querySelector("main").innerHTML = `
-            <h1>Your valt key and paper key</h1>
-            <section>
-                <h2>Saved</h2>
-                <p>valt picks up <strong>valt-key-info.json</strong> from your Downloads folder and saves it to
-                    key.info. You can close this page.</p>
-            </section>`;
+        const fileName = await download(data);
+        if (fileName === null) return;
+        finish("Saved", `
+            <p>valt picks up <strong>${fileName}</strong> from your Downloads folder and saves it to key.info. You can
+                close this page.</p>
+            <p class="hint">The file is encrypted with a one-time key that only valt has, so a copy left behind is
+                useless to anyone.</p>`);
     }
 
     field("greeting").value = initial.greeting || "";
@@ -503,6 +600,7 @@
     ["greeting", "closing", "author", "notes"].forEach((id) => field(id).addEventListener("input", update));
     field("add-contact").addEventListener("click", () => addContact());
     field("save").addEventListener("click", save);
+    field("cancel").addEventListener("click", cancel);
     update();
 
     // Color each character of the example passwords by kind: letters, digits and special characters

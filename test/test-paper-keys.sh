@@ -171,13 +171,15 @@ testPaperGeneratesPdf() {
     assertEqual 0 $? "paper must succeed: ${output}"
     assertFile "${ _paperKeyFile "${paperTestKey}"; }"
     assertContains "Paper key file:" "${output}"
-    [[ ${output} != *"previous paper key was replaced"* ]] || fail "first paper key must not report a replacement"
+    [[ ${output} != *"previous paper key"* ]] || fail "first paper key must not report a replacement"
+    assertContains "1. Print at least one copy." "${ stripAnsi "${output}"; }"
+    assertContains "3. Store copies in secure locations" "${ stripAnsi "${output}"; }"
 }
 
 testPaperReplacesPdf() {
     local output; output="${ valt paper -k "${completedInfoFile}" "${paperTestKey}" 2>&1; }"
     assertEqual 0 $? "paper must succeed: ${output}"
-    assertContains "previous paper key was replaced" "${output}"
+    assertContains "4. Destroy any printed copies of the previous paper key" "${ stripAnsi "${output}"; }"
 }
 
 testPaperRelativePaths() {

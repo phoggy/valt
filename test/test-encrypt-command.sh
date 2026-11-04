@@ -87,10 +87,17 @@ testEncryptDefaults() {
     assertEqual 'secret content' "${ cat "${file}"; }"
 }
 
+# The default key's missing paper key is reported to someone at a terminal (the answers hook stands in for one), but not
+# in a script.
+
 testEncryptRemindsPaperKey() {
     local file; newPlainFile file
-    local output; output="${ valt encrypt -i "${keyFile}" "${file}" 2>&1; }"
+    local output; output="${ VALT_KEY_FILE="${keyFile}" rayvnTest_PaperKeyAnswers='yes' valt encrypt "${file}" 2>&1; }"
     assertContains "No paper key backup exists" "${output}"
+
+    newPlainFile file
+    output="${ VALT_KEY_FILE="${keyFile}" valt encrypt "${file}" 2>&1; }"
+    [[ ${output} != *"paper key"* ]] || fail "a script must not be reminded about the paper key: ${output}"
 }
 
 testEncryptRecipientBeforeFile() {

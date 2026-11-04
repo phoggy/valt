@@ -17,6 +17,9 @@ main() {
     testNoQuestionsWithoutTerminal
     testNoQuestionsForOutOfDatePaperKey
     testEncryptAsks
+    testAnyCommandAsks
+    testCommandAsksAboutDefaultKeyOnly
+    testNoRemindersWhenDisabled
     testClearPaperKeyState
 
     return 0
@@ -103,7 +106,7 @@ testAsksPrintedThenStored() {
 testPrintedThenRemindAsksTheRest() {
     local key info pdf output leftover; newPaperKeySetup key info pdf
     remindWith output leftover 'yes remind:2' "${key}" "${info}"
-    assertContains "the next time you run valt encrypt or valt archive create after 2 days." "${output}"
+    assertContains "the next time you use valt after 2 days." "${output}"
     assertState "${pdf}" printed
     assertRemindInDays "${pdf}" 2
 
@@ -139,7 +142,7 @@ testRemindPostpones() {
 testRemindZeroDaysAsksNextTime() {
     local key info pdf output leftover; newPaperKeySetup key info pdf
     remindWith output leftover 'yes remind:0' "${key}" "${info}"
-    assertContains "I'll ask again the next time you run valt encrypt or valt archive create." "${output}"
+    assertContains "I'll ask again the next time you use valt." "${output}"
     assertState "${pdf}" printed
     remindWith output leftover 'yes yes' "${key}" "${info}"
     assertEqual '' "${leftover}" "0 days must ask again the next time"
@@ -196,12 +199,42 @@ testEncryptAsks() {
     local key info pdf; newPaperKeySetup key info pdf
     local file; file="${ dirName "${key}"; }/secret.txt"
     echo 'secret' > "${file}"
-    local output; output="${ rayvnTest_PaperKeyAnswers='yes remind:3' valt encrypt "${file}" -i "${key}" 2>&1; }"
+    local output; output="${ VALT_KEY_FILE="${key}" rayvnTest_PaperKeyAnswers='yes remind:3' valt encrypt "${file}" 2>&1; }"
     assertEqual 0 $? "encrypt must succeed: ${output}"
     output="${ stripAnsi "${output}"; }"
     assertFile "${file}.age"
     assertContains "after 3 days." "${output}"
     assertState "${pdf}" printed
+}
+
+# Any command asks, not only those that sign: here, generating a passphrase.
+
+testAnyCommandAsks() {
+    local key info pdf; newPaperKeySetup key info pdf
+    local output; output="${ VALT_KEY_FILE="${key}" rayvnTest_PaperKeyAnswers='remind:4' valt passphrase 2>&1; }"
+    assertEqual 0 $? "passphrase must succeed: ${output}"
+    assertContains "after 4 days." "${ stripAnsi "${output}"; }"
+    assertState "${pdf}" new
+}
+
+# Only the default key is asked about: someone recovering files passes another's key with -i.
+
+testCommandAsksAboutDefaultKeyOnly() {
+    local key info pdf other otherInfo otherPdf
+    newPaperKeySetup key info pdf
+    newPaperKeySetup other otherInfo otherPdf
+    local output; output="${ VALT_KEY_FILE="${key}" rayvnTest_PaperKeyAnswers='stop' valt verify -i "${other}" 2>&1; }"
+    assertEqual 0 $? "verify must succeed: ${output}"
+    assertState "${pdf}" stopped
+    assertState "${otherPdf}" new
+}
+
+testNoRemindersWhenDisabled() {
+    local key info pdf; newPaperKeySetup key info pdf
+    local output; output="${ VALT_KEY_FILE="${key}" VALT_NO_PAPER_KEY_REMINDERS=1 rayvnTest_PaperKeyAnswers='stop' \
+        valt passphrase 2>&1; }"
+    assertEqual 0 $? "passphrase must succeed: ${output}"
+    assertState "${pdf}" new
 }
 
 # Clearing a paper key's answers asks again, and leaves other paper keys' answers.

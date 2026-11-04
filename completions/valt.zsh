@@ -111,7 +111,8 @@ _valt() {
                     _arguments \
                     '(--downloads -d)'{--downloads,-d}'[Your browser'\''s downloads directory (default: ~/Downloads).]:downloads:_files -/' \
                     '(--help -h)'{--help,-h}'[Print this help message.]' \
-                    '(--key-info -k)'{--key-info,-k}'[Key info file to write (default: key.info in the valt config directory).]:key-info:'
+                    '(--key-info -k)'{--key-info,-k}'[Key info file to write (default: key.info in the valt config directory).]:key-info:' \
+                    '(--timeout -t)'{--timeout,-t}'[How many minutes to wait for the page; the page expires then too.]:timeout:'
                     ;;
                 keys)
                     _arguments \

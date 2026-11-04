@@ -34,6 +34,25 @@ usage() {
 main() {
     init
     parseCommand "$@"
+    local result=$?
+    (( result == 0 )) && remindAfterCommand "${1:-}"
+    return ${result}
+}
+
+# After a command succeeds, reminds about the default key's paper key (see remindPaperKey): only the default key, since
+# that is the user's own, while someone recovering files with another's key passes it with -i. Not after the commands
+# that have just made the paper key, or offered to, nor when VALT_NO_PAPER_KEY_REMINDERS is set (as the recover
+# package does), nor without a terminal (e.g. in scripts).
+
+remindAfterCommand() {
+    local command="$1"
+    [[ -n ${VALT_NO_PAPER_KEY_REMINDERS:-} ]] && return 0
+    [[ -t 0 && -t 1 ]] || [[ -n ${rayvnTest_PaperKeyAnswers:-} ]] || return 0 # only for someone at a terminal
+    [[ ${command} == keys || ${command} == paper || ${command} == key-info ]] && return 0
+    local keyFile; keyFile="${ defaultValtKeyFile; }"
+    [[ -f ${keyFile} ]] || return 0
+    require 'valt/paper-keys'
+    remindPaperKey "${keyFile}"
 }
 
 init() {
@@ -41,6 +60,7 @@ init() {
     declare -ga _args=()
     declare -gAr valtEnvVars=(
         ['VALT_KEY_FILE']="The default private key file; overrides the 'valt default-key' setting."
+        ['VALT_NO_PAPER_KEY_REMINDERS']="When set, valt does not remind you to print and store your paper key."
     )
 }
 
@@ -102,10 +122,12 @@ declare -gA cliSpec=(
     # key.info and offers to regenerate the paper key.
     #   --key-info   Key info file to write (default: key.info in the valt config directory).
     #   --downloads  Your browser's downloads directory (default: ~/Downloads).
+    #   --timeout    How many minutes to wait for the page; the page expires then too.
     #
-    # The page works offline and sends nothing anywhere: Save downloads valt-key-info.json,
-    # which valt imports and then deletes. key.info can also be edited by hand.
-    ['key-info']='keyInfo(--key-info|-k:str --downloads|-d:dir --help|-h)'
+    # The page works offline and sends nothing anywhere: Save downloads valt-key-info-ID.json,
+    # encrypted with a one-time key, which valt imports and then deletes. Cancel leaves key.info
+    # unchanged. key.info can also be edited by hand.
+    ['key-info']='keyInfo(--key-info|-k:str --downloads|-d:dir --timeout|-t:+int=60 --help|-h)'
 
     # Decrypt an encrypted file, or verify and extract a secure archive (.valt). You will be prompted
     # for the passphrase that protects the private key.
@@ -600,17 +622,20 @@ encryptCmdUsage() {
 }
 
 parseKeyInfoArgs() {
+    _opts+=(['timeout']="60")
     local _prevFailHandler="${_failHandler}"
     declare -g _failHandler=keyInfoCmdUsage
     local _value
     while (( $# > 0 )); do
         case "$1" in
-            --downloads | -d) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(-d|-k|-h|--key-info|--downloads|--help)$ ) ]] && fail "missing value for --downloads"; assertDirectory "$2"; _opts+=(['downloads']="$2"); shift 2 ;;
+            --downloads | -d) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(-t|-d|-k|-h|--key-info|--downloads|--timeout|--help)$ ) ]] && fail "missing value for --downloads"; assertDirectory "$2"; _opts+=(['downloads']="$2"); shift 2 ;;
             --downloads=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --downloads"; assertDirectory "${_value}"; _opts+=(['downloads']="${_value}"); shift ;;
             --help | -h) _opts+=(['help']="1"); shift ;;
             --help=*) fail "--help does not accept a value" ;;
-            --key-info | -k) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(-d|-k|-h|--key-info|--downloads|--help)$ ) ]] && fail "missing value for --key-info"; _opts+=(['key-info']="$2"); shift 2 ;;
+            --key-info | -k) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(-t|-d|-k|-h|--key-info|--downloads|--timeout|--help)$ ) ]] && fail "missing value for --key-info"; _opts+=(['key-info']="$2"); shift 2 ;;
             --key-info=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --key-info"; _opts+=(['key-info']="${_value}"); shift ;;
+            --timeout | -t) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(-t|-d|-k|-h|--key-info|--downloads|--timeout|--help)$ ) ]] && fail "missing value for --timeout"; assertPositiveInt "$2"; _opts+=(['timeout']="$2"); shift 2 ;;
+            --timeout=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --timeout"; assertPositiveInt "${_value}"; _opts+=(['timeout']="${_value}"); shift ;;
             --) shift; (( $# == 0 )) || unknownArg "$1" ;;
             *) unknownArg "$1" ;;
         esac
@@ -624,15 +649,18 @@ keyInfoCmdUsage() {
     show bold "people who can help, and notes. The page opens in your browser with the current values; when you"
     show bold "save it, valt imports it into key.info and offers to regenerate the paper key."
     echo
-    show "Usage:" bold blue "valt key-info" "[-d DOWNLOADS] [-k KEY-INFO]"
+    show "Usage:" bold blue "valt key-info" "[-d DOWNLOADS] [-k KEY-INFO] [-t TIMEOUT]"
     echo
     option "-k, --key-info KEY-INFO" "Key info file to write (default: key.info in the valt config" 31
     option "" "directory)." 31
     option "-d, --downloads DOWNLOADS" "Your browser's downloads directory (default: ~/Downloads)." 31
+    option "-t, --timeout TIMEOUT" "How many minutes to wait for the page; the page expires then too." 31
+    option "" "(default: 60)" 31
     option "-h, --help" "Print this help message." 31
     echo
-    echo "The page works offline and sends nothing anywhere: Save downloads valt-key-info.json,"
-    echo "which valt imports and then deletes. key.info can also be edited by hand."
+    echo "The page works offline and sends nothing anywhere: Save downloads valt-key-info-ID.json,"
+    echo "encrypted with a one-time key, which valt imports and then deletes. Cancel leaves key.info"
+    echo "unchanged. key.info can also be edited by hand."
     declare -F keyInfoCmdUsageExtra > /dev/null && keyInfoCmdUsageExtra
     bye "$@"
 }
@@ -1104,9 +1132,7 @@ encryptCmd() {
         rm "${file}" || fail
         show "Deleted" bold "${ tildePath "${file}"; }"
     fi
-    if (( sign || _opts['verify'] )); then
-        remindPaperKey "${keyFile}"
-    fi
+    return 0
 }
 
 archiveCreateCmd() {
@@ -1129,7 +1155,6 @@ archiveCreateCmd() {
     local archive; archive="${ newSecureArchive "${args[@]}"; }" || fail
     show "Created secure archive" bold "${ tildePath "${archive}"; }"
     show "Public companion (safe to share):" cyan "${ tildePath "${archive}.pub"; }"
-    remindPaperKey "${keyFile}"
 }
 
 archiveVerifyCmd() {
@@ -1372,13 +1397,8 @@ generatePaperKey() {
 
     show "Paper key file:" cyan "${ tildePath "${paperKeyFile}"; }"
     echo
-    show "Print at least one copy," italic "write your passphrase" "on the last page, and" \
-         bold "store copies in secure locations" glue "."
-    if (( replacing )); then
-        echo
-        show bold yellow "The previous paper key was replaced." "Destroy any printed copies of it so that outdated" \
-             "contact information is not relied upon."
-    fi
+
+    showPaperKeyNextSteps ${replacing}
 }
 
 # Decrypts a single file, verifying its signature first if present.
@@ -1543,7 +1563,10 @@ keyInfoCmd() {
 
     declare -g _keyInfoPageDir; _keyInfoPageDir="${ mktemp -d "${TMPDIR:-/tmp}/valt-key-info.XXXXXX"; }" || fail
     addExitHandler removeKeyInfoPageDir
-    local pageFile; newKeyInfoPage "${keyInfoFile}" "${_keyInfoPageDir}" pageFile
+    local timeoutSeconds=$(( ${_opts['timeout']:-60} * 60 ))
+    [[ -n ${rayvnTest_KeyInfoTimeoutSeconds:-} ]] && timeoutSeconds=${rayvnTest_KeyInfoTimeoutSeconds}
+    local deadline=$(( EPOCHSECONDS + timeoutSeconds ))
+    local pageFile pageKeys; newKeyInfoPage "${keyInfoFile}" "${_keyInfoPageDir}" pageFile pageKeys ${deadline}
     local markerFile="${_keyInfoPageDir}/opened"
     touch "${markerFile}" || fail
 
@@ -1553,15 +1576,29 @@ keyInfoCmd() {
     elif ! ( openKeyInfoPage "${pageFile}" ) &> /dev/null; then
         warn "Could not open the page; open it in your browser:" bold "${pageFile}"
     fi
-    show "Fill in the page in your browser and press" bold "Save" glue "; valt picks up the file from" \
-         blue "${ tildePath "${downloadsDir}"; }" glue "."
+    show "Fill in the page in your browser and press" bold "Save" glue "; valt picks up" \
+         bold "valt-key-info-${pageKeys%% *}.json" "from" blue "${ tildePath "${downloadsDir}"; }" glue "."
     local spinnerId download
     startSpinner spinnerId "Waiting for your key info (Ctrl-C to cancel)"
-    download="${ waitForKeyInfoDownload "${downloadsDir}" "${markerFile}"; }"
-    stopSpinner spinnerId "${successCheckMark}"
+    if ! download="${ waitForKeyInfoDownload "${downloadsDir}" "${markerFile}" "${pageKeys}" ${deadline}; }"; then
+        stopSpinner spinnerId ""
+        show "Stopped waiting after ${ _countOfMinutes $(( timeoutSeconds / 60 )); }; the page has expired and" \
+             bold "${ tildePath "${keyInfoFile}"; }" "is unchanged. Run" bold "valt key-info" "again when ready."
+        return 0
+    fi
+    stopSpinner spinnerId " ${successCheckMark}"
 
+    local secureDir; makeSecureTempDir secureDir
+    local decrypted="${secureDir}/key-info.json"
+    decryptKeyInfoDownload "${download}" "${pageKeys}" "${decrypted}"
+    if isKeyInfoCancel "${decrypted}"; then
+        rm -f "${decrypted}" "${download}" 2> /dev/null
+        show "Cancelled;" bold "${ tildePath "${keyInfoFile}"; }" "is unchanged."
+        return 0
+    fi
     local before; before="${ keyInfoValues "${keyInfoFile}"; }"
-    importKeyInfo "${download}" "${keyInfoFile}"
+    importKeyInfo "${decrypted}" "${keyInfoFile}"
+    rm -f "${decrypted}"
     local changed=1
     [[ ${ keyInfoValues "${keyInfoFile}"; } == "${before}" ]] && changed=0
     if (( changed )); then
@@ -1575,11 +1612,19 @@ keyInfoCmd() {
     rm -f "${download}" 2> /dev/null
     if [[ -e ${download} ]]; then
         warn "Could not delete" bold "${ tildePath "${download}"; }" glue \
-             ", perhaps because security software protects that folder. It holds your contacts' details, so please" \
-             "delete it yourself."
+             ", perhaps because security software protects that folder. It is encrypted with a key that is now gone," \
+             "so it is useless to anyone; delete it whenever convenient."
     fi
     (( changed )) && offerPaperKeyRegeneration # the paper key is only out of date if key.info changed
     return 0
+}
+
+# Outputs a number of minutes, e.g. '1 minute', '60 minutes' (less than one is shown as seconds).
+
+_countOfMinutes() {
+    local minutes=$1
+    if (( minutes == 1 )); then echo "1 minute"; elif (( minutes > 1 )); then echo "${minutes} minutes"
+    else echo "a few seconds"; fi
 }
 
 # Removes the key info page's temp dir (an exit handler, so that it also happens on Ctrl-C).
