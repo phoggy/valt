@@ -88,7 +88,7 @@ nix run github:phoggy/valt#recover -- decrypt FILE -i KEY_FILE
 |---------|-------------|
 | `valt keys` | Create a key pair with an encrypted private key and a paper key as backup. |
 | `valt paper` | Create or regenerate the paper key for an existing key pair. |
-| `valt key-info` | Fill in the paper key's personal information (`key.info`) in a web page. |
+| `valt key-info` | Fill in the paper key's personal information (`key-info.json`) in a web page. |
 | `valt encrypt FILE` | Encrypt and sign a single file. |
 | `valt decrypt FILE` | Decrypt a file, or verify and extract a secure archive. |
 | `valt archive create INPUT...` | Create a signed, encrypted archive of files and directories. |
@@ -108,8 +108,8 @@ directory.
 ## Quick Start
 
 ```bash
-valt keys                          # create valt.key and valt.pub (and the paper key, if key.info is complete)
-valt paper                         # (re)generate the paper key after editing key.info
+valt keys                          # create valt.key and valt.pub (and the paper key, if your key info is complete)
+valt paper                         # (re)generate the paper key after changing your key info
 valt encrypt taxes.pdf             # writes taxes.pdf.age and taxes.pdf.age.minisig
 valt decrypt taxes.pdf.age         # verifies the signature, writes taxes.pdf
 valt archive create -C ~/docs .    # writes USER-TIMESTAMP.valt and a shareable .valt.pub

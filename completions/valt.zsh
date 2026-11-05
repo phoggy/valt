@@ -17,9 +17,9 @@ _valt() {
                 'decrypt:Decrypt an encrypted file, or verify and extract a secure archive (.valt). You will be prompted'
                 'default-key:Show or set the default private key file, used by any command when no key is given.'
                 'encrypt:Encrypt a single file to FILE.age and sign it with your private key (FILE.age.minisig). Your own'
-                'key-info:Fill in the paper key'\''s personal information (the key.info file) in a web page: the letter, the people who can'
+                'key-info:Fill in the paper key'\''s personal information (your key info) in a web page: the letter, the people who can'
                 'keys:Generate an age key pair, with the private key encrypted by a passphrase, plus a PDF paper key as backup'
-                'paper:Generate the paper key PDF for an existing key pair, personalized from the key.info file. The PDF is written'
+                'paper:Generate the paper key PDF for an existing key pair, personalized from your key info. The PDF is written'
                 'pass-check:Check a password or passphrase: rate its strength, and look it up in the HaveIBeenPwned'
                 'passphrase:Generate random passphrases. Passphrases are made of words chosen at random from a list of'
                 'password:Generate random passwords, using letters, digits and symbols, with a random length between'
@@ -111,7 +111,7 @@ _valt() {
                     _arguments \
                     '(--downloads -d)'{--downloads,-d}'[Your browser'\''s downloads directory (default: ~/Downloads).]:downloads:_files -/' \
                     '(--help -h)'{--help,-h}'[Print this help message.]' \
-                    '(--key-info -k)'{--key-info,-k}'[Key info file to write (default: key.info in the valt config directory).]:key-info:' \
+                    '(--key-info -k)'{--key-info,-k}'[Key info file to write (default: key-info.json in the valt config directory).]:key-info:' \
                     '(--timeout -t)'{--timeout,-t}'[How many minutes to wait for the page; the page expires then too.]:timeout:'
                     ;;
                 keys)

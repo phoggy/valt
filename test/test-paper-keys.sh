@@ -3,11 +3,6 @@
 main() {
     init "$@"
 
-    # isKeyInfoComplete
-    testIsKeyInfoCompleteCreatesMissingFile
-    testIsKeyInfoCompleteTemplateIsIncomplete
-    testIsKeyInfoCompleteWhenCompleted
-
     # paperKeyCommand
     testPaperKeyCommandDefaultKey
     testPaperKeyCommandOtherKey
@@ -58,10 +53,23 @@ init() {
     testDir="${ makeTempDir; }"
     newValtKeys 'test' "${testDir}" pubFile keyFile
 
-    incompleteInfoFile="${testDir}/incomplete.info"
-    cp "${valtHome}/etc/key-info-template.sh" "${incompleteInfoFile}" || fail
-    completedInfoFile="${testDir}/completed.info"
-    gsed "s/^completed=.*/completed='yes'/" "${incompleteInfoFile}" > "${completedInfoFile}" || fail
+    incompleteInfoFile="${testDir}/incomplete.json"
+    echo '{"greeting":"Hi"}' > "${incompleteInfoFile}" || fail
+    completedInfoFile="${testDir}/completed.json"
+    # lint-skip-start (JSON, not tests)
+    cat > "${completedInfoFile}" <<'INFO' || fail
+{
+  "greeting": "Greetings,",
+  "closing": "I hope you never need this!",
+  "author": "Bob Barker",
+  "contacts": [
+    { "name": "Aunt Martha", "ways": [ { "type": "phone", "value": "+44 791 112 4456" } ] },
+    { "name": "Sam Ortiz", "ways": [ { "type": "email", "value": "sam@ortiz.dev" } ] }
+  ],
+  "notes": []
+}
+INFO
+    # lint-skip-end
 }
 
 # Copies the test key into a new directory, so that each test has its own paper key path.
@@ -73,33 +81,13 @@ newKeyCopy() {
     keyCopyRef="${dir}/test.key"
 }
 
-# Sets file modification times from YYYYMMDDhhmm values, in order: key, key.info, paper key.
+# Sets file modification times from YYYYMMDDhhmm values, in order: key, key info, paper key.
 
 setTimes() {
     local key="$1" info="$2" pdf="$3"
     touch -t "$4" "${key}" || fail
     touch -t "$5" "${info}" || fail
     touch -t "$6" "${pdf}" || fail
-}
-
-# ---- isKeyInfoComplete ----
-
-testIsKeyInfoCompleteCreatesMissingFile() {
-    local infoFile="${testDir}/missing.info"
-    assertFalse "missing key.info must be incomplete" isKeyInfoComplete "${infoFile}"
-    assertFile "${infoFile}"
-    assertInFile "completed=" "${infoFile}"
-}
-
-testIsKeyInfoCompleteTemplateIsIncomplete() {
-    assertFalse "template key.info must be incomplete" isKeyInfoComplete "${incompleteInfoFile}"
-}
-
-testIsKeyInfoCompleteWhenCompleted() {
-    unset completed author
-    assertTrue "completed key.info must be complete" isKeyInfoComplete "${completedInfoFile}"
-    assertVarIsNotDefined completed
-    assertVarIsNotDefined author
 }
 
 # ---- paperKeyCommand ----
@@ -135,7 +123,7 @@ testRemindMissingPaperKey() {
 testRemindCurrentPaperKey() {
     local key; newKeyCopy key
     local pdf; pdf="${ _paperKeyFile "${key}"; }"
-    local info="${testDir}/current.info"
+    local info="${testDir}/current.json"
     cp "${completedInfoFile}" "${info}" || fail
     setTimes "${key}" "${info}" "${pdf}" 202001010000 202001020000 202001030000
     local output; output="${ remindPaperKey "${key}" "${info}" 2>&1; }"
@@ -146,7 +134,7 @@ testRemindCurrentPaperKey() {
 testRemindKeyNewerThanPaperKey() {
     local key; newKeyCopy key
     local pdf; pdf="${ _paperKeyFile "${key}"; }"
-    local info="${testDir}/key-newer.info"
+    local info="${testDir}/key-newer.json"
     cp "${completedInfoFile}" "${info}" || fail
     setTimes "${key}" "${info}" "${pdf}" 202001040000 202001010000 202001030000
     local output; output="${ remindPaperKey "${key}" "${info}" 2>&1; }"
@@ -156,11 +144,11 @@ testRemindKeyNewerThanPaperKey() {
 testRemindKeyInfoNewerThanPaperKey() {
     local key; newKeyCopy key
     local pdf; pdf="${ _paperKeyFile "${key}"; }"
-    local info="${testDir}/info-newer.info"
+    local info="${testDir}/info-newer.json"
     cp "${completedInfoFile}" "${info}" || fail
     setTimes "${key}" "${info}" "${pdf}" 202001010000 202001040000 202001030000
     local output; output="${ remindPaperKey "${key}" "${info}" 2>&1; }"
-    assertContains "key.info has changed" "${output}"
+    assertContains "key info has changed" "${output}"
 }
 
 # ---- paper command ----
@@ -184,8 +172,8 @@ testPaperReplacesPdf() {
 
 testPaperRelativePaths() {
     local key; newKeyCopy key
-    cp "${completedInfoFile}" "${ dirName "${key}"; }/relative.info" || fail
-    local output; output="${ cd "${ dirName "${key}"; }" && valt paper -k relative.info "${ baseName "${key}"; }" 2>&1; }"
+    cp "${completedInfoFile}" "${ dirName "${key}"; }/relative.json" || fail
+    local output; output="${ cd "${ dirName "${key}"; }" && valt paper -k relative.json "${ baseName "${key}"; }" 2>&1; }"
     assertEqual 0 $? "paper with relative paths must succeed: ${output}"
     assertFile "${ _paperKeyFile "${key}"; }"
 }
@@ -231,23 +219,19 @@ testTypstVersionCheck() {
     unset -f typst
 }
 
-# The template's data: every key.info variable (arrays as JSON arrays, notes always an array), plus generated values.
+# The template's data: every key info value (notes always a list), plus generated values.
 
 testPaperDocumentData() {
-    local info="${testDir}/data.info"
-    cp "${completedInfoFile}" "${info}" || fail
-    printf '%s\n' "notes=\"Look in the safe.\"" "favoriteColor='blue'" "pets=('cat' 'dog')" >> "${info}"
-    local jsonFile="${testDir}/data.json"
-    (
-        sourceConfigFile "${info}"
-        _writeDocumentData "${info}" 0123456789abcdef "${jsonFile}"
-    ) || fail "could not write the document data"
+    local info="${testDir}/data.json"
+    jq 'del(.notes) | .favoriteColor = "blue" | .pets = ["cat", "dog"]' "${completedInfoFile}" > "${info}" || fail
+    local jsonFile="${testDir}/document-data.json"
+    _writeDocumentData "${info}" 0123456789abcdef "${jsonFile}"
     assertEqual 'Bob Barker' "${ jq -r '.author' "${jsonFile}"; }"
     assertEqual 2 "${ jq '.contacts | length' "${jsonFile}"; }"
-    assertEqual '["Look in the safe."]' "${ jq -c '.notes' "${jsonFile}"; }"
+    assertEqual 'Sam Ortiz' "${ jq -r '.contacts[1].name' "${jsonFile}"; }"
+    assertEqual '[]' "${ jq -c '.notes' "${jsonFile}"; }" "notes must always be a list"
     assertEqual 'blue' "${ jq -r '.favoriteColor' "${jsonFile}"; }"
     assertEqual '["cat","dog"]' "${ jq -c '.pets' "${jsonFile}"; }"
-    assertEqual 'null' "${ jq '.completed' "${jsonFile}"; }" "completed is not passed to the template"
     assertEqual '0123456789abcdef' "${ jq -r '.generated.checksum' "${jsonFile}"; }"
     assertEqual 'key.pem' "${ jq -r '.generated.armoredKey' "${jsonFile}"; }"
 }
@@ -255,7 +239,8 @@ testPaperDocumentData() {
 testPaperIncompleteKeyInfo() {
     local key; newKeyCopy key
     local output; output="${ valt paper -k "${incompleteInfoFile}" "${key}" 2>&1; }"
-    assertContains "has not been completed" "${output}"
+    assertContains "is not complete yet" "${output}"
+    assertContains "a closing line" "${output}" "what is missing must be listed"
     assertFileDoesNotExist "${ _paperKeyFile "${key}"; }"
 }
 

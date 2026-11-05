@@ -1,393 +1,534 @@
 <!DOCTYPE html>
-<!-- The form 'valt key-info' opens to fill in key.info. valt replaces the JSON in #key-info-data with the current values
+<!-- The form 'valt key-info' opens to fill in the key info file (key-info.json). valt replaces the JSON in #key-info-data with the current values
      and #key-info-keys with a unique id and one-time keys, and opens a copy of this page. Save downloads
      valt-key-info-ID.json, encrypted
      with those keys (AES-256-CBC, then HMAC-SHA256 of "IV_HEX.CIPHERTEXT_BASE64"), so that a copy left in Downloads, or
-     caught by a backup, is useless; valt decrypts and imports it into key.info. No network. -->
+     caught by a backup, is useless; valt decrypts and imports it into the key info file. No network.
+     The styles follow the rayvn design system (as on rayvn's and valt's GitHub pages) when dark, and the paper key's
+     colors when the system is light. The preview of the letter is styled as the paper key, in its fonts, which valt
+     embeds in #key-info-fonts. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>valt: paper key information</title>
+<style id="key-info-fonts"></style>
 <style>
     :root {
-        --text: #222; --muted: #666; --heading: #1d3e81; --accent: #086ddd; --border: #d0d4da;
-        --field: #fff; --page: #f4f5f7; --card: #fff; --error: #c01c28; --ok: #1a7f37;
-        --alpha: #1d3e81; --digit: #c45a00; --special: #b5179e;
-        --code-bg: #eef1f6; --code-border: #d9dee7; --code-text: #1d3e81;
+        color-scheme: dark;
+        --rv-bg: #27262b; --rv-bg-raised: #302d36; --rv-bg-code: #0d1117; --rv-bg-hover: rgba(255, 255, 255, 0.04);
+        --rv-fg: #e6edf3; --rv-fg-muted: #8b949e; --rv-heading: #e6edf3; --rv-border: #44434d; --rv-field-border: #44434d;
+        --rv-accent: #5ea1fb; --rv-btn-primary-bg: #2448a7; --rv-focus-ring: 0 0 0 2px rgba(94, 161, 251, 0.45);
+        --rv-success: #859900; --rv-error: #dc322f; --rv-warning: #b58900; --rv-warning-text: #b58900;
+        --rv-term-ok: #2eff4e; --rv-term-link: #5ea1fb;
+        --rv-code-type: #cb4b16; --rv-code-keyword: #6c71c4;
+        --rv-font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+                        sans-serif;
+        --rv-font-mono: "SFMono-Regular", Menlo, Consolas, ui-monospace, monospace;
     }
-    @media (prefers-color-scheme: dark) {
+    @media (prefers-color-scheme: light) { /* the paper key's colors (etc/key-doc-template.typ) */
         :root {
-            --text: #e6e6e6; --muted: #a0a0a0; --heading: #8fb4ff; --accent: #6ea8ff; --border: #3a3f47;
-            --field: #1e2228; --page: #121418; --card: #1a1d22; --error: #ff6b6b; --ok: #4cc06a;
-            --alpha: #8fb4ff; --digit: #ffa94d; --special: #f783ac;
-            --code-bg: #262b33; --code-border: #39404a; --code-text: #b8cdf5;
+            color-scheme: light;
+            --rv-bg: #ffffff; --rv-bg-raised: #f5f6fa; --rv-bg-code: #f6f8fa; --rv-bg-hover: rgba(0, 0, 0, 0.04);
+            --rv-fg: #222222; --rv-fg-muted: #6e7781; --rv-heading: #1d3e81; --rv-border: #e4e2e6;
+            --rv-field-border: #d0d4da; --rv-accent: #086ddd; --rv-btn-primary-bg: #1d3e81;
+            --rv-focus-ring: 0 0 0 2px rgba(8, 109, 221, 0.35);
+            --rv-success: #5f7000; --rv-error: #dc267f; --rv-warning: #ff9100; --rv-warning-text: #b35f00;
+            --rv-term-ok: #1a8f2e; --rv-term-link: #086ddd;
         }
     }
     * { box-sizing: border-box; }
-    body { margin: 0; background: var(--page); color: var(--text); font: 15px/1.5 system-ui, -apple-system, sans-serif; }
-    main { max-width: 1060px; margin: 0 auto; padding: 32px 16px 64px; }
-    h1 { color: var(--heading); font-size: 26px; margin: 0 0 4px; }
-    h2 { color: var(--heading); font-size: 18px; margin: 0 0 4px; }
-    p.lead, p.hint { color: var(--muted); margin: 4px 0 16px; }
-    section { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin: 18px 0; }
-    label { display: block; font-weight: 600; margin: 12px 0 4px; }
-    input, textarea {
-        width: 100%; padding: 8px 10px; font: inherit; color: var(--text); background: var(--field);
-        border: 1px solid var(--border); border-radius: 6px;
+    body {
+        margin: 0; background: var(--rv-bg); color: var(--rv-fg); font: 0.9375rem/1.6 var(--rv-font-sans);
+        -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
     }
-    textarea { min-height: 70px; resize: vertical; }
-    input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-    .invalid { border-color: var(--error); }
-    .contact { border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin: 12px 0; }
-    .contact-head { display: flex; align-items: center; gap: 8px; }
-    .contact-head strong { flex: 1; }
-    button {
-        font: inherit; border: 1px solid var(--border); background: var(--field); color: var(--text);
-        border-radius: 6px; padding: 6px 12px; cursor: pointer;
-    }
-    button:hover { border-color: var(--accent); }
-    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; padding: 10px 22px; }
-    button.small { padding: 2px 8px; font-size: 13px; }
-    .actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-    #status { font-weight: 600; }
-    #status.error { color: var(--error); }
-    #status.ok { color: var(--ok); }
-    .preview { font-size: 14px; }
-    .preview .closing { font-style: italic; margin-top: 18px; }
-    .preview .signature { font-size: 20px; margin-top: 6px; }
-    .preview ol { padding-left: 22px; }
-    .preview .empty { color: var(--muted); font-style: italic; }
-    nav.tabs { display: flex; gap: 6px; margin: 20px 0 4px; border-bottom: 1px solid var(--border); }
-    nav.tabs button {
-        border: 1px solid transparent; border-bottom: none; border-radius: 8px 8px 0 0; background: none;
-        padding: 8px 16px; margin-bottom: -1px; color: var(--muted); font-weight: 600;
-    }
-    nav.tabs button[aria-selected="true"] { background: var(--card); border-color: var(--border); color: var(--heading); }
-    .skip { margin: 14px 0 0; }
-    .skip a, a { color: var(--accent); }
-    .understand h2 { margin-top: 2px; }
-    .understand ul { padding-left: 22px; margin: 8px 0; }
-    .understand li { margin: 6px 0; }
-    .understand .warning { border-left: 4px solid var(--error); padding-left: 12px; }
-    .table-scroll { overflow-x: auto; } /* a narrow window scrolls the table rather than overflowing its box */
-    table.examples { border-collapse: collapse; margin: 12px 0 14px 18px; }
-    table.examples th {
-        text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
-        color: var(--muted); padding: 0 18px 6px 0; border-bottom: 1px solid var(--border);
-    }
-    table.examples td { padding: 9px 18px 9px 0; vertical-align: middle; border-bottom: 1px solid var(--border); }
-    table.examples td:last-child, table.examples th:last-child { text-align: right; padding-right: 0; }
-    table.examples td:nth-child(n+2) { white-space: nowrap; }
-    table.examples td:nth-child(n+4) { font-weight: 600; }
-    table.examples th .sub { font-weight: 400; text-transform: none; letter-spacing: 0; }
-    dl { margin: 8px 0; }
-    dt { font-family: ui-monospace, Menlo, monospace; font-weight: 600; color: var(--heading); margin-top: 10px; }
-    dd { margin: 2px 0 0 18px; }
-    .pw {
-        font-family: ui-monospace, Menlo, monospace; font-size: 14px; white-space: pre; padding: 3px 9px;
-        background: var(--field); border: 1px solid var(--border); border-radius: 6px;
-    }
-    .pw .alpha { color: var(--alpha); }
-    .pw .digit { color: var(--digit); }
-    .pw .special { color: var(--special); }
-    blockquote { margin: 12px 0; padding-left: 14px; border-left: 3px solid var(--border); font-style: italic; }
-    blockquote cite { display: block; margin-top: 4px; font-style: normal; color: var(--muted); }
-    code {
-        font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: var(--code-text);
-        background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 4px;
-        padding: 1px 5px; white-space: nowrap;
-    }
+    a { color: var(--rv-accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
     [hidden] { display: none !important; }
-    .countdown {
-        margin: 10px 0 0; padding: 10px 14px; border-radius: 8px; font-size: 14px;
-        background: var(--code-bg); border: 1px solid var(--code-border); border-left: 4px solid var(--accent);
+
+    /* Layout: the tabs and countdown in a sidebar, the tab's content beside it */
+
+    .page { max-width: 70rem; margin: 0 auto; min-height: 100vh; display: flex; }
+    .side-bar {
+        width: 16.5rem; min-width: 16.5rem; border-right: 1px solid var(--rv-border); display: flex; flex-direction: column;
+        position: sticky; top: 0; height: 100vh; /* keeps the countdown in view */
     }
-    .countdown.soon { border-left-color: var(--error); color: var(--error); }
-    .countdown .left { font-weight: 600; white-space: nowrap; }
+    .site-header, .main-header { height: 3.75rem; display: flex; align-items: center; border-bottom: 1px solid var(--rv-border); }
+    .site-header { padding: 0 1.5rem; }
+    .site-title { font: 600 1.5rem var(--rv-font-mono); color: var(--rv-fg); }
+    .site-nav { padding: 0.75rem 0; flex: 1; }
+    .nav-list { list-style: none; padding: 0; margin: 0; }
+    .nav-list-link { display: flex; padding: 0.35rem 1.5rem; color: var(--rv-accent); }
+    .nav-list-link:hover { background: var(--rv-bg-hover); text-decoration: none; }
+    .nav-list-link.active {
+        background-image: linear-gradient(-90deg, var(--rv-bg-raised), transparent); font-weight: 600;
+        box-shadow: inset 3px 0 0 var(--rv-accent);
+    }
+    .countdown { padding: 1rem 1.5rem; border-top: 1px solid var(--rv-border); display: flex; flex-direction: column; gap: 0.5rem; }
+    .countdown .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--rv-fg-muted); }
+    .countdown .bar { height: 4px; background: var(--rv-bg-raised); border-radius: 2px; overflow: hidden; }
+    .countdown .bar div { height: 4px; background: var(--rv-warning); }
+    .countdown.soon .left { color: var(--rv-error); }
+    .countdown.soon .bar div { background: var(--rv-error); }
+    .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .main-header { padding: 0 2rem; gap: 1rem; font-size: 0.8125rem; color: var(--rv-fg-muted); }
+    .main-header .command { font-family: var(--rv-font-mono); }
+    .main-header .local { margin-left: auto; }
+    .main-content { padding: 2rem; max-width: 52rem; }
+
+    @media (max-width: 50rem) {
+        .page { flex-direction: column; }
+        .side-bar { width: auto; min-width: 0; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--rv-border); }
+        .site-header { height: 3rem; padding: 0 1rem; }
+        .site-nav { padding: 0.5rem 0; }
+        .nav-list { display: flex; flex-wrap: wrap; }
+        .nav-list-link { padding: 0.35rem 1rem; }
+        .nav-list-link.active { box-shadow: inset 0 -3px 0 var(--rv-accent); background-image: none; }
+        .countdown { padding: 0.75rem 1rem; }
+        .main-header { height: auto; padding: 0.75rem 1rem; flex-wrap: wrap; }
+        .main-content { padding: 1.5rem 1rem; }
+    }
+
+    /* Content */
+
+    h1 { font-size: 2.25rem; font-weight: 300; line-height: 1.25; color: var(--rv-heading); margin: 0 0 1rem; }
+    h2 { font-size: 1.5rem; font-weight: 500; line-height: 1.25; color: var(--rv-heading); margin: 2rem 0 0.75rem; }
+    h3 { font-size: 1.125rem; font-weight: 500; line-height: 1.25; color: var(--rv-accent); margin: 1.75rem 0 0.75rem; }
+    h4 { font-size: 0.75rem; font-weight: 400; text-transform: uppercase; letter-spacing: 0.04em; color: var(--rv-fg-muted); margin: 1.25rem 0 0.5rem; }
+    @media (max-width: 31.25rem) {
+        h1 { font-size: 2rem; }
+        h2 { font-size: 1.125rem; }
+        h3 { font-size: 1rem; }
+    }
+    p { margin: 0.75rem 0; }
+    dl.headed { grid-template-columns: 8rem 1fr; column-gap: 1.5rem; row-gap: 0.75rem; align-items: baseline; margin: 1rem 0; }
+    dl.headed dt { font-size: 1.125rem; font-weight: 500; line-height: 1.4; color: var(--rv-accent); }
+    @media (max-width: 31.25rem) { dl.headed { grid-template-columns: 1fr; row-gap: 0.125rem; } }
+    p.after-terms { margin-top: 1.5rem; }
+    ul, ol { padding-left: 1.5rem; }
+    li { margin: 0.25rem 0; }
+    .muted, .hint { color: var(--rv-fg-muted); }
+    dl { display: grid; grid-template-columns: max-content 1fr; column-gap: 1.25rem; row-gap: 0.4rem; margin: 0.5rem 0; }
+    dt { font-weight: 500; }
+    dd { margin: 0; }
+    dl.terms dt { color: var(--rv-accent); font-weight: 600; }
+    @media (max-width: 31.25rem) {
+        dl { grid-template-columns: 1fr; }
+        dd { margin-bottom: 0.5rem; }
+    }
+    code, pre, .pw { font-family: var(--rv-font-mono); background: var(--rv-bg-code); border: 1px solid var(--rv-border); }
+    code { font-size: 0.85em; padding: 0.2em 0.45em; border-radius: 0.25rem; white-space: nowrap; }
+    pre { font-size: 0.8125rem; line-height: 1.55; padding: 0.875rem 1rem; border-radius: 0.25rem; overflow-x: auto; margin: 0.75rem 0; }
+    pre .prompt { color: var(--rv-fg-muted); user-select: none; }
+    pre.terminal { white-space: pre-wrap; overflow-wrap: anywhere; } /* wraps as a terminal would */
+    pre .t-ok { color: var(--rv-term-ok); }   /* valt's terminal colors, as its output shows them */
+    pre .t-link { color: var(--rv-term-link); }
+    blockquote { margin: 0.75rem 0; padding: 0.25rem 0 0.25rem 1rem; border-left: 3px solid var(--rv-border); font-style: italic; }
+    blockquote cite { display: block; margin-top: 0.25rem; font-style: normal; color: var(--rv-fg-muted); }
+    .box { background: var(--rv-bg-raised); border: 1px solid var(--rv-border); border-radius: 0.375rem; padding: 1rem; }
+    .box > :first-child { margin-top: 0; }
+    .box > :last-child { margin-bottom: 0; }
+    .box.danger { border-color: var(--rv-error); }
+    .box.danger strong { color: var(--rv-error); }
+    .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin: 0.75rem 0; }
+    .choices h3 { margin: 0 0 0.375rem; }
+    @media (max-width: 40rem) { .choices { grid-template-columns: 1fr; } }
+
+    .table-scroll { overflow-x: auto; } /* a narrow window scrolls the table rather than overflowing the page */
+    table.examples { border-collapse: collapse; margin: 0.75rem 0; }
+    table.examples th {
+        text-align: left; vertical-align: bottom; font-size: 0.75rem; font-weight: 500; text-transform: uppercase;
+        letter-spacing: 0.04em; color: var(--rv-fg-muted); padding: 0 1rem 0.4rem 0; border-bottom: 1px solid var(--rv-border);
+    }
+    table.examples th .sub { font-weight: 400; text-transform: none; letter-spacing: 0; }
+    table.examples td { padding: 0.55rem 1rem 0.55rem 0; vertical-align: middle; border-bottom: 1px solid var(--rv-border); }
+    table.examples td:first-child, table.examples td:last-child { white-space: nowrap; }
+    table.examples td:last-child { font-weight: 600; }
+    .weak { color: var(--rv-error); }
+    .fair { color: var(--rv-warning-text); }
+    .strong { color: var(--rv-success); }
+    .pw { font-size: 0.875rem; white-space: pre; padding: 3px 9px; border-radius: 0.375rem; }
+    .pw .alpha { color: var(--rv-accent); }
+    .pw .digit { color: var(--rv-code-type); }
+    .pw .special { color: var(--rv-code-keyword); }
+
+    /* Form */
+
+    input, select, textarea {
+        font: inherit; color: var(--rv-fg); background: var(--rv-bg-code); border: 1px solid var(--rv-field-border);
+        border-radius: 0.25rem; padding: 0.375rem 0.625rem; outline: none; min-width: 0;
+    }
+    select { background: var(--rv-bg-raised); padding: 0.375rem 0.5rem; font-size: 0.8125rem; }
+    textarea { width: 100%; resize: vertical; padding: 0.5rem 0.625rem; }
+    input:focus, select:focus, textarea:focus { border-color: var(--rv-accent); box-shadow: var(--rv-focus-ring); }
+    .invalid, .invalid:focus { border-color: var(--rv-error); }
+    .letter { display: grid; grid-template-columns: max-content 1fr; column-gap: 1.25rem; row-gap: 0.625rem; align-items: center; margin-top: 0.75rem; }
+    .letter label { font-weight: 500; }
+    @media (max-width: 31.25rem) { .letter { grid-template-columns: 1fr; row-gap: 0.25rem; } }
+    .btn {
+        display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.3em 1em; font: inherit; font-weight: 500;
+        line-height: 1.5; color: var(--rv-fg); background: var(--rv-bg-raised); border: 1px solid var(--rv-border);
+        border-radius: 0.375rem; cursor: pointer;
+    }
+    .btn:hover { filter: brightness(1.15); }
+    .btn:disabled { opacity: 0.35; cursor: default; filter: none; }
+    .btn-primary { background: var(--rv-btn-primary-bg); color: #fff; border-color: transparent; padding: 0.375rem 1.375rem; }
+    .btn.icon { padding: 0.25rem 0.375rem; }
+    .btn.small { padding: 0.0625rem 0.625rem; font-size: 0.8125rem; }
+    .btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .actions { display: flex; align-items: center; gap: 0.75rem; margin-top: 1.75rem; flex-wrap: wrap; }
+    #status { font-weight: 500; }
+    #status.error { color: var(--rv-error); }
+    #status.ok { color: var(--rv-success); }
+
+    .contacts { display: flex; flex-direction: column; border-top: 1px solid var(--rv-border); margin-top: 0.75rem; }
+    .contact { display: flex; flex-direction: column; gap: 0.5rem; padding: 1rem 0; border-bottom: 1px solid var(--rv-border); }
+    .contact-head { display: flex; align-items: center; gap: 0.625rem; }
+    .contact-head .number { font-family: var(--rv-font-mono); color: var(--rv-fg-muted); }
+    .contact-head input { flex: 1; font-weight: 500; }
+    .ways { display: flex; flex-direction: column; gap: 0.375rem; padding-left: 1.5rem; }
+    .method { display: grid; grid-template-columns: 9.375rem minmax(0, 1fr) auto; gap: 0.5rem; align-items: start; }
+    .method .message { grid-column: 2 / 4; font-size: 0.75rem; color: var(--rv-error); margin-top: -0.25rem; }
+    .add-method { display: flex; gap: 0.375rem; flex-wrap: wrap; align-items: center; }
+    .add-method span { font-size: 0.75rem; color: var(--rv-fg-muted); margin-right: 0.25rem; }
+    .summary { font-size: 0.8125rem; color: var(--rv-fg-muted); overflow-wrap: anywhere; }
+    .summary.warning { color: var(--rv-warning-text); }
+    .summary.error { color: var(--rv-error); }
+    @media (max-width: 31.25rem) {
+        .ways { padding-left: 0; }
+        .method { grid-template-columns: minmax(0, 1fr) auto; }
+        .method select { grid-column: 1 / 3; }
+        .method .message { grid-column: 1 / 3; }
+    }
+
+    /* The preview: paper, in the paper key's colors and fonts (sizes in pt as there, 1pt being 4/3px) */
+
+    .preview {
+        margin-top: 0.75rem; padding: 2rem 2.25rem; background: #ffffff; color: #222222; border: 1px solid #d0d4da;
+        border-radius: 0.25rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); color-scheme: light;
+        font: 15px/1.6 "Google Sans Flex", var(--rv-font-sans);
+    }
+    .preview p { margin: 0 0 1em; }
+    .preview h2 { font-size: 22.5px; font-weight: 700; color: #1d3e81; margin: 0 0 0.75em; }
+    .preview .page-break { border: none; border-top: 1px dashed #c0c4ca; margin: 1.75rem -2.25rem; }
+    .preview .human { font-family: "Shantell Sans", var(--rv-font-sans); }
+    .preview .closing { font-size: 18px; font-style: italic; margin: 2.25em 0 0; }
+    .preview .signature { font: 29px "Yellowtail", cursive; margin: 0.6em 0 0; }
+    .preview ol { margin: 0 0 1em; padding-left: 1.5em; }
+    .preview li { margin: 0 0 0.75em; }
+    .preview .notes p { margin: 0; }
+    .preview .empty { color: #8a8f98; font-style: italic; }
+    @media (max-width: 31.25rem) {
+        .preview { padding: 1.25rem; }
+        .preview .page-break { margin: 1.25rem -1.25rem; }
+    }
 </style>
 </head>
 <body>
-<main>
-    <h1>Your valt key and paper key</h1>
-    <p id="countdown" class="countdown" role="status" hidden></p>
-
-    <nav class="tabs" role="tablist">
-        <button type="button" role="tab" id="tab-understand" aria-controls="understand">1. How it works</button>
-        <button type="button" role="tab" id="tab-strength" aria-controls="strength">2. Strong passphrases</button>
-        <button type="button" role="tab" id="tab-detail" aria-controls="detail">3. Strength in detail</button>
-        <button type="button" role="tab" id="tab-info" aria-controls="info">4. Your information</button>
-    </nav>
-
-    <div id="understand" class="understand" role="tabpanel">
-        <p class="skip">Already know how valt works? <a href="#info" data-tab="info">Skip to your information →</a></p>
-
-        <section>
-            <h2>One key pair</h2>
-            <p>Normally you will need only a single key pair for all your file encryption needs: a public key and a
-                private key.</p>
-            <ul>
-                <li>valt encrypts (locks) files with your <strong>public key</strong>. It is safe to share: it can
-                    only encrypt files, not decrypt them.</li>
-                <li>Only your <strong>private key</strong> can decrypt (unlock) them. valt also signs what it
-                    encrypts, so any
-                    tampering is detected.</li>
+<div class="page">
+    <aside class="side-bar">
+        <div class="site-header"><span class="site-title">valt</span></div>
+        <nav class="site-nav">
+            <ul class="nav-list" role="tablist">
+                <li><a class="nav-list-link" role="tab" id="tab-understand" href="#understand" data-tab="understand">How it works</a></li>
+                <li><a class="nav-list-link" role="tab" id="tab-strength" href="#strength" data-tab="strength">Strong passphrases</a></li>
+                <li><a class="nav-list-link" role="tab" id="tab-detail" href="#detail" data-tab="detail">Strength in detail</a></li>
+                <li><a class="nav-list-link" role="tab" id="tab-info" href="#info" data-tab="info">Your information</a></li>
             </ul>
-        </section>
-
-        <section>
-            <h2>Your private key and its passphrase</h2>
-            <ul>
-                <li>Your private key is itself encrypted with a <strong>passphrase</strong>, so it can be stored anywhere:
-                    a stolen copy of the key file is useless on its own.</li>
-                <li>A passphrase is simply a password made of several words: easier to remember, and much harder to
-                    guess. See <a href="#strength" data-tab="strength">Strong passphrases</a>.</li>
-                <li>Your private key also contains your public key, so the public key can always be recreated from it
-                    (with the passphrase): if you lose the public key file, <code>valt public-key</code> makes it again.
-                    The private key is the one that matters.</li>
-            </ul>
-        </section>
-
-        <section>
-            <h2>The paper key</h2>
-            <p>The paper key is a printed backup, for you and for whoever you would want to recover your files if
-                you cannot: family, or an executor. It contains:</p>
-            <ul>
-                <li>your private key, as a QR code and as text, both still encrypted with the passphrase;</li>
-                <li>space to write the passphrase by hand, or notes saying where to find it;</li>
-                <li>step-by-step instructions for decrypting your files, and the people who can help with them.</li>
-            </ul>
-            <p>To make it useful:</p>
-            <ul>
-                <li><strong>Include at least one person who can help</strong> with the technical steps, who has agreed
-                    to help, with ways to reach them.</li>
-                <li><strong>Print several copies</strong>, and decide where the passphrase goes: see below.</li>
-                <li><strong>Keep them in separate secure places</strong>, such as a safe deposit box, a fire safe, or
-                    with people you trust.</li>
-                <li><strong>Regenerate it whenever this information changes</strong>, and destroy the old copies.
-                    valt will remind you to print and store it.</li>
-            </ul>
-        </section>
-
-        <section>
-            <h2>Where to keep the passphrase</h2>
-            <p>Whoever recovers your files will need the passphrase as well as the paper key. There are two ways to
-                make sure they can find it:</p>
-            <ul>
-                <li><strong>Write it on the paper key.</strong> It cannot be missed, but every copy with it written on is
-                    a complete key: anyone who holds that copy, and can reach your encrypted files, can decrypt
-                    them.</li>
-                <li><strong>Keep it somewhere else, and say where in the notes</strong> (more secure). A copy on its own
-                    is then useless, so copies can be given out more freely. But that place has to last, and stay
-                    findable by the right people.</li>
-            </ul>
-            <p>Some good places to keep it:</p>
-            <ul>
-                <li>a password manager with emergency access: Bitwarden and 1Password let a person you choose request
-                    access, which you can refuse within a waiting period;</li>
-                <li>a sealed envelope held by your estate attorney or executor, to be released with your will;</li>
-                <li>a mix: one copy with the passphrase written on it in your most secure place, such as a safe deposit
-                    box, and copies with a note instead everywhere else.</li>
-            </ul>
-        </section>
-
-        <section>
-            <h2>If the passphrase is lost</h2>
-            <p class="warning">If the passphrase is lost, and no paper key has it written on it (or notes saying
-                where to find it), the files encrypted to your key <strong>cannot be recovered</strong>, by you or anyone
-                else. There is no reset and no back door: that is what keeps them safe.</p>
-        </section>
-
-        <div class="actions">
-            <button type="button" class="primary" data-tab="strength">Next: strong passphrases</button>
+        </nav>
+        <div id="countdown" class="countdown" role="status" hidden>
+            <span class="label">valt is waiting</span>
+            <span><strong class="left"></strong> left to <strong>Save</strong> or <strong>Cancel</strong> on
+                <a href="#info" data-tab="info">Your information</a></span>
+            <div class="bar"><div></div></div>
         </div>
-    </div>
+    </aside>
 
-    <div id="strength" class="understand" role="tabpanel">
-        <p class="skip"><a href="#info" data-tab="info">Skip to your information →</a></p>
+    <main class="main">
+        <div class="main-header">
+            <span class="command">valt key-info</span>
+            <span class="local">Opened locally · no network</span>
+        </div>
+        <div class="main-content" id="content">
 
-        <section>
-            <h2>Why a passphrase</h2>
-            <p>Rather than a typical password, a multi-word <strong>passphrase</strong> is a <em>much</em> better
-                choice, since it is far easier to remember. Just as with a password manager, the idea is that you
-                remember <strong>one</strong> secret that gives you access to all of your encrypted data.</p>
-            <p>Since human memory <em>is</em> fallible, it is extremely important that you keep it on paper somewhere
-                secure, in case you forget it or become incapacitated: that is what the paper key is for. If you use a
-                password manager (<em>strongly recommended</em>), store your keys and passphrase in it too.</p>
-        </section>
+    <div id="panel-understand" role="tabpanel" aria-labelledby="tab-understand">
+        <h1>How it works</h1>
+        <p class="muted">Already know how valt works? <a href="#info" data-tab="info">Skip to your information</a></p>
 
-        <section>
-            <h2>Strength depends on what it protects</h2>
-            <p>How long a password takes to crack depends on how an attacker can try guesses:</p>
-            <ul>
-                <li><strong>An online account</strong>: guesses are slow while they go through the site, which can
-                    limit them, but if the site's password database is ever stolen they can be tried offline,
-                    quickly or very quickly depending on how the site stored it. That is out of your control.</li>
-                <li><strong>An encrypted file or private key</strong>: someone with a copy can guess offline, as fast
-                    as their hardware allows, but each guess is deliberately slow. <a href="https://age-encryption.org">age</a>, the encryption tool valt
-                    uses, encrypts the key using <a href="https://en.wikipedia.org/wiki/Scrypt">scrypt</a>, a computation designed to take a lot of time and memory for
-                    every single guess.</li>
-            </ul>
-            <p>Your valt key is always the second case. valt judges its passphrase against a <strong>professional
-                attacker</strong>: one with purpose-built hardware.</p>
-        </section>
+        <h2>One key pair</h2>
+        <p>Normally you will need only a single key pair for all your file encryption needs: a public key and a private
+            key.</p>
+        <ul>
+            <li>valt encrypts (locks) files with your <strong>public key</strong>. It is safe to share: it can only
+                encrypt files, not decrypt them.</li>
+            <li>Only your <strong>private key</strong> can decrypt (unlock) them. valt also signs what it encrypts, so
+                any tampering is detected.</li>
+        </ul>
 
-        <section>
-            <h2>What makes one strong</h2>
-            <p>Estimates from valt's strength checker, against a professional attacker:</p>
-            <!-- These estimates are copied by hand from valt pass-check (the default threat level, professional), so
-                 update them if its estimates change. For each example:
-                     printf '%s' 'EXAMPLE' | valt pass-check -u account   (the two "if the account is breached" lines)
-                     printf '%s' 'EXAMPLE' | valt pass-check -u file      (the 1024 cores line)
-                 The lines the rating is based on are underlined in a terminal. Last updated 2026-11-03. -->
-            <div class="table-scroll">
-            <table class="examples">
-                <tr><th>Example</th><th>Kind</th><th>To remember</th><th>Online account, if breached<br><span class="sub">slow
-                    / fast hashing</span></th><th>valt key</th></tr>
-                <tr><td><span class="pw">My dog Oscar</span></td>
-                    <td>short phrase</td><td><strong>easy</strong></td>
-                    <td>6 days / under a second</td><td>2 months</td></tr>
-                <tr><td><span class="pw">BkZB&amp;XWGj%3Tx</span></td>
-                    <td>random password</td><td><strong>hard</strong></td>
-                    <td>31 years / 16 minutes</td><td>303 years</td></tr>
-                <tr><td><span class="pw">repossess thursday flaky lazy</span></td>
-                    <td>random passphrase</td><td><strong>fair</strong></td>
-                    <td>57 million years / 57 years</td><td>560 million years</td></tr>
-            </table>
+        <h2>Your private key and its passphrase</h2>
+        <ul>
+            <li>Your private key is itself encrypted with a <strong>passphrase</strong>, so it can be stored anywhere: a
+                stolen copy of the key file is useless on its own.</li>
+            <li>A passphrase is simply a password made of several words: easier to remember, and much harder to guess.
+                See <a href="#strength" data-tab="strength">Strong passphrases</a>.</li>
+            <li>Your private key also contains your public key, so the public key can always be recreated from it (with
+                the passphrase): if you lose the public key file, <code>valt public-key</code> makes it again. The
+                private key is the one that matters.</li>
+        </ul>
+
+        <h2>The paper key</h2>
+        <p>The paper key is a printed backup, for you and for whoever you would want to recover your files if you
+            cannot: family, or an executor. It contains:</p>
+        <ul>
+            <li>your private key, as a QR code and as text, both still encrypted with the passphrase;</li>
+            <li>space to write the passphrase by hand, or notes saying where to find it;</li>
+            <li>step-by-step instructions for decrypting your files, and the people who can help with them.</li>
+        </ul>
+        <h4>To make it useful</h4>
+        <dl class="terms">
+            <dt>Include a helper</dt>
+            <dd>At least one person who can help with the technical steps, who has agreed to help, with ways to reach
+                them.</dd>
+            <dt>Print several copies</dt>
+            <dd>And decide where the passphrase goes: see below.</dd>
+            <dt>Store them apart</dt>
+            <dd>In separate secure places, such as a safe deposit box, a fire safe, or with people you trust.</dd>
+            <dt>Regenerate on change</dt>
+            <dd>Whenever this information changes, and destroy the old copies. valt will remind you to print and store
+                it.</dd>
+        </dl>
+
+        <h2 id="where-to-keep">Where to keep the passphrase</h2>
+        <p>Whoever recovers your files will need the passphrase as well as the paper key. There are two ways to make
+            sure they can find it:</p>
+        <div class="choices">
+            <div class="box">
+                <h3>Write it on the paper key</h3>
+                <p>It cannot be missed, but every copy with it written on is a complete key: anyone who holds that copy,
+                    and can reach your encrypted files, can decrypt them.</p>
             </div>
-            <p>A good passphrase requires randomness, and we humans are very bad at that. There's a famous
-                <a href="https://xkcd.com/936/">xkcd comic</a> on this subject that ends with this gem:</p>
-            <blockquote>Through 20 years of effort, we've successfully trained everyone to use passwords that are hard
-                for humans to remember, but easy for computers to guess.<cite>Randall Munroe</cite></blockquote>
-            <p>That comic makes another important point in its last panel: creating a mental scene to represent your
-                passphrase is an <em>excellent</em> way to help remember it.</p>
-            <p>For how these estimates are made, see <a href="#detail" data-tab="detail">Strength in detail</a>.</p>
-        </section>
+            <div class="box">
+                <h3>Keep it elsewhere, say where in the notes</h3>
+                <p>More secure. A copy on its own is then useless, so copies can be given out more freely. But that place
+                    has to last, and stay findable by the right people.</p>
+            </div>
+        </div>
+        <h4>Some good places to keep it</h4>
+        <ul>
+            <li>a password manager with emergency access: Bitwarden and 1Password let a person you choose request
+                access, which you can refuse within a waiting period;</li>
+            <li>a sealed envelope held by your estate attorney or executor, to be released with your will;</li>
+            <li>a mix: one copy with the passphrase written on it in your most secure place, such as a safe deposit box,
+                and copies with a note instead everywhere else.</li>
+        </ul>
 
-        <section>
-            <h2>How valt helps</h2>
-            <ul>
-                <li><code>valt passphrase</code> generates strong random passphrases to choose from.</li>
-                <li>valt checks how long a well-equipped attacker would need to guess yours, and rejects weak ones.
-                    It also checks a database of passwords exposed in data breaches; only the first 5 characters of a
-                    one-way hash of it are sent, never the passphrase itself.</li>
-                <li><code>valt pass-check</code> checks any password or passphrase the same way.</li>
-            </ul>
-        </section>
+        <h2>If the passphrase is lost</h2>
+        <div class="box danger">
+            <p>If the passphrase is lost, and no paper key has it written on it (or notes saying where to find it), the
+                files encrypted to your key <strong>cannot be recovered</strong>, by you or anyone else. There is no
+                reset and no back door: that is what keeps them safe.</p>
+        </div>
 
         <div class="actions">
-            <button type="button" class="primary" data-tab="info">Next: your information</button>
+            <button type="button" class="btn btn-primary" data-tab="strength">Next: strong passphrases</button>
         </div>
     </div>
 
-    <div id="detail" class="understand" role="tabpanel">
-        <p class="skip"><a href="#info" data-tab="info">Skip to your information →</a></p>
+    <div id="panel-strength" role="tabpanel" aria-labelledby="tab-strength">
+        <h1>Strong passphrases</h1>
+        <p class="muted"><a href="#info" data-tab="info">Skip to your information</a></p>
 
-        <section>
-            <h2>Use cases</h2>
-            <p>Every strength check is made for one of two use cases, which decide the attacks that apply:</p>
-            <dl>
-                <dt>account</dt>
-                <dd>A password for an online account whose password hashing isn't under your control. Covers online
-                    login attempts (rate-limited and unrestricted) and, if the account's password database were ever
-                    breached, offline cracking under either a slow or a fast hashing scheme.</dd>
-                <dt>file</dt>
-                <dd>A password or passphrase protecting an encrypted file or private key, cracked entirely offline at
-                    a fixed, deliberately slow cost per guess (the <a href="https://en.wikipedia.org/wiki/Scrypt">scrypt</a> computation that <a href="https://age-encryption.org">age</a>, the encryption tool
-                    valt uses, applies to every guess), with attacker compute ranging from a single processor core to
-                    a large cluster. <strong>Your valt key is always this case.</strong></dd>
-            </dl>
-        </section>
+        <h2>Why a passphrase</h2>
+        <p>A multi-word <strong>passphrase</strong> is a <em>much</em> better choice than a typical password: it is far
+            easier to remember. Just as with a password manager, the idea is that you remember <strong>one</strong>
+            secret that gives you access to all of your encrypted data.</p>
+        <p>Since human memory <em>is</em> fallible, it is extremely important that you keep it on paper somewhere secure,
+            in case you forget it or become incapacitated: that is what the paper key is for. If you use a password
+            manager (<em>strongly recommended</em>), store your keys and passphrase in it too.</p>
 
-        <section>
-            <h2>Threat levels</h2>
-            <p>The strength rating is judged against one of four attackers, least to most capable:</p>
-            <dl>
-                <dt>casual</dt><dd>An opportunistic attacker with minimal resources.</dd>
-                <dt>motivated</dt><dd>An individual attacker with a real, focused effort behind it.</dd>
-                <dt>professional</dt><dd>An attacker with resourced, purpose-built hardware. <strong>valt checks key
-                    passphrases against this level.</strong></dd>
-                <dt>nation-state</dt><dd>An attacker with the largest realistic guessing power modeled.</dd>
-            </dl>
-            <p>Each report lists crack times for a range of attack scenarios, and bases its rating on those that fit
-                the threat level. For a valt key against a professional attacker, that is an offline attack on
-                1,024 processor cores. A passphrase that is strong enough there takes far longer on smaller hardware,
-                and the report also shows the time against a nation-state cluster.</p>
-        </section>
+        <h2>Strength depends on what it protects</h2>
+        <p>How long a password takes to crack depends on how an attacker can try guesses:</p>
+        <dl class="terms">
+            <dt>Online account</dt>
+            <dd>Guesses are slow while they go through the site, which can limit them, but if the site's password
+                database is ever stolen they can be tried offline, quickly or very quickly depending on how the site
+                stored it. That is out of your control.</dd>
+            <dt>Encrypted file or key</dt>
+            <dd>Someone with a copy can guess offline, as fast as their hardware allows, but each guess is deliberately
+                slow. <a href="https://age-encryption.org">age</a>, the encryption tool valt uses, encrypts the key
+                using <a href="https://en.wikipedia.org/wiki/Scrypt">scrypt</a>, a computation designed to take a lot
+                of time and memory for every single guess.</dd>
+        </dl>
+        <p>Your valt key is always the second case. valt judges its passphrase against a <strong>professional
+            attacker</strong>: one with purpose-built hardware.</p>
 
-        <section>
-            <h2>Breached passwords</h2>
-            <p>Every check also looks the password up in the <a href="https://haveibeenpwned.com/Passwords">Have I
-                Been Pwned</a> database of passwords exposed in data breaches. A password found there is unsafe
-                whatever its estimated strength, since attackers try those first.</p>
-            <p>valt does this without revealing the password. It hashes the password on your computer with
-                <a href="https://en.wikipedia.org/wiki/SHA-1">SHA-1</a> (a one-way function: the hash cannot be turned
-                back into the password) and sends only the first five characters of the hash. The service returns
-                every breached password hash that starts with those characters, and valt looks for a match itself, on
-                your computer. The password, and even its full hash, never leave your computer. (This is the
-                service's <a href="https://haveibeenpwned.com/API/v3#PwnedPasswords">range search</a>, designed for
-                exactly this.)</p>
-        </section>
+        <h2>What makes one strong</h2>
+        <p>Estimates from valt's strength checker, against a professional attacker:</p>
+        <!-- These estimates are copied by hand from valt pass-check (the default threat level, professional), so
+             update them if its estimates change. For each example:
+                 printf '%s' 'EXAMPLE' | valt pass-check -u account   (the two "if the account is breached" lines)
+                 printf '%s' 'EXAMPLE' | valt pass-check -u file      (the 1024 cores line)
+             The lines the rating is based on are underlined in a terminal. Last updated 2026-11-03. -->
+        <div class="table-scroll">
+        <table class="examples">
+            <tr><th>Example</th><th>Kind</th><th>To remember</th><th>Online account, if breached<br><span
+                class="sub">slow / fast hashing</span></th><th>valt key</th></tr>
+            <tr><td><span class="pw">My dog Oscar</span></td>
+                <td>short phrase</td><td>easy</td>
+                <td>6 days / under a second</td><td class="weak">2 months</td></tr>
+            <tr><td><span class="pw">BkZB&amp;XWGj%3Tx</span></td>
+                <td>random password</td><td>hard</td>
+                <td>31 years / 16 minutes</td><td class="fair">303 years</td></tr>
+            <tr><td><span class="pw">repossess thursday flaky lazy</span></td>
+                <td>random passphrase</td><td>fair</td>
+                <td>57 million years / 57 years</td><td class="strong">560 million years</td></tr>
+        </table>
+        </div>
+        <p>A good passphrase requires randomness, and we humans are very bad at that. There's a famous
+            <a href="https://xkcd.com/936/">xkcd comic</a> on this subject that ends with this gem:</p>
+        <blockquote>Through 20 years of effort, we've successfully trained everyone to use passwords that are hard for
+            humans to remember, but easy for computers to guess.<cite>Randall Munroe</cite></blockquote>
+        <p>That comic makes another important point in its last panel: creating a mental scene to represent your
+            passphrase is an <em>excellent</em> way to help remember it.</p>
+        <p>For how these estimates are made, see <a href="#detail" data-tab="detail">Strength in detail</a>.</p>
 
-        <section>
-            <h2>Try it</h2>
-            <p><code>valt pass-check</code> rates any password or passphrase. Choose the use case and threat level with
-                <code>-u account|file</code> and <code>-t casual|motivated|professional|nation-state</code>; the
-                defaults are <code>account</code> and <code>professional</code>. For how the estimates are calculated,
-                see <a href="https://github.com/phoggy/mrld#methodology-and-sources">mrld's methodology and
-                sources</a>.</p>
-        </section>
+        <h2>How valt helps</h2>
+        <dl>
+            <dt><code>valt passphrase</code></dt>
+            <dd>Generates strong random passphrases to choose from.</dd>
+            <dt><code>valt keys</code></dt>
+            <dd>Checks the passphrase you choose when it creates your key: how long a well-equipped attacker would need
+                to guess it, rejecting weak ones. It also checks a database of passwords exposed in data breaches; only
+                the first 5 characters of a one-way hash of it are sent, never the passphrase itself.</dd>
+            <dt><code>valt pass-check</code></dt>
+            <dd>Checks any password or passphrase the same way.</dd>
+        </dl>
 
         <div class="actions">
-            <button type="button" class="primary" data-tab="info">Next: your information</button>
+            <button type="button" class="btn btn-primary" data-tab="info">Next: your information</button>
         </div>
     </div>
 
-    <div id="info" role="tabpanel">
-    <p class="lead">This personalizes your paper key: a letter to whoever may need it, the people who can help them,
-        and any notes. Nothing leaves this page until you save, and then only to your Downloads folder, encrypted,
-        where valt picks it up.</p>
-    <section>
+    <div id="panel-detail" role="tabpanel" aria-labelledby="tab-detail">
+        <h1>Strength in detail</h1>
+        <p class="muted"><a href="#info" data-tab="info">Skip to your information</a></p>
+
+        <h2>Use cases</h2>
+        <p>Every strength check is made for one of two use cases, which decide the attacks that apply:</p>
+        <dl class="headed">
+            <dt>account</dt>
+            <dd>A password for an online account whose password hashing isn't under your control. Covers online login
+                attempts (rate-limited and unrestricted) and, if the account's password database were ever breached, offline
+                cracking under either a slow or a fast hashing scheme.</dd>
+            <dt>file</dt>
+            <dd>A password or passphrase protecting an encrypted file or private key, cracked entirely offline at a fixed,
+                deliberately slow cost per guess (the <a href="https://en.wikipedia.org/wiki/Scrypt">scrypt</a> computation
+                that <a href="https://age-encryption.org">age</a>, the encryption tool valt uses, applies to every guess),
+                with attacker compute ranging from a single processor core to a large cluster. <strong>Your valt key is
+                always this case.</strong></dd>
+        </dl>
+
+        <h2>Threat levels</h2>
+        <p>The strength rating is judged against one of four attackers, least to most capable:</p>
+        <dl class="headed">
+            <dt>casual</dt>
+            <dd>An opportunistic attacker with minimal resources.</dd>
+            <dt>motivated</dt>
+            <dd>An individual attacker with a real, focused effort behind it.</dd>
+            <dt>professional</dt>
+            <dd>An attacker with resourced, purpose-built hardware. <strong>valt checks key passphrases against this
+                level.</strong></dd>
+            <dt>nation-state</dt>
+            <dd>An attacker with the largest realistic guessing power modeled.</dd>
+        </dl>
+        <p class="after-terms">Each report lists crack times for a range of attack scenarios, and bases its rating on those that fit the
+            threat level. For a valt key against a professional attacker, that is an offline attack on 1,024 processor
+            cores. A passphrase that is strong enough there takes far longer on smaller hardware, and the report also
+            shows the time against a nation-state cluster.</p>
+
+        <h2>Breached passwords</h2>
+        <p>Every check also looks the password up in the <a href="https://haveibeenpwned.com/Passwords">Have I Been
+            Pwned</a> database of passwords exposed in data breaches. A password found there is unsafe whatever its
+            estimated strength, since attackers try those first.</p>
+        <p>valt does this without revealing the password. It hashes the password on your computer with
+            <a href="https://en.wikipedia.org/wiki/SHA-1">SHA-1</a> (a one-way function: the hash cannot be turned back
+            into the password) and sends only the first five characters of the hash. The service returns every breached
+            password hash that starts with those characters, and valt looks for a match itself, on your computer. The
+            password, and even its full hash, never leave your computer. (This is the service's
+            <a href="https://haveibeenpwned.com/API/v3#PwnedPasswords">range search</a>, designed for exactly
+            this.)</p>
+
+        <h2>Try it</h2>
+        <p><code>valt pass-check</code> rates any password or passphrase. Choose the use case and threat level with
+            <code>-u account|file</code> and <code>-t casual|motivated|professional|nation-state</code>; the defaults
+            are <code>account</code> and <code>professional</code>.</p>
+        <!-- The output, and its styles, are copied by hand from valt pass-check in a terminal: update them if that
+             changes. -->
+        <pre class="terminal"><span class="prompt">$ </span>echo 'repossess thursday flaky lazy' | valt pass-check -u file
+
+✅ <span class="t-ok">strong</span> (<span class="t-ok">4/4</span>) <span class="t-ok">against professional file attacker</span>, <span class="t-ok">no known breaches</span>
+
+Strength score based on the underlined crack time scenario:
+
+- <b>longer than the age of the universe</b> to crack for motivated attacker (<i>offline attack, scrypt hash, single core</i>)
+- <b>longer than the age of the universe</b> to crack for motivated attacker (<i>offline attack, scrypt hash, 32 cores</i>)
+- <b>4 billion years</b> to crack for professional attacker (<i>offline attack, scrypt hash, 128 cores</i>)
+- <b><u>560 million years</u></b> to crack for professional attacker (<i>offline attack, scrypt hash, 1024 cores</i>)
+- <b>5 million years</b> to crack for nation-state attacker (<i>offline attack, scrypt hash, 100,000-core cluster</i>)
+
+See <a class="t-link" href="https://haveibeenpwned.com/Passwords">https://haveibeenpwned.com/Passwords</a> for more on password breaches.
+See <a class="t-link" href="https://github.com/phoggy/mrld#methodology-and-sources">https://github.com/phoggy/mrld#methodology-and-sources</a> for how these estimates are calculated.</pre>
+
+        <div class="actions">
+            <button type="button" class="btn btn-primary" data-tab="info">Next: your information</button>
+        </div>
+    </div>
+
+    <div id="panel-info" role="tabpanel" aria-labelledby="tab-info">
+        <h1>Your information</h1>
+        <p>This personalizes your paper key: a letter to whoever may need it, the people who can help them, and any
+            notes. Nothing leaves this page until you save, and then only to your Downloads folder, encrypted, where
+            valt picks it up.</p>
+
         <h2>The letter</h2>
         <p class="hint">The first page of the paper key is a short letter from you.</p>
-        <label for="greeting">Greeting</label>
-        <input id="greeting" placeholder="e.g. Greetings,">
-        <label for="closing">Closing line</label>
-        <input id="closing" placeholder="e.g. I hope you never need this!">
-        <label for="author">Your name (the signature)</label>
-        <input id="author" placeholder="e.g. Bob Barker">
-    </section>
+        <div class="letter">
+            <label for="greeting">Greeting</label>
+            <input id="greeting" placeholder="e.g. Greetings,">
+            <label for="closing">Closing line</label>
+            <input id="closing" placeholder="e.g. I hope you never need this!">
+            <label for="author">Signature</label>
+            <input id="author" placeholder="Your name, e.g. Bob Barker">
+        </div>
 
-    <section>
         <h2>People who can help</h2>
         <p class="hint">If you are unavailable, whoever has the paper key may need help with the technical steps. Add at
-            least one person with computer skills (the command line on macOS or Linux) who has agreed to help, with
-            ways to reach them.</p>
-        <div id="contacts"></div>
-        <button type="button" id="add-contact">Add a person</button>
-    </section>
+            least one person with computer skills (the command line on macOS or Linux) who has agreed to help, and each
+            way to reach them; two phones or two emails are fine.</p>
+        <div class="contacts" id="contacts"></div>
+        <div class="actions" style="margin-top: 0.75rem"><button type="button" class="btn" id="add-contact">Add a
+            person</button></div>
 
-    <section>
         <h2>Notes</h2>
         <p class="hint">Anything else the reader should know, one item per line. If you will not write your passphrase
             on the paper key (the more secure choice), say here where to find it: see
-            <a href="#understand" data-tab="understand">Where to keep the passphrase</a>.</p>
-        <textarea id="notes" placeholder="e.g. The passphrase is in the envelope in the fire safe."></textarea>
-    </section>
+            <a href="#where-to-keep" data-tab="understand">Where to keep the passphrase</a>.</p>
+        <textarea id="notes" rows="3" placeholder="e.g. The passphrase is in the envelope in the fire safe."></textarea>
 
-    <section class="preview">
         <h2>Preview</h2>
         <p class="hint">Roughly how this appears on the paper key.</p>
-        <div id="preview"></div>
-    </section>
+        <div class="preview" id="preview"></div>
 
-    <div class="actions">
-        <button type="button" class="primary" id="save">Save</button>
-        <button type="button" id="cancel">Cancel</button>
-        <span id="status" role="status"></span>
+        <div class="actions">
+            <button type="button" class="btn btn-primary" id="save">Save</button>
+            <button type="button" class="btn" id="cancel">Cancel</button>
+            <span id="status" role="status"></span>
+        </div>
     </div>
-    </div>
-</main>
+
+        </div>
+    </main>
+</div>
 
 <script id="key-info-data" type="application/json">{}</script>
 <script id="key-info-keys" type="application/json">{}</script>
@@ -398,58 +539,187 @@
     const keys = JSON.parse(document.getElementById("key-info-keys").textContent || "{}");
     const field = (id) => document.getElementById(id);
     const contactsEl = field("contacts");
+    const tabs = ["understand", "strength", "detail", "info"];
+    let triedSave = false;
 
-    // A contact is stored as one string, "Name: details"; split it at the first ': ' to edit the parts
+    // ---- People who can help
+    //
+    // Each person is a name and a list of ways to reach them, each with a type and a value, as the key info file holds
+    // them. The paper key shows each way on its own line, with its type's paper label.
 
-    function splitContact(text) {
-        const at = text.indexOf(": ");
-        return at > 0 ? { name: text.slice(0, at), details: text.slice(at + 2) } : { name: "", details: text };
+    const wayTypes = {
+        phone: { label: "Phone", paper: "Phone", example: "+44 791 112 4456" },
+        email: { label: "Email", paper: "Email", example: "martha@example.com" },
+        social: { label: "Social", paper: "Social", example: "Signal @martha" },
+        address: { label: "Mailing address", paper: "Address", example: "12 Elm Street, Leeds LS6 2AB, UK" },
+    };
+    let contacts = [];
+
+    // Returns the problem with a way to reach someone, or "" if there is none (or it is empty)
+
+    function wayProblem(type, value) {
+        const v = value.trim();
+        if (!v) return "";
+        switch (type) {
+            case "phone": return /^\+?[\d\s().-]+$/.test(v) && v.replace(/\D/g, "").length >= 7 ? ""
+                : "Use at least 7 digits, with an optional + and country code";
+            case "email": return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) ? "" : "Not a complete email address";
+            case "social": return /^https?:\/\/\S+$/.test(v) || /^([A-Za-z]+\s+)?@?[\w.-]{2,}$/.test(v) ? ""
+                : "Use a handle like Signal @name, or a profile URL";
+            default: return v.length >= 10 && /,/.test(v) ? "" : "Add street, city and country";
+        }
     }
 
-    function joinContact(contact) {
-        const name = contact.name.trim(), details = contact.details.trim().replace(/\s*\n\s*/g, ", ");
-        return name && details ? `${name}: ${details}` : name || details;
+    function newContact() {
+        return { name: "", ways: [{ type: "phone", value: "" }, { type: "email", value: "" }] };
     }
 
-    function addContact(contact = { name: "", details: "" }) {
-        const el = document.createElement("div");
-        el.className = "contact";
-        el.innerHTML = `
-            <div class="contact-head">
-                <strong></strong>
-                <button type="button" class="small" data-move="-1" title="Move up">↑</button>
-                <button type="button" class="small" data-move="1" title="Move down">↓</button>
-                <button type="button" class="small" data-remove title="Remove">Remove</button>
-            </div>
-            <label>Name</label>
-            <input class="contact-name" placeholder="e.g. Aunt Martha">
-            <label>How to reach them</label>
-            <textarea class="contact-details"
-                placeholder="Phone, email, address, social handles: e.g. +44 791 112 4456, martha@example.com"></textarea>`;
-        el.querySelector(".contact-name").value = contact.name;
-        el.querySelector(".contact-details").value = contact.details;
-        el.addEventListener("input", update);
-        el.querySelector("[data-remove]").addEventListener("click", () => { el.remove(); update(); });
-        el.querySelectorAll("[data-move]").forEach((button) => button.addEventListener("click", () => {
-            const sibling = button.dataset.move < 0 ? el.previousElementSibling : el.nextElementSibling;
-            if (sibling) button.dataset.move < 0 ? sibling.before(el) : sibling.after(el);
-            update();
+    function isBlank(contact) {
+        return !contact.name.trim() && contact.ways.every((m) => !m.value.trim());
+    }
+
+    // Returns a person as the key info file holds them: trimmed, without empty ways
+
+    function savedContact(contact) {
+        return { name: contact.name.trim(),
+                 ways: contact.ways.filter((w) => w.value.trim()).map((w) => ({ type: w.type, value: w.value.trim() })) };
+    }
+
+    function isValid(contact) {
+        const saved = savedContact(contact);
+        return Boolean(saved.name && saved.ways.length && contact.ways.every((w) => !wayProblem(w.type, w.value)));
+    }
+
+    const icon = (paths) => `<svg viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`;
+    const icons = {
+        up: icon('<line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>'),
+        down: icon('<line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>'),
+        remove: icon('<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'),
+    };
+
+    function iconButton(name, title, onClick, disabled = false) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "btn icon";
+        button.title = title;
+        button.setAttribute("aria-label", title);
+        button.innerHTML = icons[name];
+        button.disabled = disabled;
+        button.addEventListener("click", onClick);
+        return button;
+    }
+
+    // Rebuilds the people's fields from the model; typing only updates the model and calls update(), keeping focus
+
+    function renderContacts() {
+        contactsEl.replaceChildren(...contacts.map((contact, i) => {
+            const el = document.createElement("div");
+            el.className = "contact";
+            const head = document.createElement("div");
+            head.className = "contact-head";
+            const number = document.createElement("span");
+            number.className = "number";
+            number.textContent = `${i + 1}.`;
+            const name = document.createElement("input");
+            name.className = "contact-name";
+            name.placeholder = "Name, e.g. Aunt Martha";
+            name.setAttribute("aria-label", `Name of person ${i + 1}`);
+            name.value = contact.name;
+            name.addEventListener("input", () => { contact.name = name.value; update(); });
+            const move = (by) => () => { contacts.splice(i + by, 0, contacts.splice(i, 1)[0]); renderContacts(); };
+            head.append(number, name,
+                        iconButton("up", "Move up", move(-1), i === 0),
+                        iconButton("down", "Move down", move(1), i === contacts.length - 1),
+                        iconButton("remove", "Remove", () => { contacts.splice(i, 1); renderContacts(); }));
+
+            const methods = document.createElement("div");
+            methods.className = "methods";
+            contact.ways.forEach((method, j) => methods.append(renderWay(contact, method, j)));
+            const add = document.createElement("div");
+            add.className = "add-method";
+            add.innerHTML = "<span>Add</span>";
+            for (const [type, { label }] of Object.entries(wayTypes)) {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "btn small";
+                button.textContent = label;
+                button.addEventListener("click", () => {
+                    contact.ways.push({ type, value: "" });
+                    renderContacts();
+                    contactsEl.children[i].querySelectorAll(".method input")[contact.ways.length - 1].focus();
+                });
+                add.append(button);
+            }
+            const summary = document.createElement("div");
+            summary.className = "summary";
+            methods.append(add, summary);
+            el.append(head, methods);
+            return el;
         }));
-        contactsEl.append(el);
         update();
     }
 
+    function renderWay(contact, method, index) {
+        const row = document.createElement("div");
+        row.className = "method";
+        const type = document.createElement("select");
+        type.setAttribute("aria-label", "Kind");
+        for (const [value, { label }] of Object.entries(wayTypes)) type.add(new Option(label, value));
+        type.value = method.type;
+        const value = document.createElement("input");
+        value.setAttribute("aria-label", "How to reach them");
+        value.value = method.value;
+        const message = document.createElement("span");
+        message.className = "message";
+        type.addEventListener("change", () => { method.type = type.value; update(); });
+        value.addEventListener("input", () => { method.value = value.value; update(); });
+        value.addEventListener("blur", () => { method.touched = true; update(); });
+        row.append(type, value,
+                   iconButton("remove", "Remove", () => { contact.ways.splice(index, 1); renderContacts(); }), message);
+        return row;
+    }
+
+    // Updates each person's problems and summary; problems show once a field has been left, or Save was pressed
+
+    function updateContacts() {
+        contactsEl.querySelectorAll(".contact").forEach((el, i) => {
+            const contact = contacts[i];
+            let anyProblem = false;
+            el.querySelectorAll(".method").forEach((row, j) => {
+                const method = contact.ways[j];
+                const problem = wayProblem(method.type, method.value);
+                const show = problem && (method.touched || triedSave);
+                anyProblem ||= Boolean(problem);
+                row.querySelector("input").placeholder = wayTypes[method.type].example;
+                row.querySelector("input").classList.toggle("invalid", Boolean(show));
+                row.querySelector(".message").textContent = show ? problem : "";
+                row.querySelector(".message").hidden = !show;
+            });
+            el.querySelector(".contact-name").classList.toggle("invalid",
+                                                               triedSave && !contact.name.trim() && !isBlank(contact));
+            const summary = el.querySelector(".summary");
+            summary.hidden = false;
+            if (!savedContact(contact).ways.length) {
+                summary.textContent = "Add at least one way to reach them.";
+                summary.className = "summary warning";
+            } else if (anyProblem && (triedSave || contact.ways.some((m) => m.touched))) {
+                summary.textContent = "Fix the highlighted entries before saving.";
+                summary.className = "summary error";
+            } else {
+                summary.hidden = true;
+            }
+        });
+    }
+
+    // ---- The form
+
     function currentInfo() {
-        const contacts = [...contactsEl.querySelectorAll(".contact")].map((el) => ({
-            name: el.querySelector(".contact-name").value, details: el.querySelector(".contact-details").value,
-        }));
         return {
             greeting: field("greeting").value.trim(),
             closing: field("closing").value.trim(),
             author: field("author").value.trim(),
-            contacts: contacts.map(joinContact).filter((text) => text),
+            contacts: contacts.filter((contact) => !isBlank(contact)).map(savedContact),
             notes: field("notes").value.split("\n").map((line) => line.trim()).filter((line) => line),
-            contactParts: contacts,
         };
     }
 
@@ -459,23 +729,29 @@
 
     function update() {
         const info = currentInfo();
-        contactsEl.querySelectorAll(".contact").forEach((el, i) => {
-            el.querySelector("strong").textContent = `${i + 1}. ${el.querySelector(".contact-name").value || "New person"}`;
-        });
+        updateContacts();
         const or = (text, empty) => text ? escapeHtml(text) : `<span class="empty">${empty}</span>`;
         field("preview").innerHTML = `
             <p>${or(info.greeting, "(greeting)")}</p>
-            <p>This document contains a private key that can unlock files encrypted with the associated public key…</p>
-            <div class="closing">${or(info.closing, "(closing line)")}</div>
+            <p>This document contains a private key that can unlock files encrypted with the associated public key. It
+                is intended as a backup so <strong>must</strong> be kept in at least one secure place…</p>
+            <div class="closing human">${or(info.closing, "(closing line)")}</div>
             <div class="signature">${or(info.author, "(your name)")}</div>
-            <p><strong>Getting Help</strong>: the following are contacts that I trust and who have agreed to help if
-                needed:</p>
-            ${info.contacts.length ? `<ol>${info.contacts.map((c) => `<li>${escapeHtml(c)}</li>`).join("")}</ol>`
+            <hr class="page-break">
+            <h2>Getting Help</h2>
+            <p>The following are contacts that I trust and who have agreed to help if needed:</p>
+            ${info.contacts.length ? `<ol>${info.contacts.map(previewContact).join("")}</ol>`
                                    : `<p class="empty">(no one yet)</p>`}
-            <p><strong>Notes</strong></p>
-            ${info.notes.length ? info.notes.map((n) => `<p>${escapeHtml(n)}</p>`).join("")
-                                : `<p class="empty">(none)</p>`}`;
+            <hr class="page-break">
+            <h2>Notes</h2>
+            <div class="notes human">${info.notes.length ? info.notes.map((n) => `<p>${escapeHtml(n)}</p>`).join("")
+                                                         : `<p class="empty">(none)</p>`}</div>`;
         setStatus("");
+    }
+
+    function previewContact(contact) {
+        const ways = contact.ways.map((w) => `<br>${wayTypes[w.type].paper}: ${escapeHtml(w.value)}`).join("");
+        return `<li><strong>${contact.name ? escapeHtml(contact.name) : '<span class="empty">(name)</span>'}</strong>${ways}</li>`;
     }
 
     function setStatus(text, kind = "") {
@@ -484,21 +760,21 @@
         status.className = kind;
     }
 
-    // Returns the problems that must be fixed before saving, marking the fields
+    // Returns the problems that must be fixed before saving, marking the fields. People left entirely blank are
+    // ignored.
 
     function problems(info) {
         const found = [];
-        document.querySelectorAll(".invalid").forEach((el) => el.classList.remove("invalid"));
         for (const [id, what] of [["greeting", "a greeting"], ["closing", "a closing line"], ["author", "your name"]]) {
-            if (!info[id]) { field(id).classList.add("invalid"); found.push(what); }
+            field(id).classList.toggle("invalid", !info[id]);
+            if (!info[id]) found.push(what);
         }
         if (!info.contacts.length) found.push("at least one person who can help");
-        contactsEl.querySelectorAll(".contact").forEach((el, i) => {
-            const part = info.contactParts[i];
-            if (!part.name.trim()) el.querySelector(".contact-name").classList.add("invalid");
-            if (!part.details.trim()) el.querySelector(".contact-details").classList.add("invalid");
-            if (!part.name.trim() || !part.details.trim()) found.push(`a name and how to reach person ${i + 1}`);
+        contacts.forEach((contact, i) => {
+            if (isBlank(contact)) return;
+            if (!isValid(contact)) found.push(`a name and a valid way to reach person ${i + 1}`);
         });
+        updateContacts();
         return found;
     }
 
@@ -526,12 +802,9 @@
         document.getElementById("key-info-keys").textContent = "";
         keys.id = keys.encryptionKey = keys.macKey = "";
         clearInterval(expiryTimer);
-        document.querySelector("main").innerHTML = `
-            <h1>Your valt key and paper key</h1>
-            <section>
-                <h2>${title}</h2>
-                ${message}
-            </section>`;
+        document.querySelector(".site-nav").hidden = true;
+        field("countdown").hidden = true;
+        field("content").innerHTML = `<h1>${title}</h1>${message}`;
     }
 
     function expired() {
@@ -543,21 +816,20 @@
             <code>valt key-info</code> again when you are ready.</p>`);
     }
 
-    // Shows how long valt will keep waiting, and expires the page when it stops
+    // Shows how long valt will keep waiting, and expires the page when it stops. The bar shows the time left out of
+    // the whole wait, from when valt made the page (so a reload does not refill it).
+
+    const startedAt = keys.started ? keys.started * 1000 : Date.now();
 
     function updateCountdown() {
         if (!keys.expires) return;
         if (expired()) return expire();
-        const minutes = Math.ceil((keys.expires * 1000 - Date.now()) / 60000);
+        const left = keys.expires * 1000 - Date.now();
+        const minutes = Math.ceil(left / 60000);
         const countdown = field("countdown");
         countdown.hidden = false;
-        countdown.innerHTML = `⏳ valt is waiting for you to press <strong>Save</strong> or <strong>Cancel</strong> on
-            the <a href="#info" data-tab="info">Your information</a> tab:
-            <span class="left">${minutes} ${minutes === 1 ? "minute" : "minutes"} left</span>`;
-        countdown.querySelector("[data-tab]").addEventListener("click", (event) => {
-            event.preventDefault();
-            showTab("info");
-        });
+        countdown.querySelector(".left").textContent = `${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
+        countdown.querySelector(".bar div").style.width = `${Math.round(100 * left / (keys.expires * 1000 - startedAt))}%`;
         countdown.classList.toggle("soon", minutes <= 5);
     }
 
@@ -591,23 +863,22 @@
     async function cancel() {
         if (expired()) return expire();
         if (await download({ cancelled: true }) === null) return;
-        finish("Cancelled", "<p>Nothing was saved, and key.info is unchanged. You can close this page.</p>");
+        finish("Cancelled", "<p>Nothing was saved, and your key info is unchanged. You can close this page.</p>");
     }
 
     async function save() {
         if (expired()) return expire();
+        triedSave = true;
         const info = currentInfo();
         const found = problems(info);
         if (found.length) {
             setStatus(`Please add ${found.join(", ")}.`, "error");
             return;
         }
-        const data = { greeting: info.greeting, closing: info.closing, author: info.author,
-                       contacts: info.contacts, notes: info.notes };
-        const fileName = await download(data);
+        const fileName = await download(info);
         if (fileName === null) return;
         finish("Saved", `
-            <p>valt picks up <strong>${fileName}</strong> from your Downloads folder and saves it to key.info. You can
+            <p>valt picks up <strong>${fileName}</strong> from your Downloads folder and saves it as your key info. You can
                 close this page.</p>
             <p class="hint">The file is encrypted with a one-time key that only valt has, so a copy left behind is
                 useless to anyone.</p>`);
@@ -617,13 +888,20 @@
     field("closing").value = initial.closing || "";
     field("author").value = initial.author || "";
     field("notes").value = (initial.notes || []).join("\n");
-    (initial.contacts || []).forEach((c) => addContact(splitContact(c)));
-    if (!contactsEl.children.length) addContact();
+    contacts = (initial.contacts || []).map((c) => ({
+        name: c.name || "",
+        ways: (c.ways || []).map((w) => ({ type: wayTypes[w.type] ? w.type : "address", value: w.value || "" })),
+    }));
+    if (!contacts.length) contacts.push(newContact());
     ["greeting", "closing", "author", "notes"].forEach((id) => field(id).addEventListener("input", update));
-    field("add-contact").addEventListener("click", () => addContact());
+    field("add-contact").addEventListener("click", () => {
+        contacts.push(newContact());
+        renderContacts();
+        contactsEl.lastElementChild.querySelector(".contact-name").focus();
+    });
     field("save").addEventListener("click", save);
     field("cancel").addEventListener("click", cancel);
-    update();
+    renderContacts();
 
     // Color each character of the example passwords by kind: letters, digits and special characters
 
@@ -638,25 +916,37 @@
         }
     });
 
-    function showTab(name) {
-        for (const tab of ["understand", "strength", "detail", "info"]) {
-            field(tab).hidden = tab !== name;
+    // Open outside links in a new tab, so that following one does not leave this page and lose what was entered
+
+    document.querySelectorAll('a[href^="http"]').forEach((link) => {
+        link.target = "_blank";
+        link.rel = "noopener";
+    });
+
+    // ---- Tabs
+
+    function showTab(name, target) {
+        for (const tab of tabs) {
+            field(`panel-${tab}`).hidden = tab !== name;
+            field(`tab-${tab}`).classList.toggle("active", tab === name);
             field(`tab-${tab}`).setAttribute("aria-selected", tab === name ? "true" : "false");
         }
         history.replaceState(null, "", `#${name}`);
-        window.scrollTo(0, 0);
+        const element = target && document.getElementById(target);
+        if (element) element.scrollIntoView();
+        else window.scrollTo(0, 0);
     }
 
-    document.querySelectorAll("[data-tab]").forEach((el) => el.addEventListener("click", (event) => {
+    document.addEventListener("click", (event) => {
+        const el = event.target.closest("[data-tab]");
+        if (!el) return;
         event.preventDefault();
-        showTab(el.dataset.tab);
-    }));
-    for (const tab of ["understand", "strength", "detail", "info"]) {
-        field(`tab-${tab}`).addEventListener("click", () => showTab(tab));
-    }
+        showTab(el.dataset.tab, (el.getAttribute("href") || "").slice(1));
+    });
     const editing = Boolean(initial.author || initial.greeting || (initial.contacts || []).length);
     const requested = location.hash.slice(1);
-    showTab(["understand", "strength", "detail", "info"].includes(requested) ? requested : editing ? "info" : "understand");
+    // (The panels' ids are not the tabs' names, so that the browser does not scroll to one when the page opens)
+    showTab(tabs.includes(requested) ? requested : editing ? "info" : "understand");
 </script>
 </body>
 </html>

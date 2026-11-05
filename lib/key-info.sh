@@ -1,12 +1,31 @@
 #!/usr/bin/env bash
 
-# Filling in key.info, the paper key's personal information, from a web page.
+# The paper key's personal information: the key info file (key-info.json in the valt config directory), filling it in
+# from a web page, checking it, and converting the key.info file earlier versions of valt used.
 # Use via: require 'valt/key-info'
+#
+# The key info file is JSON: the letter's greeting, closing and author, the people who can help (contacts, each with a
+# name and the ways to reach them, each with a type and a value) and notes. Any other values are kept, for a custom
+# paper key template:
+#
+#   {
+#     "greeting": "Greetings,",
+#     "closing": "I hope you never need this!",
+#     "author": "Bob Barker",
+#     "contacts": [
+#       { "name": "Aunt Martha", "ways": [ { "type": "phone", "value": "+44 791 112 4456" },
+#                                          { "type": "address", "value": "1 Park Row, Leeds LS1 5AB, UK" } ] }
+#     ],
+#     "notes": [ "The passphrase is in the envelope in the fire safe." ]
+#   }
+#
+# A way's type is phone, email, social or address.
 
 # ◇ Writes the key info web page (a single HTML file with no network access) to a directory, with the current values
-#   from the key info file filled in, so that it can be opened in a browser. Values that are still the template's
-#   samples are left out, unless key.info is marked completed. The page's Save button downloads valt-key-info-ID.json (ID being unique to this page),
-#   encrypted with one-time keys that are also embedded in the page, for decryptKeyInfoDownload.
+#   from the key info file filled in, so that it can be opened in a browser. The page's Save button downloads
+#   valt-key-info-ID.json (ID being unique to this page), encrypted with one-time keys that are also embedded in the
+#   page, for decryptKeyInfoDownload. The paper key's fonts are embedded too, for the page's preview of the letter
+#   (browsers do not load fonts from beside a local page).
 #
 # · ARGS
 #
@@ -24,7 +43,7 @@ newKeyInfoPage() {
     local expires=$5
     local _nkipPageFile="${dir}/key-info.html" # prefixed: a caller may name its var pageFile
     local html; readFile "${_keyInfoPageFile}" html || fail
-    local json; json="${ _currentKeyInfoJson "${keyInfoFile}"; }" || fail
+    local json; json="${ _pageKeyInfoJson "${keyInfoFile}"; }" || fail
     json="${json//<\//<\\/}" # so that a value cannot end the script element
     html="${html/'<script id="key-info-data" type="application/json">{}</script>'/<script id=\"key-info-data\" type=\"application/json\">${json}</script>}"
 
@@ -32,10 +51,15 @@ newKeyInfoPage() {
     id="${ printf '%06d' $(( 16#${ _randomHex 4; } % 1000000 )); }" || fail
     encryptionKey="${ _randomHex 32; }" || fail
     macKey="${ _randomHex 32; }" || fail
-    local keysJson="{\"id\":\"${id}\",\"encryptionKey\":\"${encryptionKey}\",\"macKey\":\"${macKey}\",\"expires\":${expires}}" # (a literal } would end the substitution)
+    local keysJson="{\"id\":\"${id}\",\"encryptionKey\":\"${encryptionKey}\",\"macKey\":\"${macKey}\",\"started\":${EPOCHSECONDS},\"expires\":${expires}}" # (a literal } would end the substitution)
     html="${html/'<script id="key-info-keys" type="application/json">{}</script>'/<script id=\"key-info-keys\" type=\"application/json\">${keysJson}</script>}"
 
-    printf '%s\n' "${html}" > "${_nkipPageFile}" || fail "could not write ${_nkipPageFile}"
+    local fontsPlaceholder='<style id="key-info-fonts"></style>'
+    {
+        printf '%s' "${html%%"${fontsPlaceholder}"*}"
+        _keyInfoFontsStyle
+        printf '%s\n' "${html#*"${fontsPlaceholder}"}"
+    } > "${_nkipPageFile}" || fail "could not write ${_nkipPageFile}"
     _nkipResultRef="${_nkipPageFile}"
     _nkipKeysRef="${id} ${encryptionKey} ${macKey}"
 }
@@ -140,8 +164,8 @@ isKeyInfoCancel() {
     jq -e '.cancelled == true' "$1" > /dev/null 2>&1
 }
 
-# ◇ Imports the key info page's JSON into the key info file, which is replaced and marked completed. Variables in an
-#   existing key info file other than those the page sets (e.g. for a custom template) are kept.
+# ◇ Imports the key info page's JSON into the key info file, which is replaced. Values in an existing key info file other
+#   than those the page sets (e.g. for a custom template) are kept.
 #
 # · ARGS
 #
@@ -151,68 +175,149 @@ isKeyInfoCancel() {
 importKeyInfo() {
     local jsonFile="$1" keyInfoFile="$2"
     assertFile "${jsonFile}"
-    jq -e '
-        (.greeting, .closing, .author | type == "string" and length > 0)
-        and (.contacts | type == "array" and length > 0 and all(type == "string" and length > 0))
-        and ((.notes // []) | type == "array" and all(type == "string"))
-    ' "${jsonFile}" > /dev/null 2>&1 || fail "${ tildePath "${jsonFile}"; } is not valid key info"
-
-    local greeting closing author
-    greeting="${ jq -r '.greeting' "${jsonFile}"; }" || fail
-    closing="${ jq -r '.closing' "${jsonFile}"; }" || fail
-    author="${ jq -r '.author' "${jsonFile}"; }" || fail
-    local -a contacts=() notes=()
-    mapfile -t contacts < <(jq -r '.contacts[] | gsub("\n"; " ")' "${jsonFile}")
-    mapfile -t notes < <(jq -r '(.notes // [])[] | gsub("\n"; " ")' "${jsonFile}")
-    local extras=''
-    [[ -f ${keyInfoFile} ]] && extras="${ _extraKeyInfoVars "${keyInfoFile}"; }"
-
+    jq -e "${_keyInfoJq}"' isValidDownload' "${jsonFile}" > /dev/null 2>&1 \
+        || fail "${ tildePath "${jsonFile}"; } is not valid key info"
+    local existing='{}'
+    [[ -f ${keyInfoFile} ]] && existing="${ jq -c 'if type == "object" then . else {} end' "${keyInfoFile}" 2> /dev/null; }"
     local temp="${keyInfoFile}.new"
-    {
-        printf '%s\n' '#!/usr/bin/env bash' '' \
-            "# The paper key's personal information. Written by 'valt key-info', which can edit it again, but it can also" \
-            "# be edited by hand: see valt's etc/key-info-template.sh for what each value means." ''
-        printf 'greeting=%s\n' "${ _shellQuote "${greeting}"; }"
-        printf 'closing=%s\n' "${ _shellQuote "${closing}"; }"
-        printf 'author=%s\n\n' "${ _shellQuote "${author}"; }"
-        _printArrayAssignment contacts "${contacts[@]}"
-        _printArrayAssignment notes "${notes[@]}"
-        [[ -n ${extras} ]] && printf '%s\n\n' "${extras}"
-        printf "completed='yes'\n"
-    } > "${temp}" || fail "could not write ${temp}"
+    jq --argjson existing "${existing:-{\}}" "${_keyInfoJq}"'
+        (normalized | {greeting, closing, author, contacts, notes}) + ($existing | del(.greeting, .closing, .author,
+                                                                                    .contacts, .notes))
+    ' "${jsonFile}" > "${temp}" || fail "could not write ${temp}"
     chmod 600 "${temp}" && mv "${temp}" "${keyInfoFile}" || fail "could not write ${keyInfoFile}"
 }
 
-# ◇ Outputs the values a key info file sets (every variable, as declare -p output, sorted by name), or nothing if it does
-#   not exist, so that two versions can be compared by value whatever their layout.
+# ◇ Outputs the key info file's values as compact JSON with sorted keys, or nothing if it does not exist, so that two
+#   versions can be compared by value whatever their layout.
 #
 # · ARGS
 #
 #   keyInfoFile (string)  Path to the key info file.
 
-keyInfoValues() (
+keyInfoValues() {
     local keyInfoFile="$1"
     [[ -f ${keyInfoFile} ]] || return 0
-    local -a names=()
-    local line
-    while IFS= read -r line; do
-        [[ ${line} =~ ^([A-Za-z][A-Za-z0-9_]*)= ]] && names+=("${BASH_REMATCH[1]}")
-    done < "${keyInfoFile}"
-    (( ${#names[@]} )) || return 0
-    sourceConfigFile "${keyInfoFile}"
-    local name
-    while IFS= read -r name; do
-        [[ -v ${name} ]] && declare -p "${name}"
-    done < <(printf '%s\n' "${names[@]}" | sort -u)
-)
+    jq -cS . "${keyInfoFile}" 2> /dev/null || cat "${keyInfoFile}"
+}
+
+# ◇ Outputs what the key info file still needs before a paper key can be made from it, one item per line (e.g. 'a
+#   greeting'), or nothing if it is complete.
+#
+# · ARGS
+#
+#   keyInfoFile (string)  Path to the key info file; it need not exist.
+
+keyInfoProblems() {
+    local keyInfoFile="$1"
+    migrateLegacyKeyInfo "${keyInfoFile}"
+    if [[ ! -f ${keyInfoFile} ]]; then
+        echo "your information, from 'valt key-info'"
+    elif ! jq -e . "${keyInfoFile}" > /dev/null 2>&1; then
+        echo "valid JSON in ${ tildePath "${keyInfoFile}"; }"
+    else
+        jq -r "${_keyInfoJq}"' problems[]' "${keyInfoFile}"
+    fi
+}
+
+# ◇ Succeeds if the key info file is complete, so that a paper key can be made from it (see keyInfoProblems).
+#
+# · ARGS
+#
+#   keyInfoFile (string)  Path to the key info file; it need not exist.
+
+isKeyInfoComplete() {
+    [[ -z ${ keyInfoProblems "$1"; } ]]
+}
+
+# ◇ Converts the key.info file that earlier versions of valt used (a bash file, in the same directory) to the key info
+#   file, if that does not exist yet, keeping the old file as key.info.bak. Each contact's ways are split out, their
+#   types guessed as the key info page does. Values that are still the old template's samples are left out, unless the
+#   file was marked completed. Says so on stderr when it converts.
+#
+# · ARGS
+#
+#   keyInfoFile (string)  Path to the key info file.
+
+migrateLegacyKeyInfo() {
+    local keyInfoFile="$1"
+    local legacyFile; legacyFile="${ dirName "${keyInfoFile}"; }/key.info"
+    [[ -f ${keyInfoFile} || ! -f ${legacyFile} || ${keyInfoFile} == "${legacyFile}" ]] && return 0
+    local json; json="${ _legacyKeyInfoJson "${legacyFile}"; }" || fail "could not convert ${ tildePath "${legacyFile}"; }"
+    local temp="${keyInfoFile}.new"
+    jq . <<< "${json}" > "${temp}" && chmod 600 "${temp}" && mv "${temp}" "${keyInfoFile}" \
+        || fail "could not write ${keyInfoFile}"
+    mv "${legacyFile}" "${legacyFile}.bak" || fail "could not rename ${ tildePath "${legacyFile}"; }"
+    show "Converted" bold "${ tildePath "${legacyFile}"; }" "to" bold "${ tildePath "${keyInfoFile}"; }" \
+         glue "; the old file is now" bold "${ tildePath "${legacyFile}.bak"; }" glue "." >&2
+}
 
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/key-info' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 _init_valt_key-info() {
     require 'rayvn/config'
     declare -gr _keyInfoPageFile="${valtHome}/etc/key-info.html"
-    declare -gr _keyInfoTemplate="${valtHome}/etc/key-info-template.sh"
-    declare -gra _keyInfoPageVars=(greeting closing author contacts notes)
+
+    # jq definitions for the key info file and the page's download. A way's type guess (wayType) matches the page's.
+
+    declare -gr _keyInfoJq='
+        def wayTypes: ["phone", "email", "social", "address"];
+        def text: type == "string" and (gsub("\\s"; "") | length > 0);
+        def isValidDownload:
+            (.greeting, .closing, .author | text)
+            and (.contacts | type == "array" and length > 0 and all(
+                (.name | text) and (.ways | type == "array" and length > 0
+                                    and all((.type as $t | wayTypes | index($t)) and (.value | text)))))
+            and ((.notes // []) | type == "array" and all(type == "string"));
+        def oneLine: gsub("\\s*\n\\s*"; " ") | gsub("^\\s+|\\s+$"; "");
+        def normalized:
+            .greeting |= oneLine | .closing |= oneLine | .author |= oneLine
+            | .contacts |= map({name: (.name | oneLine), ways: [.ways[] | {type, value: (.value | oneLine)}]})
+            | .notes = [(.notes // [])[] | oneLine | select(length > 0)];
+        def problems:
+            [ (if (.greeting | text) then empty else "a greeting" end),
+              (if (.closing | text) then empty else "a closing line" end),
+              (if (.author | text) then empty else "your name (the signature)" end),
+              (if (.contacts | type == "array" and length > 0) then empty else "at least one person who can help" end),
+              ((.contacts // []) | if type == "array" then to_entries[] else empty end
+               | select((.value.name | text | not)
+                        or ([(.value.ways // [])[]? | select(.value | text)] | length == 0)
+                        or ([(.value.ways // [])[]? | .type as $t | wayTypes | index($t)] | any(. == null)))
+               | "a name and a way (phone, email, social or address) to reach person \(.key + 1)") ];
+        def wayType:
+            if test("^[^\\s@]+@[^\\s@]+$") then "email"
+            elif test("^\\+?[\\d\\s().-]+$") and (gsub("\\D"; "") | length >= 7) then "phone"
+            elif test("^https?://\\S+$") or test("^([A-Za-z]+\\s+)?@[\\w.-]+$") then "social"
+            else "address" end;
+        def parseContact:
+            (index(": ")) as $at
+            | (if $at != null and $at > 0 then [.[:$at], .[$at + 2:]] else ["", .] end) as [$name, $rest]
+            | {name: $name, ways: ([$rest | splits("\\s*,\\s*") | select(length > 0)]
+                                   | reduce .[] as $part ([]; ($part | wayType) as $type
+                                       | if $type == "address" and length > 0 and .[-1].type == "address"
+                                         then .[-1].value += ", " + $part else . + [{type: $type, value: $part}] end))};
+    '
+    declare -gr _keyInfoFontsDir="${valtHome}/etc/fonts"
+    # family (_ for space), file, format, weight (- for a range) and style of each font the page's preview uses
+    declare -gr _keyInfoFonts="Google_Sans_Flex GoogleSansFlex[ROND,opsz,slnt,wdth,wght].ttf ttf 100-1000 normal
+Shantell_Sans Shantell_Sans-Normal-Regular.otf otf 400 normal
+Shantell_Sans Shantell_Sans-Normal-Regular_Italic.otf otf 400 italic
+Yellowtail Yellowtail-Regular.ttf ttf 400 normal"
+}
+
+# Outputs a style element with the paper key's fonts, as used by the key info page's preview, embedded as data URLs.
+
+_keyInfoFontsStyle() {
+    local family file format weight style cssFormat
+    echo '<style id="key-info-fonts">'
+    while read -r family file format weight style; do
+        cssFormat=truetype
+        [[ ${format} == otf ]] && cssFormat=opentype
+        printf '@font-face { font-family: "%s"; font-weight: %s; font-style: %s; src: url(data:font/%s;base64,' \
+               "${family//_/ }" "${weight/-/ }" "${style}" "${format}"
+        base64 < "${_keyInfoFontsDir}/${file}" | tr -d '\n' || fail "could not read ${file}"
+        printf ') format("%s"); }\n' "${cssFormat}"
+    done <<< "${_keyInfoFonts}"
+    echo '</style>'
 }
 
 # Outputs the bundle id of the macOS default web browser (the https handler), or Safari's if none is set.
@@ -226,44 +331,61 @@ _defaultBrowserBundleId() {
     echo "${id:-com.apple.Safari}"
 }
 
-# Outputs the key info file's page values as JSON (notes as an array). While it is not marked completed, values that are
-# still the template's samples are left out. Runs in a subshell, so that the file's variables do not leak.
+# Outputs the key info file's values that the page edits, as compact JSON with defaults for any that are missing.
 
-_currentKeyInfoJson() (
+_pageKeyInfoJson() {
     local keyInfoFile="$1"
+    migrateLegacyKeyInfo "${keyInfoFile}"
+    local json='{}'
+    [[ -f ${keyInfoFile} ]] && json="${ jq -c 'if type == "object" then . else {} end' "${keyInfoFile}" 2> /dev/null; }"
+    jq -c '{greeting: (.greeting // ""), closing: (.closing // ""), author: (.author // ""),
+            contacts: [(.contacts // [])[]? | {name: (.name // ""), ways: [(.ways // [])[]? | {type, value}]}],
+            notes: [(.notes // [])[]? | tostring]}' <<< "${json:-{\}}"
+}
 
-    # The template's sample values, to leave out
+# Outputs a key.info file (the bash format earlier versions of valt used) as key info JSON. Runs in a subshell, so that
+# the file's variables do not leak.
 
-    sourceConfigFile "${_keyInfoTemplate}"
-    local sampleGreeting="${greeting}" sampleClosing="${closing}" sampleAuthor="${author}"
-    local sampleContacts="${contacts[*]}"
-    unset greeting closing author contacts notes
+_legacyKeyInfoJson() (
+    local legacyFile="$1"
+    local -a names=()
+    local line name
+    while IFS= read -r line; do
+        [[ ${line} =~ ^([A-Za-z][A-Za-z0-9_]*)= ]] || continue
+        memberOf "${BASH_REMATCH[1]}" names || names+=("${BASH_REMATCH[1]}")
+    done < "${legacyFile}"
+    sourceConfigFile "${legacyFile}"
 
-    # The current values. sourceConfigFile sets globals, so these are not locals (this runs in a subshell)
+    # Each value as JSON: arrays as lists (notes always one), others as strings, leaving out 'completed'
 
-    greeting='' closing='' author='' completed=''
-    contacts=()
-    [[ -f ${keyInfoFile} ]] && sourceConfigFile "${keyInfoFile}"
+    local json='{}' value
+    for name in "${names[@]}"; do
+        [[ ${name} == completed || ! -v ${name} ]] && continue
+        if [[ ${ declare -p "${name}" 2> /dev/null; } =~ ^declare\ -[A-Za-z]*a ]]; then
+            local -n arrayRef="${name}"
+            value="${ jq -n '$ARGS.positional' --args "${arrayRef[@]}"; }" || return 1
+            unset -n arrayRef
+        elif [[ ${name} == notes ]]; then
+            value="${ jq -n --arg note "${!name}" 'if $note == "" then [] else [$note] end'; }" || return 1
+        else
+            value="${ jq -n --arg value "${!name}" '$value'; }" || return 1
+        fi
+        json="${ jq --arg name "${name}" --argjson value "${value}" '.[$name] = $value' <<< "${json}"; }" || return 1
+    done
 
-    # Leave out the samples only while key.info is not yet marked completed (e.g. as first created from the template):
-    # once it is, show exactly what it holds, so that samples left in it are noticed
+    # Contacts' ways split out, and, unless completed, the old template's samples left out
 
-    if [[ ${completed} != yes ]]; then
-        [[ ${greeting} == "${sampleGreeting}" ]] && greeting=''
-        [[ ${closing} == "${sampleClosing}" ]] && closing=''
-        [[ ${author} == "${sampleAuthor}" ]] && author=''
-        [[ "${contacts[*]}" == "${sampleContacts}" ]] && contacts=()
-    fi
-    local -a noteList=()
-    if [[ ${ declare -p notes 2> /dev/null; } =~ ^declare\ -[A-Za-z]*a ]]; then
-        noteList=("${notes[@]}")
-    elif [[ -n ${notes:-} ]]; then
-        noteList=("${notes}")
-    fi
-    jq -nc --arg greeting "${greeting}" --arg closing "${closing}" --arg author "${author}" \
-        --argjson contacts "${ jq -n '$ARGS.positional' --args "${contacts[@]}"; }" \
-        --argjson notes "${ jq -n '$ARGS.positional' --args "${noteList[@]}"; }" \
-        '{greeting: $greeting, closing: $closing, author: $author, contacts: $contacts, notes: $notes}'
+    jq --arg completed "${completed:-}" "${_keyInfoJq}"'
+        .contacts = [(.contacts // [])[] | select(length > 0) | parseContact]
+        | if $completed == "yes" then . else
+              (if .greeting == "Greetings," then .greeting = "" else . end)
+              | (if .closing == "I hope you never need this!" then .closing = "" else . end)
+              | (if .author == "Bob Barker" then .author = "" else . end)
+              | (if [.contacts[].name] == ["Billy Bob", "Aunt Martha"] then .contacts = [] else . end)
+          end
+        | {greeting: (.greeting // ""), closing: (.closing // ""), author: (.author // ""), contacts,
+           notes: (.notes // [])} + del(.greeting, .closing, .author, .contacts, .notes)
+    ' <<< "${json}"
 )
 
 # Outputs count random bytes as hex.
@@ -271,51 +393,4 @@ _currentKeyInfoJson() (
 _randomHex() {
     local count=$1
     od -An -tx1 -N "${count}" /dev/urandom | tr -d ' \n'
-}
-
-# Outputs assignments for the variables set in the key info file other than those the page sets and 'completed', so
-# that importing keeps them (e.g. values used by a custom template).
-
-_extraKeyInfoVars() (
-    local keyInfoFile="$1"
-    local -a names=()
-    local line name
-    while IFS= read -r line; do
-        [[ ${line} =~ ^([A-Za-z][A-Za-z0-9_]*)= ]] || continue
-        name="${BASH_REMATCH[1]}"
-        [[ ${name} == completed ]] && continue
-        memberOf "${name}" _keyInfoPageVars && continue
-        memberOf "${name}" names || names+=("${name}")
-    done < "${keyInfoFile}"
-    (( ${#names[@]} )) || return 0
-    sourceConfigFile "${keyInfoFile}"
-    for name in "${names[@]}"; do
-        [[ -v ${name} ]] || continue
-        if [[ ${ declare -p "${name}" 2> /dev/null; } =~ ^declare\ -[A-Za-z]*a ]]; then
-            local -n arrayRef="${name}"
-            _printArrayAssignment "${name}" "${arrayRef[@]}"
-            unset -n arrayRef
-        else
-            printf '%s=%s\n' "${name}" "${ _shellQuote "${!name}"; }"
-        fi
-    done
-)
-
-# Outputs an array assignment of the values, one per line.
-
-_printArrayAssignment() {
-    local name="$1"; shift
-    printf '%s=(\n' "${name}"
-    local value
-    for value in "$@"; do
-        printf '    %s\n' "${ _shellQuote "${value}"; }"
-    done
-    printf ')\n\n'
-}
-
-# Outputs the value single-quoted for bash, e.g. it's -> 'it'\''s'.
-
-_shellQuote() {
-    local value="$1"
-    printf "'%s'" "${value//\'/\'\\\'\'}"
 }

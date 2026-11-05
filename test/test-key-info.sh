@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 
-# The key info web page and its import into key.info. HOME is a temp dir, so the real valt config is never touched.
+# The key info file, its web page and import, and converting the old key.info. HOME is a temp dir, so the real valt
+# config is never touched.
 
 main() {
     init "$@"
 
     testPageHasCurrentValues
-    testPageLeavesOutTemplateSamples
-    testPageShowsSamplesWhenCompleted
+    testPageForMissingFileIsEmpty
     testPageCannotEndItsScript
+    testProblems
+    testMigrateLegacyKeyInfo
+    testMigrateLeavesOutSamples
+    testMigrateKeepsExistingFile
     testImportRoundTrip
     testImportKeepsExtraVars
     testImportRejectsInvalidInfo
@@ -48,18 +52,38 @@ pageData() {
     gsed -n 's|.*<script id="key-info-data" type="application/json">\(.*\)</script>.*|\1|p' "$1"
 }
 
+# lint-skip-start (JSON, not tests)
 writeKeyInfo() {
     cat > "$1" <<'INFO'
-greeting="Hi, it's me"
-closing='Don'\''t panic!'
-author="Bob O'Brien"
-contacts=(
-    "Aunt Martha: +44 791, martha@example.com"
-    'Billy "BB" Bob: $HOME is not expanded'
-)
-notes="The passphrase is in the safe."
-completed='yes'
+{
+  "greeting": "Hi, it's me",
+  "closing": "Don't panic!",
+  "author": "Bob O'Brien",
+  "contacts": [
+    { "name": "Aunt Martha", "ways": [ { "type": "phone", "value": "+44 791 112 4456" },
+                                       { "type": "email", "value": "martha@example.com" } ] },
+    { "name": "Billy \"BB\" Bob", "ways": [ { "type": "social", "value": "$HOME is not expanded" } ] }
+  ],
+  "notes": [ "The passphrase is in the safe." ]
+}
 INFO
+}
+# lint-skip-end
+
+# A download's contacts: one person with a phone number
+
+contactsJson='[{"name":"A","ways":[{"type":"phone","value":"+1 555 555 1212"}]}]'
+
+# Outputs a page download's JSON with the given author (and the other values the page always sends).
+
+downloadJson() {
+    echo "{\"greeting\":\"Hi\",\"closing\":\"Bye\",\"author\":\"$1\",\"contacts\":${contactsJson},\"notes\":[]}"
+}
+
+# Outputs a value from a key info file, e.g. author.
+
+keyInfoValue() {
+    jq -r ".$2" "$1"
 }
 
 # Outputs the id and one-time keys embedded in a key info page, as "ID ENCRYPTION_KEY MAC_KEY".
@@ -95,90 +119,170 @@ pageFromOutput() {
     gsed -n 's/^Key info page: //p' "$1" | head -n 1
 }
 
-# Sets the named var to the values the key info file defines, as declare -p output.
+# Waits up to 60 seconds for 'valt key-info' to print its page path to its output file, then outputs it.
 
-keyInfoValues() {
-    local -n valuesRef=$2
-    valuesRef="${ ( sourceConfigFile "$1"; declare -p greeting closing author contacts ) 2>&1; }"
+waitForPageFromOutput() {
+    local outputFile="$1" page i
+    for (( i=0; i < 240; i++ )); do
+        page="${ pageFromOutput "${outputFile}"; }"
+        [[ -n ${page} ]] && { echo "${page}"; return 0; }
+        sleep 0.25
+    done
+    return 1
 }
 
 testPageHasCurrentValues() {
     local keys
-    local info="${testDir}/current.info" pageFile # the name valt key-info uses, which once collided with a local
+    local info="${testDir}/current.json" pageFile # the name valt key-info uses, which once collided with a local
     writeKeyInfo "${info}"
     newKeyInfoPage "${info}" "${testDir}" pageFile keys $(( EPOCHSECONDS + 3600 ))
     assertFile "${pageFile}"
     local data; data="${ pageData "${pageFile}"; }"
     assertEqual "Bob O'Brien" "${ jq -r '.author' <<< "${data}"; }"
     assertEqual 2 "${ jq '.contacts | length' <<< "${data}"; }"
-    assertEqual '["The passphrase is in the safe."]' "${ jq -c '.notes' <<< "${data}"; }" "a notes string must become a list"
+    assertEqual '{"type":"email","value":"martha@example.com"}' "${ jq -c '.contacts[0].ways[1]' <<< "${data}"; }"
+    assertEqual '["The passphrase is in the safe."]' "${ jq -c '.notes' <<< "${data}"; }"
 }
 
-testPageLeavesOutTemplateSamples() {
-    local keys
-    local info="${testDir}/template.info" page
-    cp "${valtHome}/etc/key-info-template.sh" "${info}" || fail
-    newKeyInfoPage "${info}" "${testDir}" page keys $(( EPOCHSECONDS + 3600 ))
-    assertEqual '{"greeting":"","closing":"","author":"","contacts":[],"notes":[]}' "${ pageData "${page}"; }"
-
-    newKeyInfoPage "${testDir}/missing.info" "${testDir}" page keys $(( EPOCHSECONDS + 3600 ))
-    assertEqual '' "${ pageData "${page}" | jq -r '.author'; }" "a missing key.info must give an empty form"
-}
-
-# Once key.info is marked completed, the page shows what it holds, even values that are still the template's samples,
-# so that they are noticed.
-
-testPageShowsSamplesWhenCompleted() {
-    local info="${testDir}/completed-template.info" page keys
-    gsed "s/^completed=.*/completed=\"yes\"/" "${valtHome}/etc/key-info-template.sh" > "${info}" || fail
-    newKeyInfoPage "${info}" "${testDir}" page keys $(( EPOCHSECONDS + 3600 ))
-    local data; data="${ pageData "${page}"; }"
-    assertEqual 'Bob Barker' "${ jq -r '.author' <<< "${data}"; }"
-    assertEqual 2 "${ jq '.contacts | length' <<< "${data}"; }"
+testPageForMissingFileIsEmpty() {
+    local page keys
+    newKeyInfoPage "${testDir}/missing.json" "${testDir}" page keys $(( EPOCHSECONDS + 3600 ))
+    assertEqual '{"greeting":"","closing":"","author":"","contacts":[],"notes":[]}' "${ pageData "${page}"; }" \
+        "a missing key info file must give an empty form"
 }
 
 testPageCannotEndItsScript() {
     local keys
-    local info="${testDir}/script.info" page
-    printf '%s\n' "author='</script><script>alert(1)</script>'" "contacts=('x: y')" > "${info}"
+    local info="${testDir}/script.json" page
+    echo '{"author":"</script><script>alert(1)</script>"}' > "${info}"
     newKeyInfoPage "${info}" "${testDir}" page keys $(( EPOCHSECONDS + 3600 ))
     assertEqual 3 "${ grep -c '</script>' "${page}"; }" "a value must not end the data script" # data, keys and code
+    assertEqual 4 "${ grep -c '^@font-face .*;base64,[A-Za-z0-9+/=]*) format(' "${page}"; }" \
+        "the page must embed the paper key's fonts"
     assertEqual '</script><script>alert(1)</script>' "${ pageData "${page}" | jq -r '.author'; }"
+}
+
+testProblems() {
+    local info="${testDir}/problems.json"
+    writeKeyInfo "${info}"
+    assertEqual '' "${ keyInfoProblems "${info}"; }" "a complete key info file must have no problems"
+    assertTrue "a complete key info file must be complete" isKeyInfoComplete "${info}"
+
+    echo '{"greeting":"Hi","contacts":[{"name":"","ways":[{"type":"phone","value":"1"}]},
+            {"name":"B","ways":[{"type":"fax","value":"1"}]}, {"name":"C","ways":[{"type":"email","value":" "}]}]}' \
+        > "${info}"
+    local problems; problems="${ keyInfoProblems "${info}"; }"
+    assertContains "a closing line" "${problems}"
+    assertContains "your name" "${problems}"
+    assertContains "to reach person 1" "${problems}" "a person needs a name"
+    assertContains "to reach person 2" "${problems}" "a way's type must be known"
+    assertContains "to reach person 3" "${problems}" "a person needs a way with a value"
+    assertFalse "an incomplete key info file must not be complete" isKeyInfoComplete "${info}"
+
+    echo 'not json' > "${info}"
+    assertContains "valid JSON" "${ keyInfoProblems "${info}"; }"
+    assertContains "valt key-info" "${ keyInfoProblems "${testDir}/missing.json"; }"
+}
+
+# An old key.info, next to where the key info file belongs, is converted on first use, and kept as key.info.bak
+
+testMigrateLegacyKeyInfo() {
+    local dir="${testDir}/legacy" output
+    mkdir -p "${dir}" || fail
+    cat > "${dir}/key.info" <<'INFO'
+greeting="Hi, it's me"
+closing='Don'\''t panic!'
+author="Bob O'Brien"
+contacts=(
+    "Aunt Martha: +44 791 112 4456, martha@example.com, 1 Park Row, Leeds LS1 5AB, UK"
+    'Billy "BB" Bob: Signal @bb'
+)
+notes="The passphrase is in the safe."
+favoriteColor='blue'
+completed='yes'
+INFO
+    output="${ migrateLegacyKeyInfo "${dir}/key-info.json" 2>&1; }"
+    assertContains "Converted" "${output}"
+    assertFileDoesNotExist "${dir}/key.info"
+    assertFile "${dir}/key.info.bak"
+    local info="${dir}/key-info.json"
+    assertEqual "Bob O'Brien" "${ keyInfoValue "${info}" author; }"
+    assertEqual '["phone","email","address"]' "${ jq -c '[.contacts[0].ways[].type]' "${info}"; }"
+    assertEqual '1 Park Row, Leeds LS1 5AB, UK' "${ jq -r '.contacts[0].ways[2].value' "${info}"; }" \
+        "an address's parts must be kept together"
+    assertEqual 'Billy "BB" Bob' "${ jq -r '.contacts[1].name' "${info}"; }"
+    assertEqual '{"type":"social","value":"Signal @bb"}' "${ jq -c '.contacts[1].ways[0]' "${info}"; }"
+    assertEqual '["The passphrase is in the safe."]' "${ jq -c '.notes' "${info}"; }"
+    assertEqual 'blue' "${ keyInfoValue "${info}" favoriteColor; }" "other values must be kept"
+    assertEqual 'null' "${ keyInfoValue "${info}" completed; }" "completed is no longer used"
+    assertTrue "a converted complete key.info must be complete" isKeyInfoComplete "${info}"
+    local mode; mode="${ stat -f '%Lp' "${info}" 2> /dev/null || stat -c '%a' "${info}"; }"
+    assertEqual 600 "${mode}"
+}
+
+# A key.info not yet marked completed loses the old template's sample values
+
+testMigrateLeavesOutSamples() {
+    local dir="${testDir}/legacy-samples"
+    mkdir -p "${dir}" || fail
+    cat > "${dir}/key.info" <<'INFO'
+greeting="Greetings,"
+closing="I hope you never need this!"
+author="Bob Barker"
+contacts=(
+    "Billy Bob: +1 555-555-1212, @billy_bob1725, billy_bob@gmail.com. 14 Main Street, Small Town, AR 95466 USA"
+    "Aunt Martha: +44 791 112 4456, @aunt_martha1, martha@aol.com. 221B Baker Street, London, NW1 6XE UNITED KINGDOM"
+)
+notes=""
+completed="no"
+INFO
+    local page keys
+    newKeyInfoPage "${dir}/key-info.json" "${testDir}" page keys $(( EPOCHSECONDS + 3600 )) 2> /dev/null
+    assertEqual '{"greeting":"","closing":"","author":"","contacts":[],"notes":[]}' "${ pageData "${page}"; }"
+}
+
+testMigrateKeepsExistingFile() {
+    local dir="${testDir}/legacy-both"
+    mkdir -p "${dir}" || fail
+    echo "author='Old'" > "${dir}/key.info"
+    writeKeyInfo "${dir}/key-info.json"
+    migrateLegacyKeyInfo "${dir}/key-info.json"
+    assertFile "${dir}/key.info" "key.info must be left alone once there is a key info file"
+    assertEqual "Bob O'Brien" "${ keyInfoValue "${dir}/key-info.json" author; }"
 }
 
 testImportRoundTrip() {
     local keys
-    local info="${testDir}/roundtrip.info" page
+    local info="${testDir}/roundtrip.json" page
     writeKeyInfo "${info}"
-    local before; keyInfoValues "${info}" before
+    local before; before="${ keyInfoValues "${info}"; }"
+    [[ -n ${before} ]] || fail "keyInfoValues must output the values"
     newKeyInfoPage "${info}" "${testDir}" page keys $(( EPOCHSECONDS + 3600 ))
     pageData "${page}" > "${testDir}/valt-key-info.json"
     importKeyInfo "${testDir}/valt-key-info.json" "${info}"
-    local after; keyInfoValues "${info}" after
-    assertEqual "${before}" "${after}" "the values must survive the round trip"
-    assertTrue "the imported key.info must be complete" isKeyInfoComplete "${info}"
-    local notes; notes="${ ( sourceConfigFile "${info}"; declare -p notes ); }"
-    assertContains '[0]="The passphrase is in the safe."' "${notes}"
+    assertEqual "${before}" "${ keyInfoValues "${info}"; }" "the values must survive the round trip"
+    assertTrue "the imported key info must be complete" isKeyInfoComplete "${info}"
 }
 
 testImportKeepsExtraVars() {
-    local info="${testDir}/extras.info" json="${testDir}/extras.json"
+    local info="${testDir}/extras.json" json="${testDir}/extras-download.json"
     writeKeyInfo "${info}"
-    printf '%s\n' "favoriteColor='blue'" "pets=('cat' 'dog')" >> "${info}"
-    echo '{"greeting":"Hello","closing":"Bye","author":"New Name","contacts":["A: 1"],"notes":[]}' > "${json}"
+    jq '.favoriteColor = "blue" | .pets = ["cat", "dog"]' "${info}" > "${info}.tmp" && mv "${info}.tmp" "${info}"
+    downloadJson "New Name" > "${json}"
     importKeyInfo "${json}" "${info}"
-    local values; values="${ ( sourceConfigFile "${info}"; declare -p author favoriteColor pets ); }"
-    assertContains 'author="New Name"' "${values}"
-    assertContains 'favoriteColor="blue"' "${values}"
-    assertContains '[1]="dog"' "${values}"
+    assertEqual "New Name" "${ keyInfoValue "${info}" author; }"
+    assertEqual "blue" "${ keyInfoValue "${info}" favoriteColor; }"
+    assertEqual "dog" "${ keyInfoValue "${info}" 'pets[1]'; }"
 }
 
 testImportRejectsInvalidInfo() {
-    local info="${testDir}/invalid.info" json="${testDir}/invalid.json" output
+    local info="${testDir}/invalid.json" json="${testDir}/invalid-download.json" output
     writeKeyInfo "${info}"
     local before; readFile "${info}" before
-    for data in '{"greeting":"Hi","closing":"Bye","author":"","contacts":["A: 1"]}' \
+    for data in "${ downloadJson ""; }" \
                 '{"greeting":"Hi","closing":"Bye","author":"Me","contacts":[]}' \
+                '{"greeting":"Hi","closing":"Bye","author":"Me","contacts":["A: 1"]}' \
+                '{"greeting":"Hi","closing":"Bye","author":"Me","contacts":[{"name":"A","ways":[{"type":"fax","value":"1"}]}]}' \
                 'not json'; do
         echo "${data}" > "${json}"
         output="${ ( importKeyInfo "${json}" "${info}" ) 2>&1; }"
@@ -186,55 +290,51 @@ testImportRejectsInvalidInfo() {
         assertContains "is not valid key info" "${output}"
     done
     local after; readFile "${info}" after
-    assertEqual "${before}" "${after}" "a rejected import must leave key.info unchanged"
+    assertEqual "${before}" "${after}" "a rejected import must leave the key info file unchanged"
 }
 
 testImportedFileIsPrivate() {
-    local info="${testDir}/private.info" json="${testDir}/private.json"
-    echo '{"greeting":"Hi","closing":"Bye","author":"Me","contacts":["A: 1"]}' > "${json}"
+    local info="${testDir}/private.json" json="${testDir}/private-download.json"
+    downloadJson "Me" > "${json}"
     importKeyInfo "${json}" "${info}"
     local mode; mode="${ stat -f '%Lp' "${info}" 2> /dev/null || stat -c '%a' "${info}"; }"
-    assertEqual 600 "${mode}" "key.info holds contacts' details, so must be readable only by its owner"
+    assertEqual 600 "${mode}" "the key info file holds contacts' details, so must be readable only by its owner"
 }
 
 # Runs 'valt key-info' (without a browser) in the background, writing a download once it is waiting.
 
 testCommandImportsDownload() {
-    local downloads="${testDir}/downloads" info="${testDir}/command.info"
+    local downloads="${testDir}/downloads" info="${testDir}/command.json"
     mkdir -p "${downloads}" || fail
     local outputFile="${testDir}/command.out"
     env rayvnTest_KeyInfoNoBrowser=1 valt key-info -k "${info}" -d "${downloads}" > "${outputFile}" 2>&1 &
     local pid=$!
-    sleep 2
-    local page; page="${ pageFromOutput "${outputFile}"; }"
+    local page; page="${ waitForPageFromOutput "${outputFile}"; }" || fail "no key info page: ${ cat "${outputFile}"; }"
     local keys; keys="${ pageKeys "${page}"; }"
-    encryptLikePage '{"greeting":"Hi","closing":"Bye","author":"From The Page","contacts":["A: 1"]}' "${keys}" \
-        "${downloads}/${ downloadName "${keys}"; }"
+    encryptLikePage "${ downloadJson "From The Page"; }" "${keys}" "${downloads}/${ downloadName "${keys}"; }"
     wait ${pid}
     assertEqual 0 $? "key-info must succeed: ${ cat "${outputFile}"; }"
     assertContains "Saved" "${ cat "${outputFile}"; }"
     [[ ${ cat "${outputFile}"; } != *"command not found"* && ${ cat "${outputFile}"; } != *"🔺"* ]] \
         || fail "key-info must run without errors: ${ cat "${outputFile}"; }"
-    assertContains 'author="From The Page"' "${ ( sourceConfigFile "${info}"; declare -p author ); }"
+    assertEqual "From The Page" "${ keyInfoValue "${info}" author; }"
     assertFileDoesNotExist "${downloads}/${ downloadName "${keys}"; }"
 }
 
 testCommandIgnoresOlderDownload() {
-    local downloads="${testDir}/downloads2" info="${testDir}/command2.info"
+    local downloads="${testDir}/downloads2" info="${testDir}/command2.json"
     mkdir -p "${downloads}" || fail
-    echo '{"greeting":"Old","closing":"Old","author":"Old Download","contacts":["A: 1"]}' > "${downloads}/valt-key-info.json"
+    downloadJson "Old Download" > "${downloads}/valt-key-info.json"
     touch -t 202001010000 "${downloads}/valt-key-info.json"
     local outputFile="${testDir}/command2.out"
     env rayvnTest_KeyInfoNoBrowser=1 valt key-info -k "${info}" -d "${downloads}" > "${outputFile}" 2>&1 &
     local pid=$!
-    sleep 2
-    local page; page="${ pageFromOutput "${outputFile}"; }"
+    local page; page="${ waitForPageFromOutput "${outputFile}"; }" || fail "no key info page: ${ cat "${outputFile}"; }"
     local keys; keys="${ pageKeys "${page}"; }"
     local name; name="${ downloadName "${keys}"; }"
-    encryptLikePage '{"greeting":"New","closing":"New","author":"New Download","contacts":["A: 1"]}' "${keys}" \
-        "${downloads}/${name%.json} (1).json"
+    encryptLikePage "${ downloadJson "New Download"; }" "${keys}" "${downloads}/${name%.json} (1).json"
     wait ${pid}
-    assertContains 'author="New Download"' "${ ( sourceConfigFile "${info}"; declare -p author ); }" \
+    assertEqual "New Download" "${ keyInfoValue "${info}" author; }" \
         "a download from before the page was opened must be ignored"
     assertFile "${downloads}/valt-key-info.json"
 }
@@ -260,33 +360,31 @@ testWaitPicksNewestDownload() {
 # dir stands in for that.
 
 testCommandWarnsWhenDownloadKept() {
-    local downloads="${testDir}/downloads3" info="${testDir}/command3.info"
+    local downloads="${testDir}/downloads3" info="${testDir}/command3.json"
     mkdir -p "${downloads}" || fail
     local outputFile="${testDir}/command3.out"
     env rayvnTest_KeyInfoNoBrowser=1 valt key-info -k "${info}" -d "${downloads}" > "${outputFile}" 2>&1 &
     local pid=$!
-    sleep 2
-    local page; page="${ pageFromOutput "${outputFile}"; }"
+    local page; page="${ waitForPageFromOutput "${outputFile}"; }" || fail "no key info page: ${ cat "${outputFile}"; }"
     local keys; keys="${ pageKeys "${page}"; }"
-    encryptLikePage '{"greeting":"Hi","closing":"Bye","author":"Kept","contacts":["A: 1"]}' "${keys}" \
-        "${downloads}/${ downloadName "${keys}"; }"
+    encryptLikePage "${ downloadJson "Kept"; }" "${keys}" "${downloads}/${ downloadName "${keys}"; }"
     chmod 555 "${downloads}" || fail
     wait ${pid}
     local status=$?
     chmod 755 "${downloads}"
     assertEqual 0 ${status} "key-info must still succeed: ${ cat "${outputFile}"; }"
-    assertContains 'author="Kept"' "${ ( sourceConfigFile "${info}"; declare -p author ); }"
+    assertEqual "Kept" "${ keyInfoValue "${info}" author; }"
     assertContains "useless to anyone" "${ stripAnsi "${ cat "${outputFile}"; }"; }"
 }
 
 testValuesIgnoreLayout() {
-    local a="${testDir}/layout-a.info" b="${testDir}/layout-b.info"
-    printf '%s\n' "author='Me'" "contacts=('A: 1' 'B: 2')" > "${a}"
-    printf '%s\n' '# a comment' 'contacts=(' '    "A: 1"' "    'B: 2'" ')' 'author="Me"' > "${b}"
+    local a="${testDir}/layout-a.json" b="${testDir}/layout-b.json"
+    echo '{"author":"Me","notes":["A","B"]}' > "${a}"
+    printf '%s\n' '{' '  "notes": [ "A", "B" ],' '  "author": "Me"' '}' > "${b}"
     assertEqual "${ keyInfoValues "${a}"; }" "${ keyInfoValues "${b}"; }" "the same values in another layout must be equal"
-    printf '%s\n' "author='You'" "contacts=('A: 1' 'B: 2')" > "${b}"
+    echo '{"author":"You","notes":["A","B"]}' > "${b}"
     assertNotEqual "${ keyInfoValues "${a}"; }" "${ keyInfoValues "${b}"; }" "changed values must differ"
-    assertEqual '' "${ keyInfoValues "${testDir}/missing.info"; }"
+    assertEqual '' "${ keyInfoValues "${testDir}/missing.json"; }"
 }
 
 # Runs 'valt key-info' (without a browser) with the given download, setting the named var to its output.
@@ -297,8 +395,7 @@ keyInfoCommandWith() {
     local outputFile="${testDir}/offer.out"
     env rayvnTest_KeyInfoNoBrowser=1 valt key-info -k "${info}" -d "${downloads}" > "${outputFile}" 2>&1 &
     local pid=$!
-    sleep 2
-    local page; page="${ pageFromOutput "${outputFile}"; }"
+    local page; page="${ waitForPageFromOutput "${outputFile}"; }" || fail "no key info page: ${ cat "${outputFile}"; }"
     local keys; keys="${ pageKeys "${page}"; }"
     encryptLikePage "${json}" "${keys}" "${downloads}/${ downloadName "${keys}"; }"
     wait ${pid} || fail "key-info failed: ${ cat "${outputFile}"; }"
@@ -306,7 +403,7 @@ keyInfoCommandWith() {
 }
 
 testCommandOffersRegenerationOnlyOnChange() {
-    local downloads="${testDir}/downloads4" info="${testDir}/offer.info" output
+    local downloads="${testDir}/downloads4" info="${testDir}/offer.json" output
     mkdir -p "${downloads}" || fail
 
     # A default key, so that regenerating its paper key can be offered
@@ -317,14 +414,14 @@ testCommandOffersRegenerationOnlyOnChange() {
     local skipKeyPassphraseAdvice=1 allowWeakKeyPassphrase=1
     newValtKeys valt "${configDir}" pub key
 
-    local json='{"greeting":"Hi","closing":"Bye","author":"Offer","contacts":["A: 1"]}'
+    local json; json="${ downloadJson "Offer"; }"
     keyInfoCommandWith output "${json}" "${info}" "${downloads}"
     assertContains "Saved" "${output}"
     assertContains "To regenerate the paper key, run:" "${output}"
 
     keyInfoCommandWith output "${json}" "${info}" "${downloads}"
     assertContains "No changes to" "${output}"
-    [[ ${output} != *"To regenerate"* ]] || fail "an unchanged key.info must not offer to regenerate: ${output}"
+    [[ ${output} != *"To regenerate"* ]] || fail "unchanged key info must not offer to regenerate: ${output}"
 }
 
 # ---- decryptKeyInfoDownload ----
@@ -333,14 +430,14 @@ newPageForDecrypt() {
     local -n decryptPageRef=$1
     local -n decryptKeysRef=$2
     local dir; dir="${ makeTempDir; }"
-    newKeyInfoPage "${testDir}/missing.info" "${dir}" decryptPageRef decryptKeysRef $(( EPOCHSECONDS + 3600 ))
+    newKeyInfoPage "${testDir}/missing.json" "${dir}" decryptPageRef decryptKeysRef $(( EPOCHSECONDS + 3600 ))
 }
 
 testDecryptRoundTrip() {
     local page keys; newPageForDecrypt page keys
     assertEqual "${keys}" "${ pageKeys "${page}"; }" "the returned keys must be the ones in the page"
     assertEqual '</html>' "${ tail -n 1 "${page}"; }" "nothing may be left over after the page"
-    local json='{"author":"Zoë O'"'"'Brien","contacts":["Café: ☕"]}'
+    local json='{"author":"Zoë O'"'"'Brien","contacts":[{"name":"Café","ways":[{"type":"social","value":"☕"}]}]}'
     encryptLikePage "${json}" "${keys}" "${testDir}/round.json"
     decryptKeyInfoDownload "${testDir}/round.json" "${keys}" "${testDir}/round.plain"
     assertEqual "${json}" "${ cat "${testDir}/round.plain"; }"
@@ -368,7 +465,7 @@ testDecryptRejectsOtherKeys() {
 
 testDecryptRejectsPlainFile() {
     local page keys output; newPageForDecrypt page keys
-    echo '{"greeting":"Hi","closing":"Bye","author":"Me","contacts":["A: 1"]}' > "${testDir}/plain.json"
+    downloadJson "Me" > "${testDir}/plain.json"
     output="${ ( decryptKeyInfoDownload "${testDir}/plain.json" "${keys}" "${testDir}/plain.out" ) 2>&1; }"
     assertNotEqual 0 $? "an unencrypted file must be rejected"
     assertContains "is not from the key info page" "${output}"
@@ -386,9 +483,11 @@ testEachPageHasNewKeys() {
 
 testPageHasExpiry() {
     local page keys expires=$(( EPOCHSECONDS + 1234 ))
-    newKeyInfoPage "${testDir}/missing.info" "${testDir}" page keys ${expires}
+    newKeyInfoPage "${testDir}/missing.json" "${testDir}" page keys ${expires}
     local json; json="${ gsed -n 's|.*<script id="key-info-keys" type="application/json">\(.*\)</script>.*|\1|p' "${page}"; }"
     assertEqual "${expires}" "${ jq -r '.expires' <<< "${json}"; }" "the page must know when it expires"
+    local started; started="${ jq -r '.started' <<< "${json}"; }"
+    (( started > 0 && started <= EPOCHSECONDS )) || fail "the page must know when it was made: ${started}"
 }
 
 testWaitStopsAtDeadline() {
@@ -402,27 +501,26 @@ testWaitStopsAtDeadline() {
 }
 
 testCommandCancel() {
-    local downloads="${testDir}/downloads7" info="${testDir}/cancel.info"
+    local downloads="${testDir}/downloads7" info="${testDir}/cancel.json"
     mkdir -p "${downloads}" || fail
     writeKeyInfo "${info}"
     local before; readFile "${info}" before
     local outputFile="${testDir}/cancel.out"
     env rayvnTest_KeyInfoNoBrowser=1 valt key-info -k "${info}" -d "${downloads}" > "${outputFile}" 2>&1 &
     local pid=$!
-    sleep 2
-    local page; page="${ pageFromOutput "${outputFile}"; }"
+    local page; page="${ waitForPageFromOutput "${outputFile}"; }" || fail "no key info page: ${ cat "${outputFile}"; }"
     local keys; keys="${ pageKeys "${page}"; }"
     encryptLikePage '{"cancelled":true}' "${keys}" "${downloads}/${ downloadName "${keys}"; }"
     wait ${pid}
     assertEqual 0 $? "cancel must succeed: ${ cat "${outputFile}"; }"
     assertContains "Cancelled;" "${ stripAnsi "${ cat "${outputFile}"; }"; }"
     local after; readFile "${info}" after
-    assertEqual "${before}" "${after}" "cancel must leave key.info unchanged"
+    assertEqual "${before}" "${after}" "cancel must leave the key info file unchanged"
     assertFileDoesNotExist "${downloads}/${ downloadName "${keys}"; }"
 }
 
 testCommandTimeout() {
-    local downloads="${testDir}/downloads8" info="${testDir}/timeout.info"
+    local downloads="${testDir}/downloads8" info="${testDir}/timeout.json"
     mkdir -p "${downloads}" || fail
     local output; output="${ env rayvnTest_KeyInfoNoBrowser=1 rayvnTest_KeyInfoTimeoutSeconds=2 \
         valt key-info -k "${info}" -d "${downloads}" 2>&1; }"

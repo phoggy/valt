@@ -42,8 +42,8 @@ init() {
     newValtKeys 'test' "${keyDir}" pubFile keyFile
 }
 
-# Sets up a key copy with a current paper key (a stand-in PDF newer than the key and key.info), setting the named vars
-# to the key, key.info and PDF paths.
+# Sets up a key copy with a current paper key (a stand-in PDF newer than the key and key info), setting the named vars
+# to the key, key info and PDF paths.
 
 newPaperKeySetup() {
     local -n setupKeyRef=$1
@@ -52,11 +52,11 @@ newPaperKeySetup() {
     local dir; dir="${ makeTempDir; }"
     cp "${keyFile}" "${dir}/test.key" || fail
     cp "${pubFile}" "${dir}/test.pub" || fail
-    echo "completed='yes'" > "${dir}/key.info"
+    echo '{}' > "${dir}/key-info.json"
     echo "paper key ${dir}" > "${dir}/test-key.pdf"
-    touch -t 202001010000 "${dir}/test.key" "${dir}/test.pub" "${dir}/key.info" || fail
+    touch -t 202001010000 "${dir}/test.key" "${dir}/test.pub" "${dir}/key-info.json" || fail
     setupKeyRef="${dir}/test.key"
-    setupInfoRef="${dir}/key.info"
+    setupInfoRef="${dir}/key-info.json"
     setupPdfRef="${ _paperKeyFile "${dir}/test.key"; }" # the path as valt records it (symlinks resolved)
 }
 
@@ -187,10 +187,10 @@ testNoQuestionsWithoutTerminal() {
 
 testNoQuestionsForOutOfDatePaperKey() {
     local key info pdf output leftover; newPaperKeySetup key info pdf
-    touch "${info}" # key.info is now newer than the paper key
+    touch "${info}" # the key info is now newer than the paper key
     remindWith output leftover 'yes yes' "${key}" "${info}"
     assertEqual 'yes yes' "${leftover}" "an out of date paper key must not be asked about"
-    assertContains "key.info has changed" "${output}"
+    assertContains "key info has changed" "${output}"
 }
 
 # valt encrypt (which signs) asks once it has encrypted the file.

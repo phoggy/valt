@@ -1,7 +1,7 @@
 // The valt paper key document, compiled to PDF by typst (https://typst.app).
 //
-// Values come from data.json, written by valt: every variable set in key.info (e.g. data.author, data.contacts), plus
-// data.generated, set by valt (date, checksum, and the logo, QR code and armored key file names). Style overrides
+// Values come from data.json, written by valt: every value in the key info file (e.g. data.author, and data.contacts,
+// each with a name and ways, each with a type and value), plus data.generated, set by valt (date, checksum, and the logo, QR code and armored key file names). Style overrides
 // (valt keys/paper --css) are applied by the style function in style.typ, after the rules below.
 
 #import "style.typ": style
@@ -140,7 +140,12 @@ If all of this has you thinking _"uh… what?"_, please see #link(<getting-help>
 
 The following are contacts that I trust and who have agreed to help if needed:
 
-#enum(..data.contacts)
+// Each person's name, then each way to reach them on its own line
+#let wayLabels = (phone: "Phone", email: "Email", social: "Social", address: "Address")
+#enum(..data.contacts.map(contact => [
+  #strong(contact.name)
+  #for way in contact.ways [\ #wayLabels.at(way.type, default: way.type): #way.value]
+]))
 
 If they aren't available, don't worry – there are people out there who can help you through this process. Since what
 you're trying to decrypt may be extremely sensitive (e.g. a password manager backup), you need to be careful about who you

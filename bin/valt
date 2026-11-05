@@ -86,8 +86,8 @@ declare -gA cliSpec=(
     #
     # The PDF contains your keys, also in encrypted form, to serve as a backup for you and/or your
     # successors, along with detailed usage instructions. Keys are represented as a QR code and again in
-    # a text format (often called "paper keys"). Content is personalized from a key.info file; if it has
-    # not been completed, the PDF is skipped and can be generated later with 'valt paper'.
+    # a text format (often called "paper keys"). Content is personalized from your key info (see 'valt
+    # key-info'); until that is complete, the PDF is skipped and can be generated later with 'valt paper'.
     #
     # The PDF is opened when done, so that you can check and print it. Please ensure that you print at
     # least one copy, then either write your passphrase on the last page or, more securely, say in the
@@ -98,13 +98,14 @@ declare -gA cliSpec=(
     #
     # The PDF is typeset by typst (https://typst.app). The template can be replaced, and style overrides
     # applied, with typst files: the default template (key-doc-template.typ) and an example style file
-    # (key-doc-style.typ) are in the valt 'etc' directory. Every variable set in the key.info file is
-    # available to the template as data.NAME (e.g. data.author); data.generated holds values set by valt.
+    # (key-doc-style.typ) are in the valt 'etc' directory. Every value in the key info file is available
+    # to the template as data.NAME (e.g. data.author; each of data.contacts has a name and ways, each with
+    # a type and value); data.generated holds values set by valt.
     ['keys']='keys(--name|-n:str=valt --output-dir|-o:dir --force|-f --allow-weak-passphrase --default|-d --no-default [--default|--no-default] --no-verify --no-advice --quick|-q --no-pdf --key-info|-k:file --template|-t:file --style|-c:file --help|-h)'
 
-    # Generate the paper key PDF for an existing key pair, personalized from the key.info file. The PDF is written
-    # next to the key and replaces any existing one, so this can be re-run whenever key.info changes. The passphrase
-    # is not required, since the private key is included in its encrypted form.
+    # Generate the paper key PDF for an existing key pair, personalized from your key info. The PDF is written
+    # next to the key and replaces any existing one, so this can be re-run whenever your key info changes. The
+    # passphrase is not required, since the private key is included in its encrypted form.
     #   KEY_FILE    The private key file (default: the default key; see 'valt default-key').
     #   --name      Use the NAME.key file in the valt config directory, e.g. bob -> bob.key.
     #   --key-info  Key info file to use instead of the default.
@@ -117,16 +118,16 @@ declare -gA cliSpec=(
     # customization details.
     ['paper']='paper(file? --name|-n:str --key-info|-k:file --template|-t:file --style|-c:file --help|-h)'
 
-    # Fill in the paper key's personal information (the key.info file) in a web page: the letter, the people who can
+    # Fill in the paper key's personal information (your key info) in a web page: the letter, the people who can
     # help, and notes. The page opens in your browser with the current values; when you save it, valt imports it into
-    # key.info and offers to regenerate the paper key.
-    #   --key-info   Key info file to write (default: key.info in the valt config directory).
+    # the key info file and offers to regenerate the paper key.
+    #   --key-info   Key info file to write (default: key-info.json in the valt config directory).
     #   --downloads  Your browser's downloads directory (default: ~/Downloads).
     #   --timeout    How many minutes to wait for the page; the page expires then too.
     #
     # The page works offline and sends nothing anywhere: Save downloads valt-key-info-ID.json,
-    # encrypted with a one-time key, which valt imports and then deletes. Cancel leaves key.info
-    # unchanged. key.info can also be edited by hand.
+    # encrypted with a one-time key, which valt imports and then deletes. Cancel leaves the key info
+    # file unchanged. It is JSON, so can also be edited by hand.
     ['key-info']='keyInfo(--key-info|-k:str --downloads|-d:dir --timeout|-t:+int=60 --help|-h)'
 
     # Decrypt an encrypted file, or verify and extract a secure archive (.valt). You will be prompted
@@ -645,13 +646,13 @@ parseKeyInfoArgs() {
 
 keyInfoCmdUsage() {
     echo
-    show bold "Fill in the paper key's personal information (the key.info file) in a web page: the letter, the"
-    show bold "people who can help, and notes. The page opens in your browser with the current values; when you"
-    show bold "save it, valt imports it into key.info and offers to regenerate the paper key."
+    show bold "Fill in the paper key's personal information (your key info) in a web page: the letter, the people"
+    show bold "who can help, and notes. The page opens in your browser with the current values; when you save it,"
+    show bold "valt imports it into the key info file and offers to regenerate the paper key."
     echo
     show "Usage:" bold blue "valt key-info" "[-d DOWNLOADS] [-k KEY-INFO] [-t TIMEOUT]"
     echo
-    option "-k, --key-info KEY-INFO" "Key info file to write (default: key.info in the valt config" 31
+    option "-k, --key-info KEY-INFO" "Key info file to write (default: key-info.json in the valt config" 31
     option "" "directory)." 31
     option "-d, --downloads DOWNLOADS" "Your browser's downloads directory (default: ~/Downloads)." 31
     option "-t, --timeout TIMEOUT" "How many minutes to wait for the page; the page expires then too." 31
@@ -659,8 +660,8 @@ keyInfoCmdUsage() {
     option "-h, --help" "Print this help message." 31
     echo
     echo "The page works offline and sends nothing anywhere: Save downloads valt-key-info-ID.json,"
-    echo "encrypted with a one-time key, which valt imports and then deletes. Cancel leaves key.info"
-    echo "unchanged. key.info can also be edited by hand."
+    echo "encrypted with a one-time key, which valt imports and then deletes. Cancel leaves the key info"
+    echo "file unchanged. It is JSON, so can also be edited by hand."
     declare -F keyInfoCmdUsageExtra > /dev/null && keyInfoCmdUsageExtra
     bye "$@"
 }
@@ -743,8 +744,8 @@ keysCmdUsage() {
     echo
     echo "The PDF contains your keys, also in encrypted form, to serve as a backup for you and/or your"
     echo "successors, along with detailed usage instructions. Keys are represented as a QR code and again in"
-    echo "a text format (often called \"paper keys\"). Content is personalized from a key.info file; if it has"
-    echo "not been completed, the PDF is skipped and can be generated later with 'valt paper'."
+    echo "a text format (often called \"paper keys\"). Content is personalized from your key info (see 'valt"
+    echo "key-info'); until that is complete, the PDF is skipped and can be generated later with 'valt paper'."
     echo
     echo "The PDF is opened when done, so that you can check and print it. Please ensure that you print at"
     echo "least one copy, then either write your passphrase on the last page or, more securely, say in the"
@@ -755,8 +756,9 @@ keysCmdUsage() {
     echo
     echo "The PDF is typeset by typst (https://typst.app). The template can be replaced, and style overrides"
     echo "applied, with typst files: the default template (key-doc-template.typ) and an example style file"
-    echo "(key-doc-style.typ) are in the valt 'etc' directory. Every variable set in the key.info file is"
-    echo "available to the template as data.NAME (e.g. data.author); data.generated holds values set by valt."
+    echo "(key-doc-style.typ) are in the valt 'etc' directory. Every value in the key info file is available"
+    echo "to the template as data.NAME (e.g. data.author; each of data.contacts has a name and ways, each with"
+    echo "a type and value); data.generated holds values set by valt."
     declare -F keysCmdUsageExtra > /dev/null && keysCmdUsageExtra
     bye "$@"
 }
@@ -790,8 +792,8 @@ parsePaperArgs() {
 
 paperCmdUsage() {
     echo
-    show bold "Generate the paper key PDF for an existing key pair, personalized from the key.info file. The PDF is"
-    show bold "written next to the key and replaces any existing one, so this can be re-run whenever key.info"
+    show bold "Generate the paper key PDF for an existing key pair, personalized from your key info. The PDF is"
+    show bold "written next to the key and replaces any existing one, so this can be re-run whenever your key info"
     show bold "changes. The passphrase is not required, since the private key is included in its encrypted form."
     echo
     show "Usage:" bold blue "valt paper" "[KEY_FILE] [-k KEY-INFO] [-n NAME] [-c STYLE] [-t TEMPLATE]"
@@ -1047,7 +1049,7 @@ keysCmd() {
     (( offerDefault )) && offerDefaultKey "${privateKeyFile}" "${_opts['default']:-0}"
 
     (( _opts['no-pdf'] )) && return 0
-    if isKeyInfoComplete "${_opts['key-info']}"; then
+    if isKeyInfoComplete "${_opts['key-info']:-${valtConfigDir}/key-info.json}"; then
         generatePaperKey "${privateKeyFile}"
         openPaperKey "${privateKeyFile}"
     else
@@ -1548,12 +1550,12 @@ verifyEncryptedFile() {
     show "Verified" bold "${ tildePath "${encryptedFile}"; }" "decrypts to match" cyan "${ tildePath "${originalFile}"; }"
 }
 
-# Opens the key info page, waits for its download, imports it into key.info, and, if that changed it, offers to
+# Opens the key info page, waits for its download, imports it into the key info file, and, if that changed it, offers to
 # regenerate the default key's paper key.
 
 keyInfoCmd() {
     require 'valt/key-info' 'valt/paper-keys' 'rayvn/spinner'
-    local keyInfoFile="${_opts['key-info']:-${valtConfigDir}/key.info}"
+    local keyInfoFile="${_opts['key-info']:-${valtConfigDir}/key-info.json}"
     local downloadsDir="${_opts['downloads']:-${HOME}/Downloads}"
     [[ -d ${downloadsDir} ]] || keyInfoCmdUsage "There is no ${ tildePath "${downloadsDir}"; } directory; use --downloads."
 
@@ -1615,7 +1617,7 @@ keyInfoCmd() {
              ", perhaps because security software protects that folder. It is encrypted with a key that is now gone," \
              "so it is useless to anyone; delete it whenever convenient."
     fi
-    (( changed )) && offerPaperKeyRegeneration # the paper key is only out of date if key.info changed
+    (( changed )) && offerPaperKeyRegeneration # the paper key is only out of date if the key info changed
     return 0
 }
 
@@ -1634,7 +1636,7 @@ removeKeyInfoPageDir() {
     return 0
 }
 
-# Offers to regenerate the default key's paper key from the new key.info (only on a terminal); otherwise shows how.
+# Offers to regenerate the default key's paper key from the new key info (only on a terminal); otherwise shows how.
 
 offerPaperKeyRegeneration() {
     local keyFile; keyFile="${ defaultValtKeyFile; }"
@@ -1656,21 +1658,20 @@ offerPaperKeyRegeneration() {
     show "To regenerate the paper key, run:" bold blue "${command}"
 }
 
-# Explains how to generate the paper key for privateKeyFile once key.info is complete.
+# Explains how to generate the paper key for privateKeyFile once the key info is complete.
 
 showPaperKeyDeferred() {
     local privateKeyFile="$1"
-    local infoFile; infoFile="${ tildePath "${_opts['key-info']:-${valtConfigDir}/key.info}"; }"
     local command; command=("${ paperKeyCommand "${privateKeyFile}"; }")
     [[ -n ${_opts['key-info']} ]] && command+=(-k "${ tildePath "${_opts['key-info']}"; }")
     [[ -n ${_opts['template']} ]] && command+=(-t "${ tildePath "${_opts['template']}"; }")
     [[ -n ${_opts['style']} ]] && command+=(-c "${ tildePath "${_opts['style']}"; }")
 
     echo
-    show bold yellow "Paper key not generated:" "the" blue "${infoFile}" "file has not been completed."
+    show bold yellow "Paper key not generated:" "your key info is not complete yet."
     echo
-    show "Your keys are ready to use now. Fill in" blue "key.info" "with" bold blue "valt key-info" \
-         "(or edit it by hand), then generate the paper key with:"
+    show "Your keys are ready to use now. Fill in your key info with" bold blue "valt key-info" glue \
+         ", then generate the paper key with:"
     echo
     show "    " bold blue "${command[*]}"
 }
