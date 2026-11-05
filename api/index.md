@@ -23,7 +23,7 @@ Documentation for all public functions in rayvn's shared libraries.
 
 | Library | Description |
 |---|---|
-| [valt/paper-keys](/valt/api/valt-paper-keys) | Paper key PDF generation from key.info, and reminders to keep it current. |
+| [valt/paper-keys](/valt/api/valt-paper-keys) | Paper key PDF generation from your key info, and reminders to keep it current. |
 | [valt/pdf](/valt/api/valt-pdf) | PDF generation from HTML. |
 | [valt/node](/valt/api/valt-node) | Node.js and npm support, used for PDF generation. |
 

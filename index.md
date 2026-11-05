@@ -17,7 +17,7 @@ encrypted *secure archive*.
 ## First Look
 
 ```bash
-valt keys                          # create valt.key and valt.pub (and the paper key, once key.info is complete)
+valt keys                          # create valt.key and valt.pub (and the paper key, once your key info is complete)
 valt encrypt taxes.pdf             # writes taxes.pdf.age and taxes.pdf.age.minisig
 valt decrypt taxes.pdf.age         # verifies the signature, writes taxes.pdf
 valt archive create -C ~/docs .    # writes USER-TIMESTAMP.valt and a shareable .valt.pub
@@ -68,7 +68,7 @@ from its QR code or printed text.
 
 | Library | Description |
 |---|---|
-| [valt/paper-keys](/valt/api/valt-paper-keys) | Paper key PDF generation from key.info, and reminders to keep it current. |
+| [valt/paper-keys](/valt/api/valt-paper-keys) | Paper key PDF generation from your key info, and reminders to keep it current. |
 | [valt/pdf](/valt/api/valt-pdf) | PDF generation from HTML. |
 | [valt/node](/valt/api/valt-node) | Node.js and npm support, used for PDF generation. |
 

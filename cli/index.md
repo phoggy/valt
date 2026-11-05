@@ -91,8 +91,8 @@ Usage: valt keys [-d | --no-default] [--allow-weak-passphrase] [-f] [-k KEY-INFO
 
 The PDF contains your keys, also in encrypted form, to serve as a backup for you and/or your
 successors, along with detailed usage instructions. Keys are represented as a QR code and again in
-a text format (often called "paper keys"). Content is personalized from a key.info file; if it has
-not been completed, the PDF is skipped and can be generated later with 'valt paper'.
+a text format (often called "paper keys"). Content is personalized from your key info (see 'valt
+key-info'); until that is complete, the PDF is skipped and can be generated later with 'valt paper'.
 
 The PDF is opened when done, so that you can check and print it. Please ensure that you print at
 least one copy, then either write your passphrase on the last page or, more securely, say in the
@@ -103,15 +103,16 @@ Document Customization
 
 The PDF is typeset by typst (https://typst.app). The template can be replaced, and style overrides
 applied, with typst files: the default template (key-doc-template.typ) and an example style file
-(key-doc-style.typ) are in the valt 'etc' directory. Every variable set in the key.info file is
-available to the template as data.NAME (e.g. data.author); data.generated holds values set by valt.
+(key-doc-style.typ) are in the valt 'etc' directory. Every value in the key info file is available
+to the template as data.NAME (e.g. data.author; each of data.contacts has a name and ways, each with
+a type and value); data.generated holds values set by valt.
 ```
 
 ### valt paper
 
 ```
-Generate the paper key PDF for an existing key pair, personalized from the key.info file. The PDF is
-written next to the key and replaces any existing one, so this can be re-run whenever key.info
+Generate the paper key PDF for an existing key pair, personalized from your key info. The PDF is
+written next to the key and replaces any existing one, so this can be re-run whenever your key info
 changes. The passphrase is not required, since the private key is included in its encrypted form.
 
 Usage: valt paper [KEY_FILE] [-k KEY-INFO] [-n NAME] [-c STYLE] [-t TEMPLATE]
@@ -134,13 +135,13 @@ customization details.
 ### valt key-info
 
 ```
-Fill in the paper key's personal information (the key.info file) in a web page: the letter, the
-people who can help, and notes. The page opens in your browser with the current values; when you
-save it, valt imports it into key.info and offers to regenerate the paper key.
+Fill in the paper key's personal information (your key info) in a web page: the letter, the people
+who can help, and notes. The page opens in your browser with the current values; when you save it,
+valt imports it into the key info file and offers to regenerate the paper key.
 
 Usage: valt key-info [-d DOWNLOADS] [-k KEY-INFO] [-t TIMEOUT]
 
-    -k, --key-info KEY-INFO    Key info file to write (default: key.info in the valt config
+    -k, --key-info KEY-INFO    Key info file to write (default: key-info.json in the valt config
                                directory).
     -d, --downloads DOWNLOADS  Your browser's downloads directory (default: ~/Downloads).
     -t, --timeout TIMEOUT      How many minutes to wait for the page; the page expires then too.
@@ -148,8 +149,8 @@ Usage: valt key-info [-d DOWNLOADS] [-k KEY-INFO] [-t TIMEOUT]
     -h, --help                 Print this help message.
 
 The page works offline and sends nothing anywhere: Save downloads valt-key-info-ID.json,
-encrypted with a one-time key, which valt imports and then deletes. Cancel leaves key.info
-unchanged. key.info can also be edited by hand.
+encrypted with a one-time key, which valt imports and then deletes. Cancel leaves the key info
+file unchanged. It is JSON, so can also be edited by hand.
 ```
 
 ### valt verify

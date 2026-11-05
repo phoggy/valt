@@ -8,7 +8,7 @@ nav_order: 6
 
 # valt/paper-keys
 
-Paper key PDF generation from key.info, and reminders to keep it current.
+Paper key PDF generation from your key info, and reminders to keep it current.
 
 ## Functions
 
@@ -22,7 +22,7 @@ needed for QR and PEM generation.
 
 | | |
 |---|---|
-| `[keyInfoFile]` *(string)* | Path to the key info file (default: ${valtConfigDir}/key.info) |
+| `[keyInfoFile]` *(string)* | Path to the key info file (default: ${valtConfigDir}/key-info.json) |
 {: .args-table}
 
 ### isKeyInfoComplete()
@@ -35,13 +35,13 @@ exist, it is created from the template so that it can be edited.
 
 | | |
 |---|---|
-| `[keyInfoFile]` *(string)* | Path to the key info file (default: ${valtConfigDir}/key.info) |
+| `[keyInfoFile]` *(string)* | Path to the key info file (default: ${valtConfigDir}/key-info.json) |
 {: .args-table}
 
 ### remindPaperKey()
 
 Warns if a valt private key has no paper key, or if its paper key is older than the key or
-the key.info file. Does nothing for files that are not valt private keys.
+the key info file. Does nothing for files that are not valt private keys.
 
 
 *args*
@@ -49,7 +49,7 @@ the key.info file. Does nothing for files that are not valt private keys.
 | | |
 |---|---|
 | `keyFile` *(string)* | Path to a private key file. |
-| `[keyInfoFile]` *(string)* | Path to the key info file (default: ${valtConfigDir}/key.info) |
+| `[keyInfoFile]` *(string)* | Path to the key info file (default: ${valtConfigDir}/key-info.json) |
 {: .args-table}
 
 ### paperKeyCommand()
@@ -75,7 +75,7 @@ Generates a paper key PDF from a private key file, storing the output path in a 
 |---|---|
 | `privateKeyFile` *(string)* | Path to the private key file. |
 | `resultVarRef` *(string)* | Name of the variable to receive the output paper key file path. |
-| `[keyInfoFile]` *(string)* | Path to the key info file (default: ${valtConfigDir}/key.info). |
+| `[keyInfoFile]` *(string)* | Path to the key info file (default: ${valtConfigDir}/key-info.json). |
 | `[cssOverride]` *(string)* | Path to an optional CSS override file. |
 | `[htmlTemplate]` *(string)* | Path to an HTML template file (default: ${valtHome}/etc/key-doc-template.html). |
 {: .args-table}
