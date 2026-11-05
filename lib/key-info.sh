@@ -13,13 +13,14 @@
 #     "closing": "I hope you never need this!",
 #     "author": "Bob Barker",
 #     "contacts": [
-#       { "name": "Aunt Martha", "ways": [ { "type": "phone", "value": "+44 791 112 4456" },
+#       { "name": "Aunt Martha", "ways": [ { "type": "phone", "value": "+44 791 112 4456", "preferred": true },
 #                                          { "type": "address", "value": "1 Park Row, Leeds LS1 5AB, UK" } ] }
 #     ],
 #     "notes": [ "The passphrase is in the envelope in the fire safe." ]
 #   }
 #
-# A way's type is phone, email, social or address.
+# A way's type is phone, email, social or address. One of a person's ways may be marked preferred, the one to try
+# first.
 
 # ◇ Writes the key info web page (a single HTML file with no network access) to a directory, with the current values
 #   from the key info file filled in, so that it can be opened in a browser. The page's Save button downloads
@@ -266,12 +267,18 @@ _init_valt_key-info() {
             (.greeting, .closing, .author | text)
             and (.contacts | type == "array" and length > 0 and all(
                 (.name | text) and (.ways | type == "array" and length > 0
-                                    and all((.type as $t | wayTypes | index($t)) and (.value | text)))))
+                                    and all((.type as $t | wayTypes | index($t)) and (.value | text)
+                                            and ((.preferred // false) | type == "boolean")))))
             and ((.notes // []) | type == "array" and all(type == "string"));
         def oneLine: gsub("\\s*\n\\s*"; " ") | gsub("^\\s+|\\s+$"; "");
         def normalized:
             .greeting |= oneLine | .closing |= oneLine | .author |= oneLine
-            | .contacts |= map({name: (.name | oneLine), ways: [.ways[] | {type, value: (.value | oneLine)}]})
+            | .contacts |= map({name: (.name | oneLine),
+                                ways: (reduce .ways[] as $way ({ways: [], preferred: false};
+                                           ($way.preferred == true and (.preferred | not)) as $first
+                                           | .ways += [{type: $way.type, value: ($way.value | oneLine)}
+                                                       + (if $first then {preferred: true} else {} end)]
+                                           | .preferred = (.preferred or $first)) | .ways)})
             | .notes = [(.notes // [])[] | oneLine | select(length > 0)];
         def problems:
             [ (if (.greeting | text) then empty else "a greeting" end),
@@ -339,7 +346,9 @@ _pageKeyInfoJson() {
     local json='{}'
     [[ -f ${keyInfoFile} ]] && json="${ jq -c 'if type == "object" then . else {} end' "${keyInfoFile}" 2> /dev/null; }"
     jq -c '{greeting: (.greeting // ""), closing: (.closing // ""), author: (.author // ""),
-            contacts: [(.contacts // [])[]? | {name: (.name // ""), ways: [(.ways // [])[]? | {type, value}]}],
+            contacts: [(.contacts // [])[]? | {name: (.name // ""),
+                                               ways: [(.ways // [])[]? | {type, value}
+                                                      + (if .preferred == true then {preferred: true} else {} end)]}],
             notes: [(.notes // [])[]? | tostring]}' <<< "${json:-{\}}"
 }
 

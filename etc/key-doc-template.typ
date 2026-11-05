@@ -140,12 +140,45 @@ If all of this has you thinking _"uh… what?"_, please see #link(<getting-help>
 
 The following are contacts that I trust and who have agreed to help if needed:
 
-// Each person's name, then each way to reach them on its own line
+// Each person: their name, then the ways to reach them, a label for each type (always in the order of wayLabels) with
+// its values beside it, the preferred way marked. Emails, phone numbers and web addresses are links, for reading on screen, but look the
+// same as the text around them when printed. With three or more people, they are set two to a row.
 #let wayLabels = (phone: "Phone", email: "Email", social: "Social", address: "Address")
-#enum(..data.contacts.map(contact => [
-  #strong(contact.name)
-  #for way in contact.ways [\ #wayLabels.at(way.type, default: way.type): #way.value]
-]))
+#let wayValue(type, value) = {
+  let plain = text(fill: textColor, value)
+  if type == "email" { link("mailto:" + value, plain) }
+  else if type == "phone" { link("tel:" + value.replace(regex("[^+0-9]"), ""), plain) }
+  else if value.starts-with("http://") or value.starts-with("https://") { link(value, plain) }
+  else { value }
+}
+#let groupedWays(ways) = {
+  let types = wayLabels.keys().filter(type => ways.any(way => way.type == type))
+  types += ways.map(way => way.type).dedup().filter(type => type not in types) // any unknown type, last
+  types.map(type => (type, ways.filter(way => way.type == type)))
+}
+#let preferredMark = text(fill: luma(115), style: "italic", [ (preferred)])
+#let person(number, contact) = grid(
+  columns: (1.1em, 1fr), column-gutter: 0.5em, // fixed widths, so that every person's values line up
+  align(right)[#number.],
+  block[
+    #strong(contact.name)
+    #v(0.5em, weak: true)
+    #grid(
+      columns: (4.2em, 1fr), column-gutter: 0.8em, row-gutter: 0.7em,
+      ..groupedWays(contact.ways).map(((type, values)) => (
+        text(fill: luma(115), wayLabels.at(type, default: type)),
+        values.map(way => [#wayValue(type, way.value)#if way.at("preferred", default: false) { preferredMark }])
+              .join(linebreak()),
+      )).flatten(),
+    )
+  ],
+)
+#let people = data.contacts.enumerate().map(((index, contact)) => person(index + 1, contact))
+#pad(left: 1em, if people.len() >= 3 {
+  grid(columns: (1fr, 1fr), column-gutter: 2em, row-gutter: 1.4em, ..people)
+} else {
+  stack(spacing: 1.4em, ..people)
+})
 
 If they aren't available, don't worry – there are people out there who can help you through this process. Since what
 you're trying to decrypt may be extremely sensitive (e.g. a password manager backup), you need to be careful about who you
@@ -242,6 +275,19 @@ nature of what you're working with. Take your time, and don't settle for help th
 
 This section assumes familiarity with the terminal and using command line tools. The tools described here run on macOS
 and Linux.
+
+#callout("warning")[
+  #calloutTitle("warning")[If you are helping]
+
+  These are #data.author's files, and they may be extremely sensitive. Anyone holding this document can try to decrypt
+  them, so before you start, make sure that the person asking should have access:
+
+  - They are someone #data.author would want to have it, such as family or the executor of their estate.
+  - They need it now. If #data.author can be reached, check with them first, using contact details you already have
+    rather than any the person asking gives you.
+  - Their story holds up. If they are a stranger to you, or anything seems wrong, stop; pressure to hurry is a warning
+    sign in itself.
+]
 
 == Prerequisites
 

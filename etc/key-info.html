@@ -186,19 +186,21 @@
     .contact-head { display: flex; align-items: center; gap: 0.625rem; }
     .contact-head .number { font-family: var(--rv-font-mono); color: var(--rv-fg-muted); }
     .contact-head input { flex: 1; font-weight: 500; }
-    .ways { display: flex; flex-direction: column; gap: 0.375rem; padding-left: 1.5rem; }
-    .method { display: grid; grid-template-columns: 9.375rem minmax(0, 1fr) auto; gap: 0.5rem; align-items: start; }
-    .method .message { grid-column: 2 / 4; font-size: 0.75rem; color: var(--rv-error); margin-top: -0.25rem; }
+    .methods { display: flex; flex-direction: column; gap: 0.375rem; padding-left: 1.5rem; }
+    .method { display: grid; grid-template-columns: 9.375rem minmax(0, 1fr) auto auto; gap: 0.5rem; align-items: start; }
+    .method .message { grid-column: 2 / -1; font-size: 0.75rem; color: var(--rv-error); margin-top: -0.25rem; }
+    .btn.star[aria-pressed="true"] { color: var(--rv-warning); border-color: var(--rv-warning); }
+    .btn.star[aria-pressed="true"] svg { fill: currentColor; }
     .add-method { display: flex; gap: 0.375rem; flex-wrap: wrap; align-items: center; }
     .add-method span { font-size: 0.75rem; color: var(--rv-fg-muted); margin-right: 0.25rem; }
     .summary { font-size: 0.8125rem; color: var(--rv-fg-muted); overflow-wrap: anywhere; }
     .summary.warning { color: var(--rv-warning-text); }
     .summary.error { color: var(--rv-error); }
     @media (max-width: 31.25rem) {
-        .ways { padding-left: 0; }
-        .method { grid-template-columns: minmax(0, 1fr) auto; }
-        .method select { grid-column: 1 / 3; }
-        .method .message { grid-column: 1 / 3; }
+        .methods { padding-left: 0; }
+        .method { grid-template-columns: minmax(0, 1fr) auto auto; }
+        .method select { grid-column: 1 / -1; }
+        .method .message { grid-column: 1 / -1; }
     }
 
     /* The preview: paper, in the paper key's colors and fonts (sizes in pt as there, 1pt being 4/3px) */
@@ -214,8 +216,15 @@
     .preview .human { font-family: "Shantell Sans", var(--rv-font-sans); }
     .preview .closing { font-size: 18px; font-style: italic; margin: 2.25em 0 0; }
     .preview .signature { font: 29px "Yellowtail", cursive; margin: 0.6em 0 0; }
-    .preview ol { margin: 0 0 1em; padding-left: 1.5em; }
-    .preview li { margin: 0 0 0.75em; }
+    .preview .people { display: grid; gap: 1.4em 2em; margin: 0 0 1em 1em; }
+    .preview .people.two { grid-template-columns: 1fr 1fr; }
+    .preview .person { display: grid; grid-template-columns: 1.1em 1fr; column-gap: 0.5em; }
+    .preview .person .number { text-align: right; }
+    .preview .ways { display: grid; grid-template-columns: 4.2em 1fr; gap: 0.35em 0.8em; margin-top: 0.25em; }
+    .preview .ways .label { color: #737373; }
+    .preview .preferred { color: #737373; font-style: italic; }
+    .preview .ways > span { overflow-wrap: anywhere; }
+    @media (max-width: 31.25rem) { .preview .people.two { grid-template-columns: 1fr; } }
     .preview .notes p { margin: 0; }
     .preview .empty { color: #8a8f98; font-style: italic; }
     @media (max-width: 31.25rem) {
@@ -503,8 +512,9 @@ See <a class="t-link" href="https://github.com/phoggy/mrld#methodology-and-sourc
 
         <h2>People who can help</h2>
         <p class="hint">If you are unavailable, whoever has the paper key may need help with the technical steps. Add at
-            least one person with computer skills (the command line on macOS or Linux) who has agreed to help, and each
-            way to reach them; two phones or two emails are fine.</p>
+            least one person with computer skills (the command line on macOS or Linux) who has agreed to help, and the
+            ways to reach them: as many as you like, of any kind, including more than one of the same kind (e.g. a home
+            and a work address). Star the way to try first; the paper key marks it as preferred.</p>
         <div class="contacts" id="contacts"></div>
         <div class="actions" style="margin-top: 0.75rem"><button type="button" class="btn" id="add-contact">Add a
             person</button></div>
@@ -578,11 +588,12 @@ See <a class="t-link" href="https://github.com/phoggy/mrld#methodology-and-sourc
         return !contact.name.trim() && contact.ways.every((m) => !m.value.trim());
     }
 
-    // Returns a person as the key info file holds them: trimmed, without empty ways
+    // Returns a person as the key info file holds them: trimmed, without empty ways, and with the preferred way marked
 
     function savedContact(contact) {
         return { name: contact.name.trim(),
-                 ways: contact.ways.filter((w) => w.value.trim()).map((w) => ({ type: w.type, value: w.value.trim() })) };
+                 ways: contact.ways.filter((w) => w.value.trim()).map((w) => ({
+                     type: w.type, value: w.value.trim(), ...(w.preferred ? { preferred: true } : {}) })) };
     }
 
     function isValid(contact) {
@@ -594,6 +605,7 @@ See <a class="t-link" href="https://github.com/phoggy/mrld#methodology-and-sourc
     const icons = {
         up: icon('<line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>'),
         down: icon('<line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>'),
+        star: icon('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'),
         remove: icon('<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'),
     };
 
@@ -674,7 +686,15 @@ See <a class="t-link" href="https://github.com/phoggy/mrld#methodology-and-sourc
         type.addEventListener("change", () => { method.type = type.value; update(); });
         value.addEventListener("input", () => { method.value = value.value; update(); });
         value.addEventListener("blur", () => { method.touched = true; update(); });
-        row.append(type, value,
+        const star = iconButton("star", "Preferred: the way to try first", () => {
+            const preferred = !method.preferred;
+            contact.ways.forEach((w) => { w.preferred = false; });
+            method.preferred = preferred;
+            renderContacts();
+        });
+        star.classList.add("star");
+        star.setAttribute("aria-pressed", method.preferred ? "true" : "false");
+        row.append(type, value, star,
                    iconButton("remove", "Remove", () => { contact.ways.splice(index, 1); renderContacts(); }), message);
         return row;
     }
@@ -740,7 +760,8 @@ See <a class="t-link" href="https://github.com/phoggy/mrld#methodology-and-sourc
             <hr class="page-break">
             <h2>Getting Help</h2>
             <p>The following are contacts that I trust and who have agreed to help if needed:</p>
-            ${info.contacts.length ? `<ol>${info.contacts.map(previewContact).join("")}</ol>`
+            ${info.contacts.length ? `<div class="people${info.contacts.length >= 3 ? " two" : ""}">${
+                info.contacts.map(previewContact).join("")}</div>`
                                    : `<p class="empty">(no one yet)</p>`}
             <hr class="page-break">
             <h2>Notes</h2>
@@ -749,9 +770,17 @@ See <a class="t-link" href="https://github.com/phoggy/mrld#methodology-and-sourc
         setStatus("");
     }
 
-    function previewContact(contact) {
-        const ways = contact.ways.map((w) => `<br>${wayTypes[w.type].paper}: ${escapeHtml(w.value)}`).join("");
-        return `<li><strong>${contact.name ? escapeHtml(contact.name) : '<span class="empty">(name)</span>'}</strong>${ways}</li>`;
+    // As the paper key shows a person: their name, then a label for each type (always in the order of wayTypes) with
+    // its values beside it, the preferred way marked
+
+    function previewContact(contact, index) {
+        const types = Object.keys(wayTypes).filter((type) => contact.ways.some((w) => w.type === type));
+        const ways = types.map((type) => `<span class="label">${wayTypes[type].paper}</span><span>${
+            contact.ways.filter((w) => w.type === type).map((w) => escapeHtml(w.value)
+                + (w.preferred ? '<span class="preferred"> (preferred)</span>' : "")).join("<br>")}</span>`).join("");
+        const name = contact.name ? escapeHtml(contact.name) : '<span class="empty">(name)</span>';
+        return `<div class="person"><span class="number">${index + 1}.</span>
+            <div><strong>${name}</strong><div class="ways">${ways}</div></div></div>`;
     }
 
     function setStatus(text, kind = "") {
@@ -890,7 +919,8 @@ See <a class="t-link" href="https://github.com/phoggy/mrld#methodology-and-sourc
     field("notes").value = (initial.notes || []).join("\n");
     contacts = (initial.contacts || []).map((c) => ({
         name: c.name || "",
-        ways: (c.ways || []).map((w) => ({ type: wayTypes[w.type] ? w.type : "address", value: w.value || "" })),
+        ways: (c.ways || []).map((w) => ({ type: wayTypes[w.type] ? w.type : "address", value: w.value || "",
+                                         preferred: w.preferred === true })),
     }));
     if (!contacts.length) contacts.push(newContact());
     ["greeting", "closing", "author", "notes"].forEach((id) => field(id).addEventListener("input", update));

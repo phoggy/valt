@@ -15,6 +15,7 @@ main() {
     testMigrateKeepsExistingFile
     testImportRoundTrip
     testImportKeepsExtraVars
+    testImportKeepsOnePreferredWay
     testImportRejectsInvalidInfo
     testImportedFileIsPrivate
     testCommandImportsDownload
@@ -273,6 +274,21 @@ testImportKeepsExtraVars() {
     assertEqual "New Name" "${ keyInfoValue "${info}" author; }"
     assertEqual "blue" "${ keyInfoValue "${info}" favoriteColor; }"
     assertEqual "dog" "${ keyInfoValue "${info}" 'pets[1]'; }"
+}
+
+# A person's preferred way is kept; if several are marked, only the first
+
+testImportKeepsOnePreferredWay() {
+    local info="${testDir}/preferred.json" json="${testDir}/preferred-download.json"
+    echo '{"greeting":"Hi","closing":"Bye","author":"Me","contacts":[{"name":"A","ways":[
+            {"type":"phone","value":"+1 555 555 1212"},{"type":"email","value":"a@example.com","preferred":true},
+            {"type":"social","value":"@a","preferred":true}]}],"notes":[]}' > "${json}"
+    importKeyInfo "${json}" "${info}"
+    assertEqual '[null,true,null]' "${ jq -c '[.contacts[0].ways[].preferred]' "${info}"; }"
+    local page keys
+    newKeyInfoPage "${info}" "${testDir}" page keys $(( EPOCHSECONDS + 3600 ))
+    assertEqual '[null,true,null]' "${ pageData "${page}" | jq -c '[.contacts[0].ways[].preferred]'; }" \
+        "the page must show which way is preferred"
 }
 
 testImportRejectsInvalidInfo() {
