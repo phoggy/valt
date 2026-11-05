@@ -144,9 +144,8 @@
     table.examples td { padding: 0.55rem 1rem 0.55rem 0; vertical-align: middle; border-bottom: 1px solid var(--rv-border); }
     table.examples td:first-child, table.examples td:last-child { white-space: nowrap; }
     table.examples td:last-child { font-weight: 600; }
-    .weak { color: var(--rv-error); }
-    .fair { color: var(--rv-warning-text); }
-    .strong { color: var(--rv-success); }
+    .weak { color: var(--rv-error); }       /* colored by valt's rating, as valt pass-check shows it */
+    .strong { color: var(--rv-term-ok); }
     .pw { font-size: 0.875rem; white-space: pre; padding: 3px 9px; border-radius: 0.375rem; }
     .pw .alpha { color: var(--rv-accent); }
     .pw .digit { color: var(--rv-code-type); }
@@ -220,7 +219,7 @@
     .preview .people.two { grid-template-columns: 1fr 1fr; }
     .preview .person { display: grid; grid-template-columns: 1.1em 1fr; column-gap: 0.5em; }
     .preview .person .number { text-align: right; }
-    .preview .ways { display: grid; grid-template-columns: 4.2em 1fr; gap: 0.35em 0.8em; margin-top: 0.25em; }
+    .preview .ways { display: grid; grid-template-columns: 4.2em 1fr; gap: 0.35em 0.8em; margin-top: 0.45em; }
     .preview .ways .label { color: #737373; }
     .preview .preferred { color: #737373; font-style: italic; }
     .preview .ways > span { overflow-wrap: anywhere; }
@@ -377,20 +376,21 @@
              update them if its estimates change. For each example:
                  printf '%s' 'EXAMPLE' | valt pass-check -u account   (the two "if the account is breached" lines)
                  printf '%s' 'EXAMPLE' | valt pass-check -u file      (the 1024 cores line)
-             The lines the rating is based on are underlined in a terminal. Last updated 2026-11-03. -->
+             The lines the rating is based on are underlined in a terminal. Each estimate is colored by the rating on
+             the first line of its report (-u account or -u file): weak or strong. Last updated 2026-11-03. -->
         <div class="table-scroll">
         <table class="examples">
             <tr><th>Example</th><th>Kind</th><th>To remember</th><th>Online account, if breached<br><span
                 class="sub">slow / fast hashing</span></th><th>valt key</th></tr>
             <tr><td><span class="pw">My dog Oscar</span></td>
                 <td>short phrase</td><td>easy</td>
-                <td>6 days / under a second</td><td class="weak">2 months</td></tr>
+                <td class="weak">6 days / under a second</td><td class="weak">2 months</td></tr>
             <tr><td><span class="pw">BkZB&amp;XWGj%3Tx</span></td>
                 <td>random password</td><td>hard</td>
-                <td>31 years / 16 minutes</td><td class="fair">303 years</td></tr>
+                <td class="strong">31 years / 16 minutes</td><td class="strong">303 years</td></tr>
             <tr><td><span class="pw">repossess thursday flaky lazy</span></td>
                 <td>random passphrase</td><td>fair</td>
-                <td>57 million years / 57 years</td><td class="strong">560 million years</td></tr>
+                <td class="strong">57 million years / 57 years</td><td class="strong">560 million years</td></tr>
         </table>
         </div>
         <p>A good passphrase requires randomness, and we humans are very bad at that. There's a famous

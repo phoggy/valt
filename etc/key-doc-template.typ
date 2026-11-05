@@ -162,7 +162,7 @@ The following are contacts that I trust and who have agreed to help if needed:
   align(right)[#number.],
   block[
     #strong(contact.name)
-    #v(0.5em, weak: true)
+    #v(1.3em, weak: true) // a little space between the name and the ways
     #grid(
       columns: (4.2em, 1fr), column-gutter: 0.8em, row-gutter: 0.7em,
       ..groupedWays(contact.ways).map(((type, values)) => (
