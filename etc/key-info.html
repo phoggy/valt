@@ -144,6 +144,10 @@
     table.examples td { padding: 0.55rem 1rem 0.55rem 0; vertical-align: middle; border-bottom: 1px solid var(--rv-border); }
     table.examples td:first-child, table.examples td:last-child { white-space: nowrap; }
     table.examples td:last-child { font-weight: 600; }
+    table.examples .rating { display: block; font-size: 0.75rem; font-weight: 500; }
+    table.examples .hash { display: inline-block; width: 2.6em; font-size: 0.75rem; color: var(--rv-fg-muted); }
+    table.examples .account .rating { padding-left: 2.6em; }
+    table.examples .kind { display: block; font-size: 0.8125rem; color: var(--rv-fg-muted); margin-top: 0.3rem; }
     .weak { color: var(--rv-error); }       /* colored by valt's rating, as valt pass-check shows it */
     .strong { color: var(--rv-term-ok); }
     .pw { font-size: 0.875rem; white-space: pre; padding: 3px 9px; border-radius: 0.375rem; }
@@ -367,32 +371,52 @@
                 using <a href="https://en.wikipedia.org/wiki/Scrypt">scrypt</a>, a computation designed to take a lot
                 of time and memory for every single guess.</dd>
         </dl>
-        <p>Your valt key is always the second case. valt judges its passphrase against a <strong>professional
+        <p>Your valt key is always the second case. valt judges its passphrase assuming a <strong>professional
             attacker</strong>: one with purpose-built hardware.</p>
 
         <h2>What makes one strong</h2>
-        <p>Estimates from valt's strength checker, against a professional attacker:</p>
+        <p>Estimates from valt's strength checker, assuming a professional attacker:</p>
         <!-- These estimates are copied by hand from valt pass-check (the default threat level, professional), so
              update them if its estimates change. For each example:
                  printf '%s' 'EXAMPLE' | valt pass-check -u account   (the two "if the account is breached" lines)
                  printf '%s' 'EXAMPLE' | valt pass-check -u file      (the 1024 cores line)
-             The lines the rating is based on are underlined in a terminal. Each estimate is colored by the rating on
-             the first line of its report (-u account or -u file): weak or strong. Last updated 2026-11-03. -->
+             The lines the rating is based on are underlined in a terminal. Each estimate shows the rating on the first
+             line of its report (-u account or -u file), and whether the password is breached, colored as valt colors
+             it: red below good or if breached, otherwise green. Last updated 2026-11-05 (mrld 0.1.16). -->
         <div class="table-scroll">
         <table class="examples">
-            <tr><th>Example</th><th>Kind</th><th>To remember</th><th>Online account, if breached<br><span
-                class="sub">slow / fast hashing</span></th><th>valt key</th></tr>
-            <tr><td><span class="pw">My dog Oscar</span></td>
-                <td>short phrase</td><td>easy</td>
-                <td class="weak">6 days / under a second</td><td class="weak">2 months</td></tr>
-            <tr><td><span class="pw">BkZB&amp;XWGj%3Tx</span></td>
-                <td>random password</td><td>hard</td>
-                <td class="weak">31 years / 16 minutes</td><td class="strong">303 years</td></tr>
-            <tr><td><span class="pw">repossess thursday flaky lazy</span></td>
-                <td>random passphrase</td><td>fair</td>
-                <td class="strong">57 million years / 57 years</td><td class="strong">560 million years</td></tr>
+            <tr><th>Example</th><th>To remember</th><th>Online account, if breached<br><span
+                class="sub">by how the site hashes passwords</span></th><th>valt key</th></tr>
+            <tr><td><span class="pw">Summer2024!</span><span class="kind">“complex” password</span></td>
+                <td>easy</td>
+                <td class="weak account"><span class="hash">slow</span>46 minutes<br><span class="hash">fast</span>under a second<span class="rating">very weak, breached</span></td>
+                <td class="weak">7 hours<span class="rating">very weak, breached</span></td></tr>
+            <tr><td><span class="pw">My dog Oscar</span><span class="kind">short phrase</span></td>
+                <td>easy</td>
+                <td class="weak account"><span class="hash">slow</span>6 days<br><span class="hash">fast</span>under a second<span class="rating">very weak</span></td>
+                <td class="weak">2 months<span class="rating">weak</span></td></tr>
+            <tr><td><span class="pw">Tr0ub4dor&amp;3</span><span class="kind">word with substitutions</span></td>
+                <td>hard</td>
+                <td class="weak account"><span class="hash">slow</span>3 months<br><span class="hash">fast</span>10 seconds<span class="rating">very weak, breached</span></td>
+                <td class="weak">3 years<span class="rating">good, but breached</span></td></tr>
+            <tr><td><span class="pw">BkZB&amp;XWGj%3Tx</span><span class="kind">random password</span></td>
+                <td>hard</td>
+                <td class="weak account"><span class="hash">slow</span>31 years<br><span class="hash">fast</span>16 minutes<span class="rating">very weak</span></td>
+                <td class="strong">303 years<span class="rating">strong</span></td></tr>
+            <tr><td><span class="pw">tulip anvil morsel 7</span><span class="kind">random words and a digit</span></td>
+                <td>fair</td>
+                <td class="strong account"><span class="hash">slow</span>3 million years<br><span class="hash">fast</span>3 years<span class="rating">good</span></td>
+                <td class="strong">33 million years<span class="rating">strong</span></td></tr>
+            <tr><td><span class="pw">repossess thursday flaky lazy</span><span class="kind">random passphrase</span></td>
+                <td>fair</td>
+                <td class="strong account"><span class="hash">slow</span>57 million years<br><span class="hash">fast</span>57 years<span class="rating">strong</span></td>
+                <td class="strong">560 million years<span class="rating">strong</span></td></tr>
         </table>
         </div>
+        <p><span class="pw">Summer2024!</span> meets the usual rules (upper and lower case, a digit and a symbol) yet
+            is very weak everywhere, and <span class="pw">Tr0ub4dor&amp;3</span>, the password from the xkcd comic
+            below, is good only as a valt key. Both have also turned up in thousands of data breaches, so valt rejects
+            them whatever their estimate: attackers try known passwords first.</p>
         <p>A good passphrase requires randomness, and we humans are very bad at that. There's a famous
             <a href="https://xkcd.com/936/">xkcd comic</a> on this subject that ends with this gem:</p>
         <blockquote>Through 20 years of effort, we've successfully trained everyone to use passwords that are hard for
@@ -438,22 +462,22 @@
         </dl>
 
         <h2>Threat levels</h2>
-        <p>The strength rating is judged against one of four attackers, least to most capable:</p>
+        <p>The strength rating assumes one of four attackers, least to most capable:</p>
         <dl class="headed">
             <dt>casual</dt>
             <dd>An opportunistic attacker with minimal resources.</dd>
             <dt>motivated</dt>
             <dd>An individual attacker with a real, focused effort behind it.</dd>
             <dt>professional</dt>
-            <dd>An attacker with resourced, purpose-built hardware. <strong>valt checks key passphrases against this
-                level.</strong></dd>
+            <dd>An attacker with resourced, purpose-built hardware. <strong>valt assumes this level for key
+                passphrases.</strong></dd>
             <dt>nation-state</dt>
             <dd>An attacker with the largest realistic guessing power modeled.</dd>
         </dl>
         <p class="after-terms">Each report lists crack times for a range of attack scenarios, and bases its rating on those that fit the
-            threat level. For a valt key against a professional attacker, that is an offline attack on 1,024 processor
+            threat level. For a valt key, assuming a professional attacker, that is an offline attack on 1,024 processor
             cores. A passphrase that is strong enough there takes far longer on smaller hardware, and the report also
-            shows the time against a nation-state cluster.</p>
+            shows the time for a nation-state cluster.</p>
 
         <h2>Breached passwords</h2>
         <p>Every check also looks the password up in the <a href="https://haveibeenpwned.com/Passwords">Have I Been
