@@ -98,6 +98,7 @@ _age() {
     local confirmPassphrase=0
     local checkStrength=0
     local passphraseFor=
+    local passphraseVar=
     local keyFile
 
     while (( $# )); do
@@ -105,6 +106,7 @@ _age() {
             --key) shift; assertFile "$1"; keyFile="$1"; requiresPassphrase=1 passphraseFor="${keyFile}" ;;
             --passphrase-for) shift; assertFile "$1"; requiresPassphrase=1 passphraseFor="$1" ;;
             --passphrase) requiresPassphrase=1 ;;
+            --passphrase-var) shift; passphraseVar="$1"; requiresPassphrase=1 ;; # a passphrase already read
             --confirm) confirmPassphrase=1 ;;
             --check-strength) checkStrength=1 ;;
             *) ageArgs+=("$1") ;;
@@ -119,7 +121,9 @@ _age() {
         # Yep, get it.
 
         local phraze
-        if [[ -n ${rayvnTest_ValtKeyPassphrase} ]]; then
+        if [[ -n ${passphraseVar} ]]; then
+            phraze="${!passphraseVar}"
+        elif [[ -n ${rayvnTest_ValtKeyPassphrase} ]]; then
             phraze="${rayvnTest_ValtKeyPassphrase}"
             (( checkStrength && rayvnTest_CheckKeyPassphraseStrength )) && _assertPassphraseStrength phraze
         else

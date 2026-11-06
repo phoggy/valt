@@ -1,0 +1,26 @@
+</div>
+<script>
+    /* The site's light mode turns on a light stylesheet rather than setting a class, so follow it to switch the
+       guide's own colors. (Block comments only: the site's layout joins lines, which would end a line comment's scope
+       nowhere.) */
+
+    const guide = document.querySelector(".valt-guide");
+    const lightStylesheet = document.getElementById("jtd-light-stylesheet");
+    const followTheme = () => guide.classList.toggle("light", Boolean(lightStylesheet && lightStylesheet.media !== "not all"));
+    followTheme();
+    if (lightStylesheet) new MutationObserver(followTheme).observe(lightStylesheet, { attributeFilter: ["media"] });
+
+    /* Color each character of the example passwords by kind: letters, digits and special characters (as on the key
+       info page) */
+
+    document.querySelectorAll(".valt-guide .pw").forEach((el) => {
+        const text = el.textContent;
+        el.textContent = "";
+        for (const c of text) {
+            const span = document.createElement("span");
+            span.className = /[A-Za-z]/.test(c) ? "alpha" : /[0-9]/.test(c) ? "digit" : c === " " ? "" : "special";
+            span.textContent = c;
+            el.append(span);
+        }
+    });
+</script>

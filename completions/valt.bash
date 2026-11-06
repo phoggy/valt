@@ -79,7 +79,7 @@ __valtComplete() {
                     local _relIdx=$(( cword - 2 ))
                     ;;
                 key-info)
-                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--downloads --help --key-info --timeout -d -h -k -t" -- "${cur}")); return; }
+                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--downloads --edit --help --key-info --timeout -d -e -h -k -t" -- "${cur}")); return; }
                     case "${prev}" in
                         --downloads|-d) COMPREPLY=($(compgen -d -- "${cur}")); return ;;
                     esac

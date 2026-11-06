@@ -126,9 +126,10 @@ newValtKeys() {
     _assertKeyFileDoesNotExist "${_publicKeyFile}"
     _assertKeyFileDoesNotExist "${_publicSigningKeyFile}"
 
-    # Maybe offer passphrase advice and/or generate passphrase if desired
+    # Get a good passphrase first, offering advice and generated ones (see _readNewKeyPassphrase)
 
-    _maybeOfferPassphraseAdvice
+    local _newKeyPassphrase=''
+    _readNewKeyPassphrase _newKeyPassphrase
 
     # Generate the post-quantum age private key (includes public key)
 
@@ -181,11 +182,9 @@ newValtKeys() {
 
     # Encrypt the private key directly to the key file
 
-    # The passphrase must be strong unless allowWeakKeyPassphrase is set
-
-    local -a strengthArgs=(--check-strength)
-    (( allowWeakKeyPassphrase )) && strengthArgs=()
-    printf "%s\n" "${plainPrivate[@]}" | _age --encrypt --passphrase --confirm "${strengthArgs[@]}" > "${_keyFile}" || { rm -f "${_keyFile}"; fail; }
+    printf "%s\n" "${plainPrivate[@]}" | _age --encrypt --passphrase-var _newKeyPassphrase > "${_keyFile}" \
+        || { rm -f "${_keyFile}"; eraseVars _newKeyPassphrase; fail; }
+    eraseVars _newKeyPassphrase
     chmod 600 "${_keyFile}" 2> /dev/null
 
     # Write public key
@@ -500,6 +499,7 @@ _init_valt_keys() {
     declare -gr _valtConfigFileName='valt.conf'
 
     declare -grx valtProjectUrl='https://github.com/phoggy/valt'
+    declare -grx valtGuideUrl='https://rayvn.ink/valt/guide/' # written by writeKeyInfoGuide, via valt's pages hook
 
     declare -grx valtPublicKeySuffix='pub'
     declare -grx valtPrivateKeySuffix='key'
@@ -606,14 +606,28 @@ _extractKey() {
     fi
 }
 
+# Asks for the passphrase of a key, unless already known (in rayvnTest_ValtKeyPassphrase, which callers make local), so
+# that operations using the key more than once ask only once. The passphrase is tried on the key at once, and asked for
+# again if it is wrong, up to 3 times, rather than failing later at the first typo.
+
 _prepareKey() {
     local _key="$1"
-    if [[ -z ${rayvnTest_ValtKeyPassphrase} ]]; then
-        local _path; _path="${ tildePath "${_key}"; }"
-        local _prompt; _prompt="${ show "Enter passphrase for" blue "${_path}"; }"
+    [[ -n ${rayvnTest_ValtKeyPassphrase} ]] && return 0
+    local _path; _path="${ tildePath "${_key}"; }"
+    local _prompt; _prompt="${ show "Enter passphrase for" blue "${_path}"; }"
+    local -i _attempt
+    local _error
+    for (( _attempt = 1; _attempt <= 3; _attempt++ )); do
         readPassword "${_prompt}" rayvnTest_ValtKeyPassphrase || fail
         cursorUpOneAndEraseLine
-    fi
+        [[ -n ${rayvnTest_ValtKeyPassphrase} ]] || fail "cancelled"
+        _error="${ ( _age --decrypt --passphrase-var rayvnTest_ValtKeyPassphrase < "${_key}" > /dev/null ) 2>&1; }" \
+            && return 0
+        [[ ${_error} == *"incorrect passphrase"* ]] || fail "could not unlock ${_path}: ${_error}"
+        rayvnTest_ValtKeyPassphrase=''
+        (( _attempt < 3 )) && show warning "Incorrect passphrase; try again."
+    done
+    fail "incorrect passphrase for ${_path}"
 }
 
 # Set the named vars to the default key file and where it comes from (see defaultValtKeyFile).
@@ -678,32 +692,80 @@ _hasRecipientValue() {
 }
 
 
-_maybeOfferPassphraseAdvice() {
+# Sets the named var to the passphrase for a new key, asking for it (twice) until it is strong and confirmed (unless
+# allowWeakKeyPassphrase is set, when it need only be confirmed). Unless skipKeyPassphraseAdvice is set, the advice is
+# shown the first times, then the question whether the user already has a strong passphrase: if not, or with no answer,
+# generated ones are offered to choose from, as they are again whenever the one entered is rejected. With
+# rayvnTest_ValtKeyPassphrase set, the advice and question are still shown, but that is the passphrase rather than one
+# entered (checked only if rayvnTest_CheckKeyPassphraseStrength is set).
+
+_readNewKeyPassphrase() {
+    local -n _rnkpResultRef=$1
+    local -i offerGenerated=0 adviceShown=0
+    local choiceIndex
     if (( ! skipKeyPassphraseAdvice )); then
         _readAdviceCount
         if (( _adviceCount <= 1 )); then
-            local choiceIndex phrase i
             _showPrivateKeyPassphraseAdvice
-            confirm "Do you already have a strong, memorable passphrase?" no yes choiceIndex || bye
-            if (( choiceIndex == 0 )); then
-                show nl "Ok, here are some randomly generated ones to choose from:" nl
-                for (( i = 0; i < 10; i++ )); do
-                    generatePassphrase phrase
-                    show "  " bold cyan "${phrase}"
-                done
-                echo
-                confirm "Does one of these work for you?" yep nope choiceIndex || bye
-                if (( choiceIndex == 1 )); then
-                    show "Ok. If you want to do this later, run:" primary "valt passphrase"
-                    _setAdviceCount 1
-                    bye
-                fi
-                show nl "Good." primary italic "Keep this passphrase someplace secure   !" nl
-                echo "Ok, now you'll need to enter it for your new keys."
-                _setAdviceCount 2
-            fi
+            adviceShown=1
+            confirm "Do you already have a strong, memorable passphrase?" no yes choiceIndex
+            case $? in
+                0) (( choiceIndex == 0 )) && offerGenerated=1 ;;
+                124) offerGenerated=1 ;; # timed out: take it as no, and offer some
+                *) bye ;;                # cancelled
+            esac
         fi
     fi
+
+    if [[ -n ${rayvnTest_ValtKeyPassphrase} ]]; then
+        (( offerGenerated )) && _showGeneratedPassphrases
+        _rnkpResultRef="${rayvnTest_ValtKeyPassphrase}"
+        (( rayvnTest_CheckKeyPassphraseStrength && ! allowWeakKeyPassphrase )) && _assertPassphraseStrength _rnkpResultRef
+        return 0
+    fi
+
+    local strengthUseCase='file'
+    (( allowWeakKeyPassphrase )) && strengthUseCase=''
+    local prompt='Passphrase for the new key'
+    local confirmPrompt; confirmPrompt="${ padString "Confirm" ${#prompt} before; }"
+    local _rnkpFirst _rnkpSecond status
+    while true; do
+        if (( offerGenerated )); then
+            _showGeneratedPassphrases
+            offerGenerated=0
+        fi
+        readPassword "${prompt}" _rnkpFirst "${strengthUseCase}"; status=$?
+        case ${status} in
+            0) ;;
+            1) show nl "That passphrase is not safe enough to protect a private key; choose another, e.g. one of these."
+               offerGenerated=1
+               continue ;;
+            *) bye "Cancelled; no key was created." ;;
+        esac
+        [[ -n ${_rnkpFirst} ]] || bye "Cancelled; no key was created."
+        readPassword "${confirmPrompt}" _rnkpSecond || bye "Cancelled; no key was created."
+        if [[ ${_rnkpFirst} != "${_rnkpSecond}" ]]; then
+            show nl "The two entries do not match; enter it again." nl
+            continue
+        fi
+        break
+    done
+    _rnkpResultRef="${_rnkpFirst}"
+    eraseVars _rnkpFirst _rnkpSecond
+    (( adviceShown )) && _setAdviceCount 2
+    show nl "Good." primary italic "Keep this passphrase someplace secure!" nl
+}
+
+# Shows passphrases generated by valt, to choose one of.
+
+_showGeneratedPassphrases() {
+    local phrase i
+    show nl "Here are some randomly generated ones to choose from:" nl
+    for (( i = 0; i < 32; i++ )); do
+        generatePassphrase phrase
+        show "  " bold cyan "${phrase}"
+    done
+    show nl "Enter one of these (or another strong passphrase of your own) below." nl
 }
 
 _showPrivateKeyPassphraseAdvice() {
@@ -712,7 +774,10 @@ _showPrivateKeyPassphraseAdvice() {
     echo "asked for it twice."
     echo
     show "Use a passphrase of several" italic "random" "words rather than a password: it is far easier to remember, and much harder"
-    echo "to crack. Since human memory is fallible, keep a record of it: on the paper key valt makes for your key or, more"
+    echo "to crack. People are poor at picking words at random, so let valt pick them: answer no to the question below and"
+    show "it will show you some to choose from (or run" bold blue "valt passphrase" "at any time)."
+    echo
+    echo "Since human memory is fallible, keep a record of the passphrase: on the paper key valt makes for your key or, more"
     show "securely, somewhere its notes point to. If the passphrase is lost, so is" bold "everything" "encrypted with this key."
     echo
     show "For more about keys, passphrases and the paper key, run" bold blue "valt key-info" glue ", which also lets you fill in the paper"

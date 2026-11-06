@@ -33,6 +33,11 @@ main() {
     testCommandWarnsWhenDownloadKept
     testValuesIgnoreLayout
     testCommandOffersRegenerationOnlyOnChange
+    testDraftHasAPersonToFillIn
+    testDraftKeepsValues
+    testTidyDropsEmptyWaysAndPeople
+    testTidyLeavesInvalidJsonAlone
+    testCommandEditsWithoutDisplay
 
     return 0
 }
@@ -438,6 +443,55 @@ testCommandOffersRegenerationOnlyOnChange() {
     keyInfoCommandWith output "${json}" "${info}" "${downloads}"
     assertContains "No changes to" "${output}"
     [[ ${output} != *"To regenerate"* ]] || fail "unchanged key info must not offer to regenerate: ${output}"
+}
+
+# ---- editing by hand, without a browser ----
+
+testDraftHasAPersonToFillIn() {
+    local draft="${testDir}/draft-new.json"
+    newKeyInfoDraft "${testDir}/missing.json" "${draft}"
+    assertEqual '' "${ keyInfoValue "${draft}" author; }"
+    assertEqual '[{"name":"","ways":[{"type":"phone","value":""},{"type":"email","value":""}]}]' \
+        "${ jq -c '.contacts' "${draft}"; }" "a new draft must have a person to fill in"
+    assertEqual '[]' "${ jq -c '.notes' "${draft}"; }"
+}
+
+testDraftKeepsValues() {
+    local info="${testDir}/draft-values.json" draft="${testDir}/draft-values-out.json"
+    writeKeyInfo "${info}"
+    jq '.favoriteColor = "blue"' "${info}" > "${info}.tmp" && mv "${info}.tmp" "${info}"
+    newKeyInfoDraft "${info}" "${draft}"
+    assertEqual "${ keyInfoValues "${info}"; }" "${ keyInfoValues "${draft}"; }" "a draft must hold the current values"
+}
+
+testTidyDropsEmptyWaysAndPeople() {
+    local draft="${testDir}/tidy.json"
+    echo '{"author":"Me","contacts":[{"name":"A","ways":[{"type":"phone","value":"+1 555 555 1212"},
+            {"type":"email","value":" "}]},{"name":"","ways":[{"type":"phone","value":""}]}]}' > "${draft}"
+    tidyKeyInfoDraft "${draft}"
+    assertEqual '[{"name":"A","ways":[{"type":"phone","value":"+1 555 555 1212"}]}]' "${ jq -c '.contacts' "${draft}"; }"
+    assertEqual 'Me' "${ keyInfoValue "${draft}" author; }"
+}
+
+testTidyLeavesInvalidJsonAlone() {
+    local draft="${testDir}/tidy-invalid.json"
+    echo '{"author": "Me",' > "${draft}"
+    tidyKeyInfoDraft "${draft}"
+    assertEqual '{"author": "Me",' "${ cat "${draft}"; }"
+    assertContains "valid JSON" "${ keyInfoProblems "${draft}"; }"
+}
+
+# Without a display, e.g. over ssh, valt key-info edits the file rather than waiting for a page no one can see (which
+# needs a terminal, so here it fails at once, rather than waiting)
+
+testCommandEditsWithoutDisplay() {
+    local info="${testDir}/ssh.json" downloads="${testDir}/downloads9"
+    mkdir -p "${downloads}" || fail
+    local output; output="${ env SSH_CONNECTION='1.2.3.4 5 6.7.8.9 22' \
+        valt key-info -k "${info}" -d "${downloads}" < /dev/null 2>&1; }"
+    assertNotEqual 0 $? "without a terminal, editing must fail: ${output}"
+    assertContains "editing the key info needs a terminal" "${output}"
+    assertFileDoesNotExist "${info}"
 }
 
 # ---- decryptKeyInfoDownload ----

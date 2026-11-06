@@ -54,8 +54,12 @@ newTestHome() {
 testBuiltInDefault() {
     newTestHome
     local output; output="${ valtInTestHome default-key; }"
+    assertContains "No key exists yet; create a key pair with valt keys." "${output}"
+    [[ ${output} != *"Default key:"* ]] || fail "with no key yet, there is no default key to show: ${output}"
+
+    mkdir -p "${testHome}/.config/valt" && cp "${keyFile}" "${testHome}/.config/valt/valt.key" || fail
+    output="${ valtInTestHome default-key; }"
     assertContains "Default key: ~/.config/valt/valt.key (from the built-in default)" "${output}"
-    assertContains "does not exist" "${output}"
 }
 
 testSetAndClear() {
@@ -68,7 +72,7 @@ testSetAndClear() {
 
     output="${ valtInTestHome default-key --clear; }"
     assertContains "Removed the default key setting" "${output}"
-    assertContains "(from the built-in default)" "${output}"
+    assertContains "No key exists yet" "${output}" # the built-in default, which does not exist here
     assertFileDoesNotExist "${testHome}/.config/valt/valt.conf"
 }
 

@@ -1,0 +1,47 @@
+#!/usr/bin/env rayvn-bash
+# shellcheck shell=bash
+
+# valt's pages hook (pagesHook in rayvn.pkg): 'rayvn pages valt' runs it after generating the docs, to add the pages
+# valt generates itself. Not installed with valt.
+
+usage() {
+    echo
+    show bold "Generate valt's own pages for its web site, after" bold blue "rayvn pages valt" "generates the docs."
+    echo
+    show "Usage:" bold blue "${scriptName}" "PAGES_DIR"
+    echo
+    echo "    PAGES_DIR  The pages dir (valt's gh-pages worktree)."
+    echo
+    echo "Writes guide/index.html: the guide to keys and passphrases, from the key info page's explanatory tabs."
+    echo
+    echo "Options:"
+    echo
+    showCommonOptions 21 true # description column, show debug options
+    bye "$@"
+}
+
+main() {
+    init "$@"
+    writeKeyInfoGuide "${pagesDir}/guide/index.html"
+    show "Wrote" bold "${ tildePath "${pagesDir}/guide/index.html"; }"
+}
+
+init() {
+    declare -g pagesDir=''
+    while (( $# )); do
+        case "$1" in
+            -h | --help) usage ;;
+            -v) projectVersion 'valt'; exit 0 ;;
+            --version) projectVersion 'valt' true; exit 0 ;;
+            --debug*) setDebug "$@"; shift $? ;;
+            -*) usage "Unknown option: $1" ;;
+            *) [[ -z ${pagesDir} ]] || usage "Only one PAGES_DIR may be given."; pagesDir="$1" ;;
+        esac
+        shift
+    done
+    [[ -n ${pagesDir} ]] || usage "A PAGES_DIR is required."
+    assertDirectory "${pagesDir}"
+}
+
+source rayvn.up 'valt/key-info' || exit
+main "$@"

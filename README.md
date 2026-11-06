@@ -7,6 +7,9 @@ valt creates a passphrase-protected key pair, plus a printable "paper key" PDF t
 and explains to your successors how to use it. Files are encrypted to your own key (and optionally to
 others), and signed so that tampering is detected on decryption.
 
+New to keys and passphrases? The [guide](https://rayvn.ink/valt/guide/) explains how valt's keys and paper key
+work, where to keep the passphrase, and what makes a passphrase strong.
+
 ## Prerequisites
 
 Requires [Nix](https://nixos.org/).
@@ -88,7 +91,7 @@ nix run github:phoggy/valt#recover -- decrypt FILE -i KEY_FILE
 |---------|-------------|
 | `valt keys` | Create a key pair with an encrypted private key and a paper key as backup. |
 | `valt paper` | Create or regenerate the paper key for an existing key pair. |
-| `valt key-info` | Fill in the paper key's personal information (`key-info.json`) in a web page. |
+| `valt key-info` | Fill in the paper key's personal information (`key-info.json`) in a web page, or your editor. |
 | `valt encrypt FILE` | Encrypt and sign a single file. |
 | `valt decrypt FILE` | Decrypt a file, or verify and extract a secure archive. |
 | `valt archive create INPUT...` | Create a signed, encrypted archive of files and directories. |

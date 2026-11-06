@@ -5,6 +5,7 @@ projectDescription='Public key encryption for files and archives, using age and 
 projectVersion='0.1.1+'
 projectReleaseDate=''
 docsWorktree='../valt-pages'
+pagesHook='bin/valt-pages-hook' # adds the guide to keys and passphrases (see writeKeyInfoGuide)
 
 # Brew formula metadata (used by rayvn/dependencies for formula generation and runtime dep checks)
 # gnugrep, coreutils, gnutar, xz and openssl are listed in flake.nix because Nix wrappers use a minimal PATH; macOS and

@@ -124,11 +124,13 @@ declare -gA cliSpec=(
     #   --key-info   Key info file to write (default: key-info.json in the valt config directory).
     #   --downloads  Your browser's downloads directory (default: ~/Downloads).
     #   --timeout    How many minutes to wait for the page; the page expires then too.
+    #   --edit       Edit the key info file in your editor ($VISUAL or $EDITOR) instead of the page.
     #
     # The page works offline and sends nothing anywhere: Save downloads valt-key-info-ID.json,
     # encrypted with a one-time key, which valt imports and then deletes. Cancel leaves the key info
-    # file unchanged. It is JSON, so can also be edited by hand.
-    ['key-info']='keyInfo(--key-info|-k:str --downloads|-d:dir --timeout|-t:+int=60 --help|-h)'
+    # file unchanged. Without a browser to show the page on, e.g. over ssh, the file is edited in your
+    # editor instead, as with --edit.
+    ['key-info']='keyInfo(--key-info|-k:str --downloads|-d:dir --timeout|-t:+int=60 --edit|-e --help|-h)'
 
     # Decrypt an encrypted file, or verify and extract a secure archive (.valt). You will be prompted
     # for the passphrase that protects the private key.
@@ -629,13 +631,15 @@ parseKeyInfoArgs() {
     local _value
     while (( $# > 0 )); do
         case "$1" in
-            --downloads | -d) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(-t|-d|-k|-h|--key-info|--downloads|--timeout|--help)$ ) ]] && fail "missing value for --downloads"; assertDirectory "$2"; _opts+=(['downloads']="$2"); shift 2 ;;
+            --downloads | -d) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--edit|-t|-d|-e|-k|-h|--key-info|--downloads|--timeout|--help)$ ) ]] && fail "missing value for --downloads"; assertDirectory "$2"; _opts+=(['downloads']="$2"); shift 2 ;;
             --downloads=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --downloads"; assertDirectory "${_value}"; _opts+=(['downloads']="${_value}"); shift ;;
+            --edit | -e) _opts+=(['edit']="1"); shift ;;
+            --edit=*) fail "--edit does not accept a value" ;;
             --help | -h) _opts+=(['help']="1"); shift ;;
             --help=*) fail "--help does not accept a value" ;;
-            --key-info | -k) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(-t|-d|-k|-h|--key-info|--downloads|--timeout|--help)$ ) ]] && fail "missing value for --key-info"; _opts+=(['key-info']="$2"); shift 2 ;;
+            --key-info | -k) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--edit|-t|-d|-e|-k|-h|--key-info|--downloads|--timeout|--help)$ ) ]] && fail "missing value for --key-info"; _opts+=(['key-info']="$2"); shift 2 ;;
             --key-info=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --key-info"; _opts+=(['key-info']="${_value}"); shift ;;
-            --timeout | -t) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(-t|-d|-k|-h|--key-info|--downloads|--timeout|--help)$ ) ]] && fail "missing value for --timeout"; assertPositiveInt "$2"; _opts+=(['timeout']="$2"); shift 2 ;;
+            --timeout | -t) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--edit|-t|-d|-e|-k|-h|--key-info|--downloads|--timeout|--help)$ ) ]] && fail "missing value for --timeout"; assertPositiveInt "$2"; _opts+=(['timeout']="$2"); shift 2 ;;
             --timeout=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --timeout"; assertPositiveInt "${_value}"; _opts+=(['timeout']="${_value}"); shift ;;
             --) shift; (( $# == 0 )) || unknownArg "$1" ;;
             *) unknownArg "$1" ;;
@@ -650,18 +654,21 @@ keyInfoCmdUsage() {
     show bold "who can help, and notes. The page opens in your browser with the current values; when you save it,"
     show bold "valt imports it into the key info file and offers to regenerate the paper key."
     echo
-    show "Usage:" bold blue "valt key-info" "[-d DOWNLOADS] [-k KEY-INFO] [-t TIMEOUT]"
+    show "Usage:" bold blue "valt key-info" "[-d DOWNLOADS] [-e] [-k KEY-INFO] [-t TIMEOUT]"
     echo
     option "-k, --key-info KEY-INFO" "Key info file to write (default: key-info.json in the valt config" 31
     option "" "directory)." 31
     option "-d, --downloads DOWNLOADS" "Your browser's downloads directory (default: ~/Downloads)." 31
     option "-t, --timeout TIMEOUT" "How many minutes to wait for the page; the page expires then too." 31
     option "" "(default: 60)" 31
+    option "-e, --edit" "Edit the key info file in your editor (\$VISUAL or \$EDITOR) instead of" 31
+    option "" "the page." 31
     option "-h, --help" "Print this help message." 31
     echo
     echo "The page works offline and sends nothing anywhere: Save downloads valt-key-info-ID.json,"
     echo "encrypted with a one-time key, which valt imports and then deletes. Cancel leaves the key info"
-    echo "file unchanged. It is JSON, so can also be edited by hand."
+    echo "file unchanged. Without a browser to show the page on, e.g. over ssh, the file is edited in your"
+    echo "editor instead, as with --edit."
     declare -F keyInfoCmdUsageExtra > /dev/null && keyInfoCmdUsageExtra
     bye "$@"
 }
@@ -1297,6 +1304,10 @@ defaultKeyCmd() {
 
     local keyFile; keyFile="${ defaultValtKeyFile; }"
     local source; source="${ defaultValtKeyFileSource; }"
+    if [[ ${source} == built-in && ! -f ${keyFile} ]]; then
+        show "No key exists yet; create a key pair with" bold blue "valt keys" glue "."
+        return 0
+    fi
     case "${source}" in
         VALT_KEY_FILE) source='the VALT_KEY_FILE environment variable' ;;
         built-in) source='the built-in default' ;;
@@ -1464,13 +1475,21 @@ removeKeysStagingDir() {
 }
 
 # Opens the paper key PDF for keyFile in the default viewer, only on a terminal (not in scripts or tests), so that it
-# can be checked and printed. Failing to open it is not an error, since it has been saved.
+# can be checked and printed; without a display (e.g. over ssh), says how to copy it to print it instead. Failing to
+# open it is not an error, since it has been saved.
 
 openPaperKey() {
     [[ -t 0 && -t 1 ]] || return 0
     local pdfFile; pdfFile="${ _paperKeyFile "$1"; }"
     [[ -f "${pdfFile}" ]] || return 0
-    ( openUrl "${pdfFile}" ) &> /dev/null || warn "Could not open" bold "${ tildePath "${pdfFile}"; }" glue "; open it to check and print it."
+    local path; path="${ tildePath "${pdfFile}"; }"
+    if ! canOpenUrls; then
+        show nl "There is no display here to open the paper key on (e.g. over ssh). Copy it to a computer that can print" \
+             "it, e.g. with" bold blue "scp HOST:${path} ." glue ", then delete the copy once printed: it holds your key," \
+             "encrypted."
+        return 0
+    fi
+    ( openUrl "${pdfFile}" ) &> /dev/null || warn "Could not open" bold "${path}" glue "; open it to check and print it."
     return 0
 }
 
@@ -1556,6 +1575,10 @@ verifyEncryptedFile() {
 keyInfoCmd() {
     require 'valt/key-info' 'valt/paper-keys' 'rayvn/spinner'
     local keyInfoFile="${_opts['key-info']:-${valtConfigDir}/key-info.json}"
+    if (( _opts['edit'] )) || { [[ -z ${rayvnTest_KeyInfoNoBrowser:-} ]] && ! canOpenUrls; }; then
+        editKeyInfo "${keyInfoFile}"
+        return 0
+    fi
     local downloadsDir="${_opts['downloads']:-${HOME}/Downloads}"
     [[ -d ${downloadsDir} ]] || keyInfoCmdUsage "There is no ${ tildePath "${downloadsDir}"; } directory; use --downloads."
 
@@ -1567,6 +1590,22 @@ keyInfoCmd() {
     addExitHandler removeKeyInfoPageDir
     local timeoutSeconds=$(( ${_opts['timeout']:-60} * 60 ))
     [[ -n ${rayvnTest_KeyInfoTimeoutSeconds:-} ]] && timeoutSeconds=${rayvnTest_KeyInfoTimeoutSeconds}
+
+    # Say what is about to happen, and ask, rather than a browser window appearing unannounced
+
+    if [[ -z ${rayvnTest_KeyInfoNoBrowser:-} && -t 0 && -t 1 ]]; then
+        require 'rayvn/prompt'
+        echo
+        show "valt opens a page in your web browser to fill in your paper key's information, then waits here until you" \
+             "press" bold "Save" "or" bold "Cancel" "on the page (for up to ${ _countOfMinutes $(( timeoutSeconds / 60 )); })."
+        local choiceIndex
+        echo
+        if ! confirm "Open the page in your browser?" yes no choiceIndex || (( choiceIndex != 0 )); then
+            show nl "Ok, nothing was opened. To edit your key info in your editor instead, run" bold blue "valt key-info --edit" \
+                 glue "."
+            return 0
+        fi
+    fi
     local deadline=$(( EPOCHSECONDS + timeoutSeconds ))
     local pageFile pageKeys; newKeyInfoPage "${keyInfoFile}" "${_keyInfoPageDir}" pageFile pageKeys ${deadline}
     local markerFile="${_keyInfoPageDir}/opened"
@@ -1578,8 +1617,8 @@ keyInfoCmd() {
     elif ! ( openKeyInfoPage "${pageFile}" ) &> /dev/null; then
         warn "Could not open the page; open it in your browser:" bold "${pageFile}"
     fi
-    show "Fill in the page in your browser and press" bold "Save" glue "; valt picks up" \
-         bold "valt-key-info-${pageKeys%% *}.json" "from" blue "${ tildePath "${downloadsDir}"; }" glue "."
+    show "When you press" bold "Save" glue ", valt picks up" bold "valt-key-info-${pageKeys%% *}.json" "from" \
+         blue "${ tildePath "${downloadsDir}"; }" glue "."
     local spinnerId download
     startSpinner spinnerId "Waiting for your key info (Ctrl-C to cancel)"
     if ! download="${ waitForKeyInfoDownload "${downloadsDir}" "${markerFile}" "${pageKeys}" ${deadline}; }"; then
@@ -1634,6 +1673,67 @@ _countOfMinutes() {
 removeKeyInfoPageDir() {
     [[ -n ${_keyInfoPageDir:-} ]] && rm -rf "${_keyInfoPageDir}"
     return 0
+}
+
+# Edits the key info file in the user's editor, for when there is no browser to show the key info page on (e.g. over
+# ssh) or --edit was given: a draft in secure temp storage is edited until it is complete, or the user saves it
+# incomplete or discards it, then replaces the key info file if it changed.
+
+editKeyInfo() {
+    local keyInfoFile="$1"
+    [[ -t 0 && -t 1 ]] || fail "editing the key info needs a terminal; or edit ${ tildePath "${keyInfoFile}"; } by hand"
+    require 'rayvn/prompt'
+    local -a editor; read -r -a editor <<< "${VISUAL:-${EDITOR:-vi}}"
+    local secureDir; makeSecureTempDir secureDir
+    local draft="${secureDir}/key-info.json"
+    newKeyInfoDraft "${keyInfoFile}" "${draft}"
+
+    if ! canOpenUrls; then
+        show nl "There is no browser here to show the key info page on (e.g. over ssh), so edit the file instead."
+        show "First, the essentials. The full guide is at" blue "${valtGuideUrl}"
+        printList "${ show "Your" bold "private key" "decrypts your files. It is itself encrypted with your" \
+                         bold "passphrase" glue ", so both are needed."; }" \
+                  "${ show "The" bold "paper key" "is a printed backup of it, with instructions and the people who can help."; }" \
+                  "${ show "Write the passphrase on the paper key or, more securely, keep it elsewhere and say where in the" \
+                         "notes."; }" \
+                  "${ show "If the passphrase is lost, the files" bold "cannot be recovered" glue ", by anyone."; }"
+    fi
+    show nl "The key info is JSON:"
+    printList "${ show bold "greeting" glue "," bold "closing" "and" bold "author" glue ": the letter's."; }" \
+              "${ show bold "contacts" glue ": the people who can help, each with a" bold "name" "and the" \
+                       bold "ways" "to reach them."; }" \
+              "${ show bold "ways" glue ": each a" bold "type" "(phone, email, social or address) and a" bold "value" \
+                       glue "; add" bold '"preferred": true' "to the one to try first."; }" \
+              "${ show bold "notes" glue ": anything else the reader should know, one item per line."; }"
+    echo "Ways and people left empty are dropped."
+    local -a problems choices=("Edit again" "Save it incomplete" "Discard changes")
+    local choiceIndex
+    while true; do
+        "${editor[@]}" "${draft}" || fail "could not run ${editor[*]}"
+        tidyKeyInfoDraft "${draft}"
+        mapfile -t problems < <(keyInfoProblems "${draft}")
+        (( ${#problems[@]} )) || break
+        show nl "Your key info still needs:"
+        printList "${problems[@]}"
+        echo
+        choose "What next?" choices choiceIndex || choiceIndex=2
+        case ${choiceIndex} in
+            0) ;;
+            1) jq -e . "${draft}" > /dev/null 2>&1 && break
+               warn "It is not valid JSON, so cannot be saved; edit it again or discard it." ;;
+            *) show "Discarded;" bold "${ tildePath "${keyInfoFile}"; }" "is unchanged."; return 0 ;;
+        esac
+    done
+
+    if [[ ${ keyInfoValues "${draft}"; } == "${ keyInfoValues "${keyInfoFile}"; }" ]]; then
+        show "No changes to" bold "${ tildePath "${keyInfoFile}"; }" glue "."
+        return 0
+    fi
+    local temp="${keyInfoFile}.new"
+    jq . "${draft}" > "${temp}" && chmod 600 "${temp}" && mv "${temp}" "${keyInfoFile}" \
+        || fail "could not write ${keyInfoFile}"
+    show "Saved" bold "${ tildePath "${keyInfoFile}"; }" glue "."
+    (( ${#problems[@]} )) || offerPaperKeyRegeneration # only once complete
 }
 
 # Offers to regenerate the default key's paper key from the new key info (only on a terminal); otherwise shows how.

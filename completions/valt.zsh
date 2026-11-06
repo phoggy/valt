@@ -110,6 +110,7 @@ _valt() {
                 key-info)
                     _arguments \
                     '(--downloads -d)'{--downloads,-d}'[Your browser'\''s downloads directory (default: ~/Downloads).]:downloads:_files -/' \
+                    '(--edit -e)'{--edit,-e}'[Edit the key info file in your editor ($VISUAL or $EDITOR) instead of the page.]' \
                     '(--help -h)'{--help,-h}'[Print this help message.]' \
                     '(--key-info -k)'{--key-info,-k}'[Key info file to write (default: key-info.json in the valt config directory).]:key-info:' \
                     '(--timeout -t)'{--timeout,-t}'[How many minutes to wait for the page; the page expires then too.]:timeout:'

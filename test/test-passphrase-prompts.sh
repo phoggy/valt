@@ -9,6 +9,8 @@ main() {
     testExtractPromptsOnce
     testVerifyPromptsOnce
     testCreatePromptsOnce
+    testWrongPassphraseAsksAgain
+    testThreeWrongPassphrasesFail
 
     return 0
 }
@@ -37,15 +39,22 @@ init() {
     # Count prompts in a file (some are made in subshells, such as a pipeline), answering each with the passphrase
 
     declare -g promptLog; promptLog="${ makeTempFile; }"
+    # Answers each prompt with the next of the answers in answersFile (one per line), or the passphrase when none are
+    # left
+
+    declare -g answersFile; answersFile="${ makeTempFile; }"
     readPassword() {
         local -n _passwordRef=$2
         echo 'prompt' >> "${promptLog}"
-        _passwordRef="${passphrase}"
+        local answer; answer="${ head -n 1 "${answersFile}"; }"
+        gsed -i '1d' "${answersFile}"
+        _passwordRef="${answer:-${passphrase}}"
     }
 }
 
 resetPromptCount() {
     : > "${promptLog}"
+    : > "${answersFile}"
 }
 
 assertPromptedOnce() {
@@ -73,6 +82,27 @@ testCreatePromptsOnce() {
     newSecureArchive -C "${inputDir}" file.txt -i "${keyFile}" -R "${pubFile}" -n test -o "${outputDir}" > /dev/null 2>&1 \
         || fail "create failed"
     assertPromptedOnce create
+}
+
+# A mistyped passphrase is caught when entered, and asked for again, up to 3 times
+
+testWrongPassphraseAsksAgain() {
+    resetPromptCount
+    echo 'not the passphrase' > "${answersFile}"
+    local output; output="${ ( _prepareKey "${keyFile}"; echo "unlocked: ${rayvnTest_ValtKeyPassphrase}" ) 2>&1; }"
+    assertContains "Incorrect passphrase; try again." "${output}"
+    assertContains "unlocked: ${passphrase}" "${output}"
+    assertEqual 2 "${ wc -l < "${promptLog}" | tr -d ' '; }" "a wrong passphrase must be asked for again, once"
+}
+
+testThreeWrongPassphrasesFail() {
+    resetPromptCount
+    printf '%s\n' wrong1 wrong2 wrong3 > "${answersFile}"
+    local output; output="${ ( _prepareKey "${keyFile}"; echo 'unlocked' ) 2>&1; }"
+    assertNotEqual 0 $? "three wrong passphrases must fail"
+    assertContains "incorrect passphrase for" "${output}"
+    [[ ${output} != *unlocked* ]] || fail "the key must not be unlocked: ${output}"
+    assertEqual 3 "${ wc -l < "${promptLog}" | tr -d ' '; }" "the passphrase must be asked for 3 times"
 }
 
 rayvnTest_ModifiableFunctions=1

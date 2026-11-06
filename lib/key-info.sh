@@ -1,26 +1,31 @@
 #!/usr/bin/env bash
 
-# The paper key's personal information: the key info file (key-info.json in the valt config directory), filling it in
-# from a web page, checking it, and converting the key.info file earlier versions of valt used.
+# The paper key's personal information (the key info file), and filling it in.
+# From a web page or an editor; also checks the file, converts the key.info file earlier versions of valt used, and
+# writes the guide to keys and passphrases for valt's web site.
 # Use via: require 'valt/key-info'
+
+#@notes
+# ## Key info file format
 #
-# The key info file is JSON: the letter's greeting, closing and author, the people who can help (contacts, each with a
-# name and the ways to reach them, each with a type and a value) and notes. Any other values are kept, for a custom
-# paper key template:
+# The key info file, key-info.json in the valt config directory, is JSON: the letter's greeting, closing and author,
+# the people who can help (contacts, each with a name and the ways to reach them, each with a type and a value) and
+# notes. Any other values are kept, for a custom paper key template:
 #
-#   {
-#     "greeting": "Greetings,",
-#     "closing": "I hope you never need this!",
-#     "author": "Bob Barker",
-#     "contacts": [
-#       { "name": "Aunt Martha", "ways": [ { "type": "phone", "value": "+44 791 112 4456", "preferred": true },
-#                                          { "type": "address", "value": "1 Park Row, Leeds LS1 5AB, UK" } ] }
-#     ],
-#     "notes": [ "The passphrase is in the envelope in the fire safe." ]
-#   }
+#     {
+#       "greeting": "Greetings,",
+#       "closing": "I hope you never need this!",
+#       "author": "Bob Barker",
+#       "contacts": [
+#         { "name": "Aunt Martha", "ways": [ { "type": "phone", "value": "+44 791 112 4456", "preferred": true },
+#                                            { "type": "address", "value": "1 Park Row, Leeds LS1 5AB, UK" } ] }
+#       ],
+#       "notes": [ "The passphrase is in the envelope in the fire safe." ]
+#     }
 #
 # A way's type is phone, email, social or address. One of a person's ways may be marked preferred, the one to try
 # first.
+#@end
 
 # ◇ Writes the key info web page (a single HTML file with no network access) to a directory, with the current values
 #   from the key info file filled in, so that it can be opened in a browser. The page's Save button downloads
@@ -63,6 +68,84 @@ newKeyInfoPage() {
     } > "${_nkipPageFile}" || fail "could not write ${_nkipPageFile}"
     _nkipResultRef="${_nkipPageFile}"
     _nkipKeysRef="${id} ${encryptionKey} ${macKey}"
+}
+
+# ◇ Writes the key info file's values to a file for editing by hand: pretty printed, with every value the page edits
+#   (empty if not yet set), and an empty person to fill in if there is no one yet.
+#
+# · ARGS
+#
+#   keyInfoFile (string)  Path to the key info file; it need not exist.
+#   draftFile (string)    Path to write the draft to (best in secure temp storage).
+
+newKeyInfoDraft() {
+    local keyInfoFile="$1" draftFile="$2"
+    migrateLegacyKeyInfo "${keyInfoFile}"
+    local existing='{}'
+    [[ -f ${keyInfoFile} ]] && existing="${ jq -c 'if type == "object" then . else {} end' "${keyInfoFile}" 2> /dev/null; }"
+    jq --argjson page "${ _pageKeyInfoJson "${keyInfoFile}"; }" '
+        $page + del(.greeting, .closing, .author, .contacts, .notes)
+        | if (.contacts | length) == 0
+          then .contacts = [{name: "", ways: [{type: "phone", value: ""}, {type: "email", value: ""}]}] else . end
+    ' <<< "${existing:-{\}}" > "${draftFile}" || fail "could not write ${draftFile}"
+}
+
+# ◇ Tidies a key info file edited by hand, as the page does on save: ways with no value, and people with no name or way,
+#   are dropped. Leaves a file that is not valid JSON alone, for keyInfoProblems to report.
+#
+# · ARGS
+#
+#   draftFile (file)  The edited file.
+
+tidyKeyInfoDraft() {
+    local draftFile="$1"
+    jq -e 'type == "object"' "${draftFile}" > /dev/null 2>&1 || return 0
+    local tidy; tidy="${ jq "${_keyInfoJq}"'
+        .contacts = [(.contacts // [])[]? | .ways = [(.ways // [])[]? | select(.value | text)]
+                     | select(if .name | text then true else .ways | length > 0 end)]
+    ' "${draftFile}"; }" || fail "could not read ${draftFile}"
+    printf '%s\n' "${tidy}" > "${draftFile}" || fail "could not write ${draftFile}"
+}
+
+# ◇ Writes the guide to keys and passphrases for valt's web site (a Jekyll page): the key info page's explanatory tabs
+#   ('How it works', 'Strong passphrases' and 'Strength in detail'), so that they can be read without the page, e.g.
+#   over ssh (see editKeyInfo). The page is the one source: its form, navigation and buttons are left out, and tab links
+#   become links within the guide.
+#
+# · ARGS
+#
+#   outputFile (string)  Path to write the guide to, e.g. guide/index.html in the pages dir.
+
+writeKeyInfoGuide() {
+    local outputFile="$1"
+    # lint-skip-start (HTML in the gawk program, not redirects)
+    local panels; panels="${ gawk '
+        /^    <div id="panel-(understand|strength|detail)" / {
+            match($0, /panel-([a-z]+)/, m); inPanel = 1
+            print "<section id=\"" m[1] "\" class=\"valt-guide-section\">"; next
+        }
+        inPanel && /^    <\/div>$/ { print "</section>"; inPanel = 0; next }
+        !inPanel { next }
+        /<p class="muted">.*Skip to your information/ { next }   # navigation within the page
+        /<div class="actions">/ { inActions = 1 }
+        inActions { if (/<\/div>/) inActions = 0; next }        # the Next buttons
+        {
+            gsub(/ data-tab="[a-z]+"/, "")
+            for (level = 4; level >= 1; level--) {   # each heading one level down, under the guide page title
+                gsub("<h" level, "<h" (level + 1)); gsub("</h" level ">", "</h" (level + 1) ">")
+            }
+            print
+        }
+    ' "${_keyInfoPageFile}"; }" || fail "could not read ${_keyInfoPageFile}"
+    # lint-skip-end
+    [[ ${panels} == *'id="understand"'*'id="strength"'*'id="detail"'* ]] \
+        || fail "the key info page's tabs were not found in ${_keyInfoPageFile}"
+    ensureDir "${ dirName "${outputFile}"; }"
+    {
+        cat "${_keyInfoGuideHead}" || fail
+        printf '%s\n' "${panels}"
+        cat "${_keyInfoGuideTail}" || fail
+    } > "${outputFile}" || fail "could not write ${outputFile}"
 }
 
 # ◇ Decrypts the key info page's download, written with the one-time keys from newKeyInfoPage, into a file for
@@ -108,6 +191,7 @@ decryptKeyInfoDownload() {
 
 openKeyInfoPage() {
     local pageFile="$1"
+    canOpenUrls || return 1
     if [[ ${OSTYPE} == darwin* ]]; then
         open -b "${ _defaultBrowserBundleId; }" "${pageFile}"
     else
@@ -257,6 +341,8 @@ PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/key-info' PRIV
 _init_valt_key-info() {
     require 'rayvn/config'
     declare -gr _keyInfoPageFile="${valtHome}/etc/key-info.html"
+    declare -gr _keyInfoGuideHead="${valtHome}/etc/key-info-guide-head.html" # the guide's front matter and styles
+    declare -gr _keyInfoGuideTail="${valtHome}/etc/key-info-guide-tail.html" # its script
 
     # jq definitions for the key info file and the page's download. A way's type guess (wayType) matches the page's.
 
