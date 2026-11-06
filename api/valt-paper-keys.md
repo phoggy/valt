@@ -14,21 +14,8 @@ Paper key PDF generation from your key info, and reminders to keep it current.
 
 ### preparePaperKey()
 
-Loads key info from a file to prepare a paper key PDF, sourcing key metadata
-needed for QR and PEM generation.
-
-
-*args*
-
-| | |
-|---|---|
-| `[keyInfoFile]` *(string)* | Path to the key info file (default: ${valtConfigDir}/key-info.json) |
-{: .args-table}
-
-### isKeyInfoComplete()
-
-Returns 0 if the key info file has been marked completed, 1 otherwise. If the file does not
-exist, it is created from the template so that it can be edited.
+Checks that the key info file is complete, so that a paper key PDF can be made from it, exiting with what it still
+needs if not (see keyInfoProblems).
 
 
 *args*
@@ -41,7 +28,10 @@ exist, it is created from the template so that it can be edited.
 ### remindPaperKey()
 
 Warns if a valt private key has no paper key, or if its paper key is older than the key or
-the key info file. Does nothing for files that are not valt private keys.
+the key info file. Otherwise, when at a terminal, asks whether the paper key has been printed
+and its copies stored securely, offering to be reminded in a number of days or to stop asking.
+The answers are kept per paper key, so a regenerated paper key is asked about again. Does
+nothing for files that are not valt private keys.
 
 
 *args*
@@ -51,6 +41,11 @@ the key info file. Does nothing for files that are not valt private keys.
 | `keyFile` *(string)* | Path to a private key file. |
 | `[keyInfoFile]` *(string)* | Path to the key info file (default: ${valtConfigDir}/key-info.json) |
 {: .args-table}
+
+*env vars*
+
+rayvnTest_PaperKeyAnswers  Test hook: answers to use instead of prompting, in order, separated
+                           by spaces: 'yes', 'stop', 'remind:DAYS' or 'timeout'.
 
 ### paperKeyCommand()
 
@@ -76,7 +71,20 @@ Generates a paper key PDF from a private key file, storing the output path in a 
 | `privateKeyFile` *(string)* | Path to the private key file. |
 | `resultVarRef` *(string)* | Name of the variable to receive the output paper key file path. |
 | `[keyInfoFile]` *(string)* | Path to the key info file (default: ${valtConfigDir}/key-info.json). |
-| `[cssOverride]` *(string)* | Path to an optional CSS override file. |
-| `[htmlTemplate]` *(string)* | Path to an HTML template file (default: ${valtHome}/etc/key-doc-template.html). |
+| `[styleFile]` *(string)* | Path to an optional typst style override file (see etc/key-doc-style.typ). |
+| `[templateFile]` *(string)* | Path to a typst template file (default: ${valtHome}/etc/key-doc-template.typ). |
+{: .args-table}
+
+### showPaperKeyNextSteps()
+
+Shows the steps to take after a paper key is generated, as a numbered list, and that valt will ask about them
+later (see remindPaperKey).
+
+
+*args*
+
+| | |
+|---|---|
+| `[replacing]` *(bool)* | 1 if the paper key replaced an earlier one, adding a step to destroy its printed copies (default: 0). |
 {: .args-table}
 

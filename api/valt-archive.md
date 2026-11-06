@@ -15,12 +15,13 @@ Signed, encrypted secure archives of files and directories.
 ### newSecureArchive()
 
 Create an encrypted, signed archive from one or more files, directories and archives. The archive file path is written to
-standard output. Also creates the public version of the archive (same path plus ".pub" suffix). See NOTES below for details.
+standard output. Also creates the public version of the archive (same path plus ".pub" suffix) unless --no-public. See
+NOTES below for details.
 
 
 *usage*
 
-`newSecureArchive ([-C DIR] INPUT...) -i PATH (-r RECIPIENT | -R PATH)... [-f] [-n NAME] [--zone ZONE] [-u TEXT] [-o DIR]`
+`newSecureArchive ([-C DIR] INPUT...) -i PATH (-r RECIPIENT | -R PATH)... [-f] [-n NAME] [-z ZONE] [-u TEXT] [-o DIR]`
 {: .usage-signature}
 
 | | |
@@ -30,9 +31,11 @@ standard output. Also creates the public version of the archive (same path plus 
 | `-R, --recipient-file PATH` | Encrypt to one or more recipients. PATH can be a valt key or contain a list of recipients (see the newRecipientsFile() function in 'valt/keys'). Valt private key files require passphrase input for decryption. Can be repeated. |
 | `-f, --force` | Overwrite any existing output file (default: fail). |
 | `-n, --name NAME` | Specify the archive file name prefix (default: ${USER}). |
-| `-z, --zone ZONE` | Specify the timezone to use for timestamps, e.g. PDT (default: UTC). |
+| `-z, --zone ZONE` | The time zone for the timestamp in the name: 'local' (the system time zone), 'UTC', or a zone name such as 'America/Los_Angeles' (default: local). |
 | `-u, --user-text TEXT` | User text to include in readme. Can contain '\n'. |
 | `-o, --output-dir DIR` | Specify the archive destination directory path (default: ${PWD}). |
+| `--no-mac-metadata` | Do not keep the macOS metadata (extended attributes such as Finder tags, ACLs and file flags) of the INPUT files. It is kept by default, but only macOS tar restores it; other tars may warn about it. Metadata is never kept for the archive's own files. |
+| `--no-public` | Do not create the public companion (ARCHIVE.pub). |
 | `-C DIR` | Change to the specified directory before processing the remaining relative INPUT paths. |
 | `INPUT...` | File, directory or @<archive> paths to add. An '@' prefixed file path is treated as a tar archive whose contents should be extracted and added. |
 {: .usage-table}
@@ -105,19 +108,19 @@ and the inner payload signature (requires decryption with the private key).
 ### extractSecureArchive()
 
 Verify and extract the contents of a secure archive into a directory.
-Checks both the outer and inner signatures before extracting the payload.
+Checks both the outer and inner signatures before decrypting and extracting the payload.
 
 
 *usage*
 
-`extractSecureArchive ARCHIVE -i PATH [-o DIR]`
+`extractSecureArchive -i PATH [-o DIR] ARCHIVE`
 {: .usage-signature}
 
 | | |
 |---|---|
-| `ARCHIVE` | Path to the .valt archive file. |
-| `-i, --identity PATH` | The valt.key file used to decrypt and verify signatures. |
-| `-o, --output-dir` | Directory to extract contents into (default: ${PWD}). |
+| `ARCHIVE` *(file)* | The secure archive file to extract. |
+| `-i, --identity PATH` *(file)* | The valt key file used to decrypt and verify signatures. |
+| `-o, --output-dir DIR` *(dir)* | Directory to extract contents into (default: ${PWD}). |
 {: .usage-table}
 
 ### extractPublicArchive()

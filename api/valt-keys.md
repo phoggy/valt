@@ -165,6 +165,24 @@ Will accept a private key that will require passphrase input to decrypt.
 | `keyFile` *(string)* | Path to the key file. |
 {: .usage-table}
 
+### writeValtPublicKey()
+
+Writes the public key file (.pub) for a valt private key, recreating it from the private key, which contains
+everything in it: the created line, the public signing key and the public encryption key. The result is identical
+to the .pub file made with the key. Requires the private key's passphrase.
+
+
+*usage*
+
+`writeValtPublicKey keyFile pubFile`
+{: .usage-signature}
+
+| | |
+|---|---|
+| `keyFile` *(file)* | Path to the valt private key file. |
+| `pubFile` *(string)* | Path to the public key file to write; it is replaced if it exists. |
+{: .usage-table}
+
 ### newRecipientsFile()
 
 Convert one or more valt key files into a recipients file. Will accept private keys; each will require passphrase input to
@@ -216,7 +234,8 @@ Extracts the signing key from a valt private key file into a temp file.
 
 ### armorKeyFile()
 
-Outputs an ASCII-armored PEM-style encoding of a key file to stdout.
+Outputs an ASCII-armored PEM-style encoding of a key file to stdout, in age's armor format: base64 in lines of
+exactly 64 characters (but the last), which age requires.
 
 
 *usage*
@@ -228,4 +247,44 @@ Outputs an ASCII-armored PEM-style encoding of a key file to stdout.
 |---|---|
 | `keyFile` *(string)* | Path to the key file to armor. |
 {: .usage-table}
+
+### assertCompatibleRecipients()
+
+Fail if the recipients mix post-quantum (age1pq1...) and classic age keys, which age refuses to encrypt to (the
+file would be open to quantum computers). Recipient files are read for their recipients; others are ignored.
+
+
+*usage*
+
+`assertCompatibleRecipients (-r RECIPIENT | -R PATH)...`
+{: .usage-signature}
+
+| | |
+|---|---|
+| `-r RECIPIENT` | A recipient (age public key). |
+| `-R PATH` | A file of recipients, e.g. a valt .pub file. |
+{: .usage-table}
+
+### defaultValtKeyFile()
+
+Output the path of the default valt private key file, used when no key is specified: VALT_KEY_FILE if set, else the
+defaultKeyFile setting in valt.conf in the valt config directory (see setDefaultValtKeyFile), else valt.key in the
+valt config directory.
+
+### defaultValtKeyFileSource()
+
+Output where the default valt private key file comes from: 'VALT_KEY_FILE', the path of the valt.conf file that
+sets it, or 'built-in'.
+
+### setDefaultValtKeyFile()
+
+Set the default valt private key file in valt.conf in the valt config directory, or remove the setting.
+
+
+*args*
+
+| | |
+|---|---|
+| `[keyFile]` *(file)* | The valt private key file to use by default; omit to remove the setting. |
+{: .args-table}
 

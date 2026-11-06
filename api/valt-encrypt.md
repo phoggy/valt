@@ -19,12 +19,12 @@ Encrypt input.
 
 *usage*
 
-`encrypt [INPUT | -v NAME] (-r RECIPIENT | -R PATH)... [--armor] [-o PATH]`
+`encrypt [INPUT | -v NAME] (-r RECIPIENT | -R PATH)... [-a] [-o PATH]`
 {: .usage-signature}
 
 | | |
 |---|---|
-| `encrypt` | `[INPUT | -v NAME] --passphrase [--armor] [-o PATH]` |
+| `encrypt` | `[INPUT | -v NAME] -p [-a] [-o PATH]` |
 | `-r, --recipient RECIPIENT` | Encrypt to the specified RECIPIENT. See the recipient() function in 'valt/keys'. |
 | `-R, --recipient-file PATH` | Encrypt to one or more recipients. PATH can be a valt key or contain a list of recipients (see the newRecipientsFile() function in 'valt/keys'). Valt private key files require passphrase input for decryption. Can be repeated. |
 | `-a, --armor` | Encrypt to a PEM encoded format. |

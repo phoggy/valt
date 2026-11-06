@@ -69,6 +69,7 @@ from its QR code or printed text.
 | Library | Description |
 |---|---|
 | [valt/paper-keys](/valt/api/valt-paper-keys) | Paper key PDF generation from your key info, and reminders to keep it current. |
+| [valt/key-info](/valt/api/valt-key-info) | The paper key's personal information (the key info file), and filling it in. |
 | [valt/pdf](/valt/api/valt-pdf) | PDF generation from HTML. |
 | [valt/node](/valt/api/valt-node) | Node.js and npm support, used for PDF generation. |
 

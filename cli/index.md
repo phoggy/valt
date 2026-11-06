@@ -139,18 +139,21 @@ Fill in the paper key's personal information (your key info) in a web page: the 
 who can help, and notes. The page opens in your browser with the current values; when you save it,
 valt imports it into the key info file and offers to regenerate the paper key.
 
-Usage: valt key-info [-d DOWNLOADS] [-k KEY-INFO] [-t TIMEOUT]
+Usage: valt key-info [-d DOWNLOADS] [-e] [-k KEY-INFO] [-t TIMEOUT]
 
     -k, --key-info KEY-INFO    Key info file to write (default: key-info.json in the valt config
                                directory).
     -d, --downloads DOWNLOADS  Your browser's downloads directory (default: ~/Downloads).
     -t, --timeout TIMEOUT      How many minutes to wait for the page; the page expires then too.
                                (default: 60)
+    -e, --edit                 Edit the key info file in your editor ($VISUAL or $EDITOR) instead of
+                               the page.
     -h, --help                 Print this help message.
 
 The page works offline and sends nothing anywhere: Save downloads valt-key-info-ID.json,
 encrypted with a one-time key, which valt imports and then deletes. Cancel leaves the key info
-file unchanged. It is JSON, so can also be edited by hand.
+file unchanged. Without a browser to show the page on, e.g. over ssh, the file is edited in your
+editor instead, as with --edit.
 ```
 
 ### valt verify

@@ -14,20 +14,32 @@ Decryption with a private key or a passphrase.
 
 ### decrypt()
 
-Decrypt input.
+Decrypt input using age, via identity key or passphrase.
 
 
 *usage*
 
-`decrypt -i PATH [-o PATH] [INPUT]`
+`decrypt -i IDENTITY [-o OUTPUT] [INPUT]`
 {: .usage-signature}
 
 | | |
 |---|---|
-| `decrypt` | `--passphrase [-o PATH] [INPUT]` |
-| `-i, --identity PATH` | Use the valt private key file (identity) at PATH; requires passphrase input to decrypt. Can be repeated. |
-| `-p, --passphrase` | Decrypt with a passphrase which will be requested via prompt. Cannot be combined with an identity. |
-| `-o, --output PATH` | Write the result to PATH. Any existing file will be overwritten (default: standard output). |
-| `[INPUT]` | Optional path to encrypted file (default: standard input). |
+| `decrypt` | `-p [-o OUTPUT] [INPUT]` |
+| `-i, --identity IDENTITY` *(file)* | The valt private key file to decrypt with; its passphrase is requested via prompt. Cannot be combined with `-p`. |
+| `-p, --passphrase` | Decrypt with a passphrase requested via prompt. Cannot be combined with `-i`. |
+| `-o, --output OUTPUT` *(file)* | Write decrypted output to file, replacing any existing file (default: stdout). |
+| `[INPUT]` *(file)* | Encrypted input file, binary or armored (detected automatically) (default: stdin). |
 {: .usage-table}
+
+### isAgeEncryptedFile()
+
+Succeeds if the file is age encrypted (binary or armored), judged by its header.
+
+
+*args*
+
+| | |
+|---|---|
+| `file` *(file)* | The file to check. |
+{: .args-table}
 
