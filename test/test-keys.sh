@@ -14,6 +14,7 @@ main() {
     testPublicSigningKeyToTempFile
     testSigningKeyToTempFile
     testArmorKeyFile
+    testValtReleaseTag
 
     return 0
 }
@@ -137,6 +138,19 @@ assertArmorFormat() {
     (( ${#lines[${last}]} >= 1 && ${#lines[${last}]} <= 64 )) || fail "the last armor line is ${#lines[${last}]} characters, ${context}"
     local decoded; decoded="${ printf '%s\n' "${lines[@]:1:${last}}" | base64 -d | sha256sum; }"
     assertEqual "${ sha256sum < "${keyFile}"; }" "${decoded}" "the armor must decode to the key file, ${context}"
+}
+
+# A release (no '+', with a release date) pins recovery to itself; a development version (e.g. 0.2.0+) to the release
+# before it
+
+testValtReleaseTag() {
+    local pkg; pkg="${ makeTempFile; }"
+    printf '%s\n' "projectVersion='0.2.0'" "projectReleaseDate='2026-11-07 10:00:00 PST'" > "${pkg}"
+    assertEqual 'v0.2.0' "${ valtReleaseTag "${pkg}"; }"
+    printf '%s\n' "projectVersion='0.2.0+'" "projectReleaseDate=''" > "${pkg}"
+    assertEqual 'v0.2.0' "${ valtReleaseTag "${pkg}"; }" "a development version must give the release before it"
+    printf '%s\n' "projectVersion='0.2.0'" "projectReleaseDate=''" > "${pkg}"
+    assertEqual '' "${ valtReleaseTag "${pkg}"; }" "a version without a release date has no tag"
 }
 
 source rayvn.up 'rayvn/test' 'valt/keys'

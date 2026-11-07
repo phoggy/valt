@@ -448,6 +448,28 @@ assertCompatibleRecipients() {
          "to leave out your own valt key."
 }
 
+# ◇ Outputs the tag of the valt release current when this valt was built (e.g. v0.1.1), for recovery commands pinned to
+#   it (nix run github:phoggy/valt/TAG#recover ...): this version, if it is a release, or for a development version
+#   (e.g. 0.1.1+, as rayvn's release process marks the versions after a release) the release before it, since its own
+#   commit may not be published. Outputs nothing if the version is neither.
+#
+# · ARGS
+#
+#   [pkgFile] (file)  The rayvn.pkg to read the version from (default: valt's own).
+
+valtReleaseTag() {
+    local pkgFile="${1:-${valtHome}/rayvn.pkg}"
+    local version releaseDate
+    version="${ gawk -F"'" '/^projectVersion=/ { print $2 }' "${pkgFile}"; }"
+    releaseDate="${ gawk -F"'" '/^projectReleaseDate=/ { print $2 }' "${pkgFile}"; }"
+    if [[ ${version} =~ ^[0-9]+(\.[0-9]+)*\+$ ]]; then
+        echo "v${version%+}"
+    elif [[ -n ${version} && ${version} != *+* && -n ${releaseDate} ]]; then
+        echo "v${version}"
+    fi
+    return 0
+}
+
 # ◇ Output the path of the default valt private key file, used when no key is specified: VALT_KEY_FILE if set, else the
 #   defaultKeyFile setting in valt.conf in the valt config directory (see setDefaultValtKeyFile), else valt.key in the
 #   valt config directory.

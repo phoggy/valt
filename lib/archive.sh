@@ -420,8 +420,21 @@ _renderArchiveReadMe() {
         notesSection=$'\n▋ Notes\n'"${divider}"$'\n\n'"${userText}"$'\n'
     fi
 
+    # Recovery with Nix: pinned to the valt release current now, with the latest version as the fallback
+
+    local latest="    nix run github:phoggy/valt#recover -- decrypt ${archiveName} -i <valt.key>"
+    local recoverCommands releaseTag; releaseTag="${ valtReleaseTag; }"
+    if [[ -n ${releaseTag} ]]; then
+        recoverCommands="  With the valt release current when this archive was made:"$'\n\n'
+        recoverCommands+="    nix run github:phoggy/valt/${releaseTag}#recover -- decrypt ${archiveName} -i <valt.key>"$'\n\n'
+        recoverCommands+="  If that fails, with the latest version:"$'\n\n'"${latest}"
+    else
+        recoverCommands="${latest}"
+    fi
+
     local substitutions=(
         "ARCHIVE_NAME:${archiveName}"
+        "RECOVER_COMMANDS:${recoverCommands}"
         "CREATED:${created}"
         "AUTHOR:${author}"
         "VALT_VERSION:${valtVersion}"

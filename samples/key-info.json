@@ -2,6 +2,7 @@
   "greeting": "Dear family,",
   "closing": "I hope you never need this!",
   "author": "Alex Sample",
+  "watermark": "SAMPLE",
   "contacts": [
     {
       "name": "Jordan Lee",

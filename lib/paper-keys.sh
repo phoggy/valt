@@ -402,16 +402,18 @@ _assertTypstVersion() {
 }
 
 # Writes the data the template reads: every value in the key info file ('notes' always a list), plus a 'generated'
-# object with the date, the key checksum and the work dir names of the logo, QR code and armored key files.
+# object with the date, the key checksum, the work dir names of the logo, QR code and armored key files, and valt's
+# release tag (see valtReleaseTag).
 
 _writeDocumentData() {
     local keyInfoFile="$1"
     local checksum="$2"
     local outputFile="$3"
     jq --arg date "${ date '+%B %-d, %Y'; }" --arg checksum "${checksum}" --arg logo "${_logoFileName}" \
-       --arg qrCode "${_qrCodeFileName}" --arg armoredKey "${_armoredKeyFileName}" '
+       --arg qrCode "${_qrCodeFileName}" --arg armoredKey "${_armoredKeyFileName}" --arg releaseTag "${ valtReleaseTag; }" '
         .notes = (.notes // [])
-        | .generated = {date: $date, checksum: $checksum, logo: $logo, qrCode: $qrCode, armoredKey: $armoredKey}
+        | .generated = {date: $date, checksum: $checksum, logo: $logo, qrCode: $qrCode, armoredKey: $armoredKey,
+                        releaseTag: $releaseTag}
     ' "${keyInfoFile}" > "${outputFile}" || fail "could not read ${ tildePath "${keyInfoFile}"; }"
 }
 

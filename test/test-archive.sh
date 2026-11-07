@@ -19,6 +19,7 @@ main() {
 
     # README content
     testPublicReadmeStructure
+    testPublicReadmeRecoverCommand
     testPublicReadmeNoNotes
     testPublicReadmeWithNotes
     testPrivateReadmeStructure
@@ -224,6 +225,18 @@ testPublicReadmeStructure() {
     assertInFile 'Extract Manually' "${readme}"
     assertInFile 'age -d' "${readme}"
     assertInFile 'minisign -V' "${readme}"
+}
+
+# The README says how to recover with Nix: with the valt release current when it was made (see valtReleaseTag), and
+# with the latest version
+
+testPublicReadmeRecoverCommand() {
+    local readme="${outerExtractDir}/${_archiveReadMeName}"
+    assertInFile 'Extract with Nix' "${readme}"
+    assertInFile "nix run github:phoggy/valt/${ valtReleaseTag; }#recover -- decrypt test-" "${readme}"
+    assertInFile 'nix run github:phoggy/valt#recover -- decrypt test-' "${readme}"
+    assertNotInFile '${RECOVER_COMMANDS}' "${readme}"
+    assertNotInFile 'phoggy.github.io' "${readme}"
 }
 
 testPublicReadmeNoNotes() {

@@ -41,9 +41,22 @@
   keywords: (data.author, "valt", "private key", "backup", "encryption", "decryption", "security"),
 )
 
+// An optional watermark stamped in the top right corner of each page, in the margin, from the key info's watermark
+// value (e.g. SAMPLE, for the sample paper key on valt's web site)
+#let watermark = data.at("watermark", default: "")
+
 #set page(
   paper: "us-letter",
   margin: (x: 0.75in, top: 0.7in, bottom: 0.9in),
+  foreground: if watermark != "" { context {
+    // Level with the top of the first page's image, on every page; in front, so that a shaded block cannot hide it
+    let red = rgb(220, 38, 38, 75%)
+    let dy = 0.62in
+    place(top + right, dx: -0.75in, dy: dy, rotate(6deg, box( // the right edge at the text margin
+      stroke: 1.5pt + red, radius: 3pt, inset: (x: 8pt, y: 4pt),
+      text(size: 13pt, weight: "bold", tracking: 0.15em, fill: red, watermark),
+    )))
+  } },
   footer: context {
     set text(size: 9pt, style: "italic", fill: luma(90))
     grid(
@@ -74,10 +87,22 @@
 #show heading.where(level: 2): set text(..fontSize(22.5))
 #show heading.where(level: 3): set text(..fontSize(17.55))
 
+// Don't start a section near the bottom of a page, leaving its heading and a line or two there with the rest on the
+// next page. An empty, unbreakable block of the space a section needs goes before each heading, then the same space is
+// taken back: if it fits, nothing moves; if not, the block, and so the heading, go to the next page. (Unlike checking
+// the heading's position, this cannot flip back and forth between layouts.) A heading also stays with what follows it.
+#let needSpace(height) = {
+  block(height: height, width: 100%, breakable: false, above: 0pt, below: 0pt)[]
+  v(-height)
+}
+#show heading: set block(sticky: true)
+#show heading.where(level: 2): it => { needSpace(2.3in); it }
+#show heading.where(level: 3): it => { needSpace(1.5in); it }
+
 #show link: set text(fill: linkColor)
 // No ligatures in code: Fira Code would otherwise join e.g. the dashes in '--option' and the armored key's '-----'
 #show raw: set text(font: codeFont, size: 9pt, ligatures: false, features: (calt: 0))
-#show raw.where(block: true): it => block(width: 100%, fill: rgb("#f9f9f9"), inset: 1em, it)
+#show raw.where(block: true): it => block(width: 100%, fill: rgb("#f9f9f9"), inset: 1em, breakable: false, it)
 
 #show: style
 
@@ -318,7 +343,9 @@ You need *one* of the following:
 - A command line tool that performs age file encryption and decryption (the format is described at
   #link("https://c2sp.org/age")[c2sp.org/age]), such as age 1.3.0 or later, from
   #link("https://github.com/FiloSottile/age")[github.com/FiloSottile/age], plus `tar`, which is included with macOS and
-  Linux. Another age implementation will work, so long as it supports post-quantum (`-pq`) keys.
+  Linux, and optionally `minisign`, to check signatures, from
+  #link("https://github.com/jedisct1/minisign")[github.com/jedisct1/minisign]. Another age implementation will work, so
+  long as it supports post-quantum (`-pq`) keys.
 
 == Identifying Your File
 
@@ -380,8 +407,10 @@ your computer:
   ```
   curl -L https://nixos.org/nix/install | sh
   ```
-  With this installer, each `nix` command in this document needs an extra option right after `nix`:
-  `--extra-experimental-features 'nix-command flakes'`.
+  With this installer, each `nix` command in this document needs this option right after `nix`:
+  ```
+  --extra-experimental-features 'nix-command flakes'
+  ```
 - *Windows*: Nix runs in Windows' own Linux environment, WSL. Open PowerShell as administrator, run `wsl --install`,
   restart, open Ubuntu from the Start menu, and follow the Linux step above inside it (see
   #link("https://learn.microsoft.com/windows/wsl/install")[learn.microsoft.com/windows/wsl/install]). Your Windows files
@@ -398,6 +427,8 @@ To remove Nix afterwards, run `/nix/nix-installer uninstall` if you used the fir
 one, follow
 #link("https://nix.dev/manual/nix/latest/installation/uninstall")[nix.dev/manual/nix/latest/installation/uninstall].
 
+#pagebreak()
+
 == Decrypting With The Recovery Tool
 
 With Nix installed (see #link(<installing-nix>)[Installing Nix], above), open a terminal, change to the directory
@@ -407,9 +438,31 @@ containing the encrypted file or archive, and run:
 nix run github:phoggy/valt#recover -- decrypt FILE -i KEY_FILE
 ```
 
+Replace `FILE` with the `.age` or `.valt` file and `KEY_FILE` with the private key file (see
+#link(<getting-the-key-file>)[Getting the Key File]). You will be prompted for the passphrase that protects the private
+key.
+
+- An encrypted file is decrypted next to the original, without the `.age` suffix. If a signature file is present it is
+  checked first, and decryption stops if the file has been tampered with.
+- A secure archive is verified and its contents are extracted into the current directory. Use `-o DIRECTORY` to extract
+  somewhere else.
+
 This downloads and runs the recovery tool automatically; no other software needs to be installed. If you used the
-Intel Mac installer (or Nix reports that flakes are not enabled), add `--extra-experimental-features 'nix-command
-flakes'` right after `nix`.
+Intel Mac installer (or Nix reports that flakes are not enabled), add this right after `nix`:
+
+```
+--extra-experimental-features 'nix-command flakes'
+```
+
+#if generated.at("releaseTag", default: "") != "" [
+  If that fails, which a later change to valt could cause, try the valt release current when this document was made:
+
+  #raw("nix run github:phoggy/valt/" + generated.releaseTag + "#recover -- decrypt FILE -i KEY_FILE", block: true)
+
+  An archive's `README.txt` gives the same command for the release current when it was made.
+]
+
+== Decrypting Using valt
 
 If you installed `valt`, the equivalent is:
 
@@ -417,24 +470,24 @@ If you installed `valt`, the equivalent is:
 valt decrypt FILE -i KEY_FILE
 ```
 
-Replace `FILE` with the `.age` or `.valt` file and `KEY_FILE` with the private key file (see
-#link(<getting-the-key-file>)[Getting the Key File]). You will be prompted for the
-passphrase that protects the private key.
-
-- An encrypted file is decrypted next to the original, without the `.age` suffix. If a signature file is present it is
-  checked first, and decryption stops if the file has been tampered with.
-- A secure archive is verified and its contents are extracted into the current directory. Use `-o DIRECTORY` to extract
-  somewhere else.
+`FILE` and `KEY_FILE` are as above, and so are the results.
 
 == Decrypting Manually
 
-For an encrypted file, using `age`:
+For an encrypted file, using `age`, and `minisign` to check its signature:
 
-```
-age -d -i KEY_FILE -o DECRYPTED_FILE FILE.age
-```
-
-This skips the signature check, which requires valt.
++ If a signature file (`FILE.age.minisig`) is next to it, check that the file has not been tampered with. The public
+  key that checks the signature is inside the private key file; this extracts it (asking for the passphrase), then
+  checks the signature:
+  ```
+  age -d KEY_FILE | sed -n 's/^# \[minisign\.pub\] //p' > minisign.pub
+  minisign -V -p minisign.pub -m FILE.age
+  ```
+  You should see `Signature and comment signature verified`. If not, stop: the file has been changed.
++ Decrypt it:
+  ```
+  age -d -i KEY_FILE -o DECRYPTED_FILE FILE.age
+  ```
 
 For a secure archive, first unpack it, which needs no key:
 
