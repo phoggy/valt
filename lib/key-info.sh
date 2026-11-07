@@ -24,7 +24,8 @@
 #     }
 #
 # A way's type is phone, email, social or address. One of a person's ways may be marked preferred, the one to try
-# first.
+# first. An optional authorShortName is how the paper key refers to the author after first giving their full name
+# (default: the first word of it), e.g. a nickname, or the given name of a name with the family name first.
 #@end
 
 # ◇ Writes the key info web page (a single HTML file with no network access) to a directory, with the current values
@@ -103,6 +104,7 @@ tidyKeyInfoDraft() {
     local tidy; tidy="${ jq "${_keyInfoJq}"'
         .contacts = [(.contacts // [])[]? | .ways = [(.ways // [])[]? | select(.value | text)]
                      | select(if .name | text then true else .ways | length > 0 end)]
+        | if (.authorShortName // "") | text then . else del(.authorShortName) end
     ' "${draftFile}"; }" || fail "could not read ${draftFile}"
     printf '%s\n' "${tidy}" > "${draftFile}" || fail "could not write ${draftFile}"
 }
@@ -266,8 +268,10 @@ importKeyInfo() {
     [[ -f ${keyInfoFile} ]] && existing="${ jq -c 'if type == "object" then . else {} end' "${keyInfoFile}" 2> /dev/null; }"
     local temp="${keyInfoFile}.new"
     jq --argjson existing "${existing:-{\}}" "${_keyInfoJq}"'
-        (normalized | {greeting, closing, author, contacts, notes}) + ($existing | del(.greeting, .closing, .author,
-                                                                                    .contacts, .notes))
+        (normalized | {greeting, closing, author}
+                      + (if (.authorShortName // "") | text then {authorShortName: (.authorShortName | oneLine)} else {} end)
+                      + {contacts, notes})
+        + ($existing | del(.greeting, .closing, .author, .authorShortName, .contacts, .notes))
     ' "${jsonFile}" > "${temp}" || fail "could not write ${temp}"
     chmod 600 "${temp}" && mv "${temp}" "${keyInfoFile}" || fail "could not write ${keyInfoFile}"
 }
@@ -355,7 +359,8 @@ _init_valt_key-info() {
                 (.name | text) and (.ways | type == "array" and length > 0
                                     and all((.type as $t | wayTypes | index($t)) and (.value | text)
                                             and ((.preferred // false) | type == "boolean")))))
-            and ((.notes // []) | type == "array" and all(type == "string"));
+            and ((.notes // []) | type == "array" and all(type == "string"))
+            and ((.authorShortName // "") | type == "string");
         def oneLine: gsub("\\s*\n\\s*"; " ") | gsub("^\\s+|\\s+$"; "");
         def normalized:
             .greeting |= oneLine | .closing |= oneLine | .author |= oneLine
@@ -432,6 +437,7 @@ _pageKeyInfoJson() {
     local json='{}'
     [[ -f ${keyInfoFile} ]] && json="${ jq -c 'if type == "object" then . else {} end' "${keyInfoFile}" 2> /dev/null; }"
     jq -c '{greeting: (.greeting // ""), closing: (.closing // ""), author: (.author // ""),
+            authorShortName: (.authorShortName // ""),
             contacts: [(.contacts // [])[]? | {name: (.name // ""),
                                                ways: [(.ways // [])[]? | {type, value}
                                                       + (if .preferred == true then {preferred: true} else {} end)]}],

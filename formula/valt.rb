@@ -9,7 +9,6 @@ class Valt < Formula
 
   def install
     bin.install "bin/valt"
-    bin.install "bin/valt-pinentry"
     (share/"valt"/"lib").install Dir["lib/*.sh"]
     (share/"valt"/"etc").install Dir["etc/*"]
     (share/"valt").install "rayvn.pkg"

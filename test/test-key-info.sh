@@ -16,6 +16,7 @@ main() {
     testImportRoundTrip
     testImportKeepsExtraVars
     testImportKeepsOnePreferredWay
+    testImportShortName
     testImportRejectsInvalidInfo
     testImportedFileIsPrivate
     testCommandImportsDownload
@@ -153,8 +154,8 @@ testPageHasCurrentValues() {
 testPageForMissingFileIsEmpty() {
     local page keys
     newKeyInfoPage "${testDir}/missing.json" "${testDir}" page keys $(( EPOCHSECONDS + 3600 ))
-    assertEqual '{"greeting":"","closing":"","author":"","contacts":[],"notes":[]}' "${ pageData "${page}"; }" \
-        "a missing key info file must give an empty form"
+    assertEqual '{"greeting":"","closing":"","author":"","authorShortName":"","contacts":[],"notes":[]}' \
+        "${ pageData "${page}"; }" "a missing key info file must give an empty form"
 }
 
 testPageCannotEndItsScript() {
@@ -244,7 +245,8 @@ completed="no"
 INFO
     local page keys
     newKeyInfoPage "${dir}/key-info.json" "${testDir}" page keys $(( EPOCHSECONDS + 3600 )) 2> /dev/null
-    assertEqual '{"greeting":"","closing":"","author":"","contacts":[],"notes":[]}' "${ pageData "${page}"; }"
+    assertEqual '{"greeting":"","closing":"","author":"","authorShortName":"","contacts":[],"notes":[]}' \
+        "${ pageData "${page}"; }"
 }
 
 testMigrateKeepsExistingFile() {
@@ -294,6 +296,22 @@ testImportKeepsOnePreferredWay() {
     newKeyInfoPage "${info}" "${testDir}" page keys $(( EPOCHSECONDS + 3600 ))
     assertEqual '[null,true,null]' "${ pageData "${page}" | jq -c '[.contacts[0].ways[].preferred]'; }" \
         "the page must show which way is preferred"
+}
+
+# The author's short name is kept when set, and removed when cleared (the paper key then uses the first word of the name)
+
+testImportShortName() {
+    local info="${testDir}/short-name.json" json="${testDir}/short-name-download.json"
+    downloadJson "Tanaka Hiroshi" | jq '.authorShortName = " Hiroshi "' > "${json}"
+    importKeyInfo "${json}" "${info}"
+    assertEqual "Hiroshi" "${ keyInfoValue "${info}" authorShortName; }"
+    local page keys
+    newKeyInfoPage "${info}" "${testDir}" page keys $(( EPOCHSECONDS + 3600 ))
+    assertEqual "Hiroshi" "${ pageData "${page}" | jq -r '.authorShortName'; }" "the page must show the short name"
+
+    downloadJson "Tanaka Hiroshi" | jq '.authorShortName = ""' > "${json}"
+    importKeyInfo "${json}" "${info}"
+    assertEqual "null" "${ keyInfoValue "${info}" authorShortName; }" "a cleared short name must be removed"
 }
 
 testImportRejectsInvalidInfo() {
@@ -461,6 +479,8 @@ testDraftKeepsValues() {
     writeKeyInfo "${info}"
     jq '.favoriteColor = "blue"' "${info}" > "${info}.tmp" && mv "${info}.tmp" "${info}"
     newKeyInfoDraft "${info}" "${draft}"
+    assertEqual '""' "${ jq '.authorShortName' "${draft}"; }" "a draft must show the optional short name, to fill in"
+    tidyKeyInfoDraft "${draft}" # as on saving, which drops an empty short name
     assertEqual "${ keyInfoValues "${info}"; }" "${ keyInfoValues "${draft}"; }" "a draft must hold the current values"
 }
 

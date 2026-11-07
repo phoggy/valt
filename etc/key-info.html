@@ -290,7 +290,7 @@
 
         <h2>The paper key</h2>
         <p>The paper key is a printed backup, for you and for whoever you would want to recover your files if you
-            cannot: family, or an executor. It contains:</p>
+            cannot: family, or an executor (<a href="https://rayvn.ink/valt/assets/sample-paper-key.pdf">see a sample</a>). It contains:</p>
         <ul>
             <li>your private key, as a QR code and as text, both still encrypted with the passphrase;</li>
             <li>space to write the passphrase by hand, or notes saying where to find it;</li>
@@ -532,7 +532,11 @@ See <a class="t-link" href="https://github.com/phoggy/mrld#methodology-and-sourc
             <input id="closing" placeholder="e.g. I hope you never need this!">
             <label for="author">Signature</label>
             <input id="author" placeholder="Your name, e.g. Bob Barker">
+            <label for="authorShortName">Short name</label>
+            <input id="authorShortName">
         </div>
+        <p class="hint">Short name (optional): how the instructions refer to you after first giving your full name, e.g. a
+            nickname, or your given name if your family name comes first. If empty, the first word of your name.</p>
 
         <h2>People who can help</h2>
         <p class="hint">If you are unavailable, whoever has the paper key may need help with the technical steps. Add at
@@ -762,6 +766,7 @@ See <a class="t-link" href="https://github.com/phoggy/mrld#methodology-and-sourc
             greeting: field("greeting").value.trim(),
             closing: field("closing").value.trim(),
             author: field("author").value.trim(),
+            authorShortName: field("authorShortName").value.trim(),
             contacts: contacts.filter((contact) => !isBlank(contact)).map(savedContact),
             notes: field("notes").value.split("\n").map((line) => line.trim()).filter((line) => line),
         };
@@ -773,6 +778,7 @@ See <a class="t-link" href="https://github.com/phoggy/mrld#methodology-and-sourc
 
     function update() {
         const info = currentInfo();
+        field("authorShortName").placeholder = info.author ? info.author.split(/\s+/)[0] : "e.g. Bob"; // the default
         updateContacts();
         const or = (text, empty) => text ? escapeHtml(text) : `<span class="empty">${empty}</span>`;
         field("preview").innerHTML = `
@@ -940,6 +946,7 @@ See <a class="t-link" href="https://github.com/phoggy/mrld#methodology-and-sourc
     field("greeting").value = initial.greeting || "";
     field("closing").value = initial.closing || "";
     field("author").value = initial.author || "";
+    field("authorShortName").value = initial.authorShortName || "";
     field("notes").value = (initial.notes || []).join("\n");
     contacts = (initial.contacts || []).map((c) => ({
         name: c.name || "",
@@ -947,7 +954,8 @@ See <a class="t-link" href="https://github.com/phoggy/mrld#methodology-and-sourc
                                          preferred: w.preferred === true })),
     }));
     if (!contacts.length) contacts.push(newContact());
-    ["greeting", "closing", "author", "notes"].forEach((id) => field(id).addEventListener("input", update));
+    ["greeting", "closing", "author", "authorShortName", "notes"]
+        .forEach((id) => field(id).addEventListener("input", update));
     field("add-contact").addEventListener("click", () => {
         contacts.push(newContact());
         renderContacts();

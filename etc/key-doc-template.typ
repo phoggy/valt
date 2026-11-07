@@ -9,6 +9,13 @@
 #let data = json("data.json")
 #let generated = data.generated
 
+// The author's name after the first mention: the key info's authorShortName if set (e.g. a nickname, or where the
+// family name comes first), otherwise the first word of their name
+#let authorShortName = {
+  let short = data.at("authorShortName", default: "").trim()
+  if short == "" { data.author.split(" ").first() } else { short }
+}
+
 // ---- Theme
 
 #let bodyFont = "Google Sans Flex"
@@ -141,8 +148,8 @@ If all of this has you thinking _"uh… what?"_, please see #link(<getting-help>
 The following are contacts that I trust and who have agreed to help if needed:
 
 // Each person: their name, then the ways to reach them, a label for each type (always in the order of wayLabels) with
-// its values beside it, the preferred way marked. Emails, phone numbers and web addresses are links, for reading on screen, but look the
-// same as the text around them when printed. With three or more people, they are set two to a row.
+// its values beside it, the preferred way marked. Emails, phone numbers and web addresses are links, for reading on
+// screen, but look the same as the text around them when printed. With three or more people, they are set two to a row.
 #let wayLabels = (phone: "Phone", email: "Email", social: "Social", address: "Address")
 #let wayValue(type, value) = {
   let plain = text(fill: textColor, value)
@@ -274,17 +281,17 @@ nature of what you're working with. Take your time, and don't settle for help th
 = Instructions <instructions>
 
 This section assumes familiarity with the terminal and using command line tools. The tools described here run on macOS
-and Linux.
+and Linux, and on Windows in its Linux environment, WSL (see #link(<installing-nix>)[Installing Nix]).
 
 #callout("warning")[
-  #calloutTitle("warning")[If you are helping]
+  #calloutTitle("warning")[If _you_ are helping]
 
   These are #data.author's files, and they may be extremely sensitive. Anyone holding this document can try to decrypt
   them, so before you start, make sure that the person asking should have access:
 
-  - They are someone #data.author would want to have it, such as family or the executor of their estate.
-  - They need it now. If #data.author can be reached, check with them first, using contact details you already have
-    rather than any the person asking gives you.
+  - They are someone #authorShortName would want to have it, such as family or the executor of their estate.
+  - They need it now. If #authorShortName can be reached, check with them first, using contact details you already
+    have rather than any the person asking gives you.
   - Their story holds up. If they are a stranger to you, or anything seems wrong, stop; pressure to hurry is a warning
     sign in itself.
 ]
@@ -292,21 +299,26 @@ and Linux.
 == Prerequisites
 
 The private key and the passphrase used to encrypt it are required. Hopefully you have the key in digital form, perhaps
-on a USB/thumb drive or in a file (it should have a '.key' file suffix). If you don't, the Paper Key section below has two
-forms of backup: a QR code and ("`PEM`" formatted) text, both containing the encrypted private key. Instructions for
-recreating the digital key from these are provided.
+on a USB/thumb drive or in a file (it should have a '.key' file suffix). If you don't, this document's Paper Key pages
+hold two forms of backup: a QR code and ("`PEM`" formatted) text, both containing the encrypted private key. See
+#link(<getting-the-key-file>)[Getting the Key File] for how to make the key file from either.
 
 The passphrase used when the key was created is either written on the Passphrase page of this document, or kept
 separately, in which case the Notes section says where to find it.
 
-You need one of the following:
+You need *one* of the following:
 
-- #link("https://nixos.org/download/")[Nix], which can download and run the valt recovery tool for you (recommended).
+// Each link shows its address, since a printed copy has no links to follow
+
+- Nix (recommended), which downloads and runs the valt recovery tool for you, with one command. It always uses the
+  versions of age and the other tools that valt has tested with (not whatever the computer happens to have), installs
+  nothing else, and can be removed afterwards. See #link(<installing-nix>)[Installing Nix], below.
 - `valt`, the tool used to create this document. Source and instructions can be found at
   #link("https://github.com/phoggy/valt")[github.com/phoggy/valt].
-- A command line tool that performs #link("https://github.com/C2SP/C2SP/blob/main/age.md")[age file encryption and
-  decryption], such as #link("https://github.com/FiloSottile/age")[age 1.3.0+], plus `tar`, which is included with
-  macOS and Linux. Another age implementation will work, so long as it supports post-quantum (`-pq`) keys.
+- A command line tool that performs age file encryption and decryption (the format is described at
+  #link("https://c2sp.org/age")[c2sp.org/age]), such as age 1.3.0 or later, from
+  #link("https://github.com/FiloSottile/age")[github.com/FiloSottile/age], plus `tar`, which is included with macOS and
+  Linux. Another age implementation will work, so long as it supports post-quantum (`-pq`) keys.
 
 == Identifying Your File
 
@@ -318,16 +330,86 @@ shows full names.
 - *`.valt`*: a secure archive, which can contain any number of files and directories. A file with the same name plus
   `.pub` may be next to it; it contains no secrets and can be ignored.
 
+== Getting the Key File <getting-the-key-file>
+
+The commands below need the private key as a file: `KEY_FILE` in them. If you have it already (a file ending in `.key`,
+perhaps on a USB drive), use that. Otherwise, make it from this document's #link(<paper-key>)[Paper Key] pages near the
+end, which hold the same encrypted key as a QR code and as text, in one of these three ways:
+
+=== Decode QR Code
+
+The QR code contains binary values so the usual phone camera decoding will likely not work. Instead, take a photo and
+move it to your computer. Use `qrtool` to convert the image (PNG, JPEG, etc.) to a key file:
+
++ `nix run github:phoggy/valt#qrtool -- decode IMAGE_FILE > KEY_FILE` or
++ `brew install qrtool; qrtool decode IMAGE_FILE > KEY_FILE`
+
+The result should match the checksum shown in the next method.
+
+=== Scan PEM Text
+
+Scan the PEM text and send/save it as a file. If you don't know how, search the web for "scanning text on phone". Verify
+that the result matches the checksum to guard against scanning errors:
+
+```
+sha256sum KEY_FILE | head -c 16
+```
+
+It should match
+
+#raw(generated.checksum, block: true)
+
+=== Manual PEM Text Entry
+
+If neither of the first two options works, you can always type it in by hand. Yes, this is _extremely_ tedious, but it
+_can_ be done. Be sure to include the leading and trailing lines, each of which begins and ends with 5 dashes. Use the
+checksum test from the previous method to ensure it was entered correctly!
+
+== Installing Nix <installing-nix>
+
+Nix fetches software and runs it, without changing anything else on the computer. Install it with the installer for
+your computer:
+
+- *Mac with Apple silicon* (Apple menu, About This Mac, shows a chip such as Apple M1): download and run the installer
+  from #link("https://dtr.mn/determinate-nix")[dtr.mn/determinate-nix].
+- *Linux*: in a terminal, run:
+  ```
+  curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+  ```
+- *Intel Mac*: in a terminal, run:
+  ```
+  curl -L https://nixos.org/nix/install | sh
+  ```
+  With this installer, each `nix` command in this document needs an extra option right after `nix`:
+  `--extra-experimental-features 'nix-command flakes'`.
+- *Windows*: Nix runs in Windows' own Linux environment, WSL. Open PowerShell as administrator, run `wsl --install`,
+  restart, open Ubuntu from the Start menu, and follow the Linux step above inside it (see
+  #link("https://learn.microsoft.com/windows/wsl/install")[learn.microsoft.com/windows/wsl/install]). Your Windows files
+  are under `/mnt/c` there, e.g. `/mnt/c/Users/NAME/Downloads`.
+
+Installing asks for an administrator password and takes a few minutes; on a Mac it creates a separate volume for Nix.
+Answer yes to its questions and allow any system dialogs that appear. When it is done, *open a new terminal window*:
+one that was already open does not know about Nix yet.
+
+The first time the recovery tool runs, it downloads what it needs, about 1 GB, so it needs an internet connection and
+may take several minutes. Later runs start at once.
+
+To remove Nix afterwards, run `/nix/nix-installer uninstall` if you used the first two installers; after the Intel Mac
+one, follow
+#link("https://nix.dev/manual/nix/latest/installation/uninstall")[nix.dev/manual/nix/latest/installation/uninstall].
+
 == Decrypting With The Recovery Tool
 
-If you have Nix installed, open a terminal, change to the directory containing the encrypted file or archive, and run:
+With Nix installed (see #link(<installing-nix>)[Installing Nix], above), open a terminal, change to the directory
+containing the encrypted file or archive, and run:
 
 ```
 nix run github:phoggy/valt#recover -- decrypt FILE -i KEY_FILE
 ```
 
-This downloads and runs the recovery tool automatically; no other software needs to be installed. If Nix reports that
-flakes are not enabled, add `--extra-experimental-features 'nix-command flakes'` immediately after `nix`.
+This downloads and runs the recovery tool automatically; no other software needs to be installed. If you used the
+Intel Mac installer (or Nix reports that flakes are not enabled), add `--extra-experimental-features 'nix-command
+flakes'` right after `nix`.
 
 If you installed `valt`, the equivalent is:
 
@@ -335,7 +417,8 @@ If you installed `valt`, the equivalent is:
 valt decrypt FILE -i KEY_FILE
 ```
 
-Replace `FILE` with the `.age` or `.valt` file and `KEY_FILE` with the private key file. You will be prompted for the
+Replace `FILE` with the `.age` or `.valt` file and `KEY_FILE` with the private key file (see
+#link(<getting-the-key-file>)[Getting the Key File]). You will be prompted for the
 passphrase that protects the private key.
 
 - An encrypted file is decrypted next to the original, without the `.age` suffix. If a signature file is present it is
@@ -368,7 +451,7 @@ In all cases you will be prompted to enter the passphrase that protects the priv
 
 // ---- Paper key: the QR code and the armored key each on a page of their own
 
-== Paper Key
+== Paper Key <paper-key>
 
 #align(center, image(generated.qrCode, width: 100%))
 
@@ -379,41 +462,6 @@ In all cases you will be prompted to enter the passphrase that protects the priv
   set par(leading: 0.45em)
   raw(read(generated.armoredKey), block: true)
 })
-
-#pagebreak()
-
-== Convert Paper Key To File
-
-Use one of the following three methods to convert one of the two forms of paper keys to a binary file:
-
-=== Decode QR Code
-
-The QR code contains binary values so the usual phone camera decoding will likely not work. Instead, take a photo and
-move it to your computer. Use `qrtool` to convert the image (PNG, JPEG, etc.) to a key file:
-
-+ `nix run github:phoggy/valt#qrtool -- decode IMAGE-FILE > KEY-FILE` or
-+ `brew install qrtool; qrtool decode IMAGE-FILE > KEY-FILE`
-
-The result should match the checksum shown in the next method.
-
-=== Scan PEM Text
-
-Scan the PEM text and send/save it as a file. If you don't know how, search the web for "scanning text on phone". Verify
-that the result matches the checksum to guard against scanning errors:
-
-```
-sha256sum KEY-FILE | head -c 16
-```
-
-It should match
-
-#raw(generated.checksum, block: true)
-
-=== Manual PEM Text Entry
-
-If neither of the first two options works, you can always type it in by hand. Yes, this is _extremely_ tedious, but it
-_can_ be done. Be sure to include the leading and trailing lines, each of which begins and ends with 5 dashes. Use the
-checksum test from the previous method to ensure it was entered correctly!
 
 #pagebreak()
 

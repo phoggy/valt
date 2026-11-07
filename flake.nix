@@ -105,7 +105,6 @@
 
             # Install bin/
             install -Dm755 bin/valt "$out/bin/valt"
-            install -Dm755 bin/valt-pinentry "$out/bin/valt-pinentry"
 
             # Install lib/
             mkdir -p "$out/share/valt/lib"
@@ -137,10 +136,6 @@ EOF
             wrapProgram "$out/bin/valt" \
               --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath runtimeDeps}"
 
-            # Wrap valt-pinentry similarly
-            wrapProgram "$out/bin/valt-pinentry" \
-              --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath runtimeDeps}"
-
             runHook postInstall
           '';
 
@@ -148,7 +143,7 @@ EOF
           # bash, which lacks builtins like compgen. Restore the shebangs so
           # they resolve via PATH, where the wrapper provides bash-interactive.
           postFixup = ''
-            for f in "$out/bin/.valt-wrapped" "$out/bin/.valt-pinentry-wrapped" "$out/share/valt/lib/"*.sh; do
+            for f in "$out/bin/.valt-wrapped" "$out/share/valt/lib/"*.sh; do
               if [ -f "$f" ]; then
                 sed -i "1s|^#\\!.*/bin/bash.*|#!/usr/bin/env bash|" "$f"
               fi
@@ -178,7 +173,6 @@ EOF
 
             # Install only what's needed for decryption
             install -Dm755 bin/valt "$out/bin/valt"
-            install -Dm755 bin/valt-pinentry "$out/bin/valt-pinentry"
 
             mkdir -p "$out/share/valt/lib"
             cp lib/*.sh "$out/share/valt/lib/"
@@ -208,9 +202,6 @@ EOF
               --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath recoverDeps}" \
               --set VALT_NO_PAPER_KEY_REMINDERS 1
 
-            wrapProgram "$out/bin/valt-pinentry" \
-              --prefix PATH : "$out/bin:${pkgs.lib.makeBinPath recoverDeps}"
-
             # For decoding the paper key QR code (see etc/key-doc-template.typ).
             ln -s "${pkgs.qrtool}/bin/qrtool" "$out/bin/qrtool"
 
@@ -218,7 +209,7 @@ EOF
           '';
 
           postFixup = ''
-            for f in "$out/bin/.valt-wrapped" "$out/bin/.valt-pinentry-wrapped" "$out/share/valt/lib/"*.sh; do
+            for f in "$out/bin/.valt-wrapped" "$out/share/valt/lib/"*.sh; do
               if [ -f "$f" ]; then
                 sed -i "1s|^#\\!.*/bin/bash.*|#!/usr/bin/env bash|" "$f"
               fi

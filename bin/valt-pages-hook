@@ -12,7 +12,8 @@ usage() {
     echo
     echo "    PAGES_DIR  The pages dir (valt's gh-pages worktree)."
     echo
-    echo "Writes guide/index.html: the guide to keys and passphrases, from the key info page's explanatory tabs."
+    echo "Writes guide/index.html: the guide to keys and passphrases, from the key info page's explanatory tabs. And"
+    echo "assets/sample-paper-key.pdf, the sample paper key, from samples/ (when it, the template or fonts change)."
     echo
     echo "Options:"
     echo
@@ -24,6 +25,29 @@ main() {
     init "$@"
     writeKeyInfoGuide "${pagesDir}/guide/index.html"
     show "Wrote" bold "${ tildePath "${pagesDir}/guide/index.html"; }"
+    writeSamplePaperKey "${pagesDir}/assets/sample-paper-key.pdf"
+}
+
+# Generates the sample paper key from samples/ (a throwaway key and fictional key info), unless it is newer than all
+# that goes into it: its footer has the date it was made, so remaking it every time would change it every day.
+
+writeSamplePaperKey() {
+    local outputFile="$1"
+    local samplesDir="${valtHome}/samples"
+    local -a inputs=("${samplesDir}/sample.key" "${samplesDir}/key-info.json" "${valtHome}/etc/key-doc-template.typ"
+                     "${valtHome}/etc/phoggy.png" "${valtHome}/etc/fonts/"*)
+    if [[ -f ${outputFile} ]]; then
+        local input changed=0
+        for input in "${inputs[@]}"; do
+            [[ ${input} -nt ${outputFile} ]] && changed=1
+        done
+        (( changed )) || { show "The sample paper key is current:" bold "${ tildePath "${outputFile}"; }"; return 0; }
+    fi
+    local pdf; newPaperKey "${samplesDir}/sample.key" pdf "${samplesDir}/key-info.json"
+    ensureDir "${ dirName "${outputFile}"; }"
+    mv "${pdf}" "${outputFile}" || fail "could not move ${pdf} to ${outputFile}"
+    chmod 644 "${outputFile}" || fail # made private, as a real paper key is; this one is published
+    show "Wrote" bold "${ tildePath "${outputFile}"; }"
 }
 
 init() {
@@ -43,5 +67,5 @@ init() {
     assertDirectory "${pagesDir}"
 }
 
-source rayvn.up 'valt/key-info' || exit
+source rayvn.up 'valt/key-info' 'valt/paper-keys' || exit
 main "$@"

@@ -4,15 +4,34 @@ Public key encryption for files and archives, using [age](https://age-encryption
 [minisign](https://jedisct1.github.io/minisign/).
 
 valt creates a passphrase-protected key pair, plus a printable "paper key" PDF that backs up the key
-and explains to your successors how to use it. Files are encrypted to your own key (and optionally to
-others), and signed so that tampering is detected on decryption.
+and explains to your successors how to use it
+([see a sample](https://rayvn.ink/valt/assets/sample-paper-key.pdf)). Files are encrypted to your own
+key (and optionally to others), and signed so that tampering is detected on decryption.
 
 New to keys and passphrases? The [guide](https://rayvn.ink/valt/guide/) explains how valt's keys and paper key
 work, where to keep the passphrase, and what makes a passphrase strong.
 
-## Prerequisites
+## Installation
 
-Requires [Nix](https://nixos.org/).
+**With Homebrew:**
+
+```bash
+brew tap rayvn-central/brew
+brew install valt
+```
+
+To upgrade to the latest version:
+
+```bash
+brew upgrade valt
+```
+
+Homebrew installs valt's dependencies too, including those from other taps, such as
+[mrld](https://github.com/phoggy/mrld) (used for password strength estimation): no separate `brew tap` is needed.
+
+**With Nix:**
+
+If you don't have [Nix](https://nixos.org/) yet, install it first:
 
 **Mac with Apple silicon:** Download and run the [Determinate Nix installer](https://dtr.mn/determinate-nix).
 
@@ -39,16 +58,14 @@ mkdir -p ~/.config/nix
 echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
 ```
 
-## Installation
+**Windows:** Nix runs in Windows' own Linux environment, WSL. In PowerShell as administrator, run `wsl --install`,
+restart, open Ubuntu from the Start menu, and follow the Linux step above inside it (see
+[Install WSL](https://learn.microsoft.com/windows/wsl/install)). Windows files are under `/mnt/c` there.
 
-**With Homebrew:**
+To remove Nix later: after the Determinate installer, run `/nix/nix-installer uninstall`; after the Mac x86 one, see
+[Uninstalling Nix](https://nix.dev/manual/nix/latest/installation/uninstall).
 
-```bash
-brew tap rayvn-central/brew
-brew install valt
-```
-
-**With Nix:**
+Then:
 
 ```bash
 nix profile add github:phoggy/valt
@@ -73,17 +90,30 @@ nix run github:phoggy/valt
 ```
 
 All dependencies are declared in the `flake.nix` file in the `runtimeDeps` list. New dependencies must be added there.
-Homebrew installs resolve these automatically, including third-party taps like [mrld](https://github.com/phoggy/mrld)
-(used for password strength estimation) - no separate `brew tap` step is needed.
 
 ### Recovery
 
-A minimal package that can only decrypt files and extract archives, for use by someone who has
-been given a key and an encrypted file:
+*Recovery* is what someone else does to get at your files when you can't: typically an heir, an executor or a person
+helping them, using your paper key (or your private key file) and its passphrase to decrypt a file or extract an archive
+you left. They don't need valt installed, and shouldn't have to learn it. With [Nix](https://nixos.org/download/), one
+command does it:
 
 ```bash
 nix run github:phoggy/valt#recover -- decrypt FILE -i KEY_FILE
 ```
+
+The first run downloads what it needs (about 1 GB), so it can take several minutes; later runs start at once.
+
+We suggest this for recovery, rather than installing valt, because:
+
+- **It doesn't depend on what the computer has.** Nix runs valt with exactly the versions of age and its other tools
+  that this repository pins and has tested together, whatever Homebrew or a system ships by then.
+- **It installs nothing.** It is fetched, run and done: nothing to set up beforehand, or clean up after.
+- **It does only what recovery needs:** decrypting files and extracting archives (and decoding the paper key's QR code),
+  without valt's prompts about the owner's own paper key.
+
+The paper key ([sample](https://rayvn.ink/valt/assets/sample-paper-key.pdf)) explains all of this step by step, how to rebuild the key file from its QR code or printed text, and how
+to recover without Nix, using `age` and `tar` directly.
 
 ## Commands
 

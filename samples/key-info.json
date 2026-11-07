@@ -1,0 +1,26 @@
+{
+  "greeting": "Dear family,",
+  "closing": "I hope you never need this!",
+  "author": "Alex Sample",
+  "contacts": [
+    {
+      "name": "Jordan Lee",
+      "ways": [
+        { "type": "phone", "value": "+1 555 010 4477" },
+        { "type": "email", "value": "jordan.lee@example.com", "preferred": true },
+        { "type": "address", "value": "12 Elm Street, Springfield, OR 97477, USA" }
+      ]
+    },
+    {
+      "name": "Sam Rivera",
+      "ways": [
+        { "type": "email", "value": "sam@example.org" },
+        { "type": "social", "value": "Signal @samrivera" }
+      ]
+    }
+  ],
+  "notes": [
+    "The passphrase is in a sealed envelope with my will, held by my attorney, Pat Morgan.",
+    "The encrypted backups are on the USB drive labeled 'valt' in the fire safe."
+  ]
+}

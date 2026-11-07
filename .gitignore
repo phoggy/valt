@@ -17,3 +17,6 @@ result
 
 # Local reference material
 password_strength_review.html
+
+# The sample paper key is generated into the pages dir, not kept here
+samples/*.pdf
