@@ -265,6 +265,21 @@ file would be open to quantum computers). Recipient files are read for their rec
 | `-R PATH` | A file of recipients, e.g. a valt .pub file. |
 {: .usage-table}
 
+### valtReleaseTag()
+
+Outputs the tag of the valt release current when this valt was built (e.g. v0.1.1), for recovery commands pinned to
+it (nix run github:phoggy/valt/TAG#recover ...): this version, if it is a release, or for a development version
+(e.g. 0.1.1+, as rayvn's release process marks the versions after a release) the release before it, since its own
+commit may not be published. Outputs nothing if the version is neither.
+
+
+*args*
+
+| | |
+|---|---|
+| `[pkgFile]` *(file)* | The rayvn.pkg to read the version from (default: valt's own). |
+{: .args-table}
+
 ### defaultValtKeyFile()
 
 Output the path of the default valt private key file, used when no key is specified: VALT_KEY_FILE if set, else the
