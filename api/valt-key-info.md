@@ -229,4 +229,5 @@ notes. Any other values are kept, for a custom paper key template:
     }
 
 A way's type is phone, email, social or address. One of a person's ways may be marked preferred, the one to try
-first.
+first. An optional authorShortName is how the paper key refers to the author after first giving their full name
+(default: the first word of it), e.g. a nickname, or the given name of a name with the family name first.

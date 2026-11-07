@@ -3,7 +3,7 @@ layout: default
 title: "valt/pwned"
 parent: "Passwords"
 grand_parent: API Reference
-nav_order: 11
+nav_order: 9
 ---
 
 # valt/pwned

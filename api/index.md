@@ -32,4 +32,3 @@ Documentation for all public functions in rayvn's shared libraries.
 |---|---|
 | [valt/password](/valt/api/valt-password) | Password and passphrase generation, secure input and strength estimates. |
 | [valt/pwned](/valt/api/valt-pwned) | HaveIBeenPwned breach checking. |
-| [valt/pinentry](/valt/api/valt-pinentry) | The valt pinentry program for passphrase input. |

@@ -3,7 +3,7 @@ layout: default
 title: "valt/password"
 parent: "Passwords"
 grand_parent: API Reference
-nav_order: 10
+nav_order: 8
 ---
 
 # valt/password

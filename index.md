@@ -10,7 +10,7 @@ Public key encryption for files and archives, using [age](https://age-encryption
 [minisign](https://jedisct1.github.io/minisign/). Built on [rayvn](/rayvn).
 
 valt creates a passphrase-protected key pair, plus a printable *paper key*: a PDF that backs up the key and explains to
-your successors, step by step, how to use it. Files are encrypted to your own key (and optionally to others), and signed
+your successors, step by step, how to use it ([see a sample](/valt/assets/sample-paper-key.pdf)). Files are encrypted to your own key (and optionally to others), and signed
 so that tampering is detected on decryption. Any number of files and directories can be kept together in a signed,
 encrypted *secure archive*.
 
@@ -35,22 +35,36 @@ See the [CLI reference](/valt/cli/) for every command and option.
 
 ## Install
 
+With [Homebrew](https://brew.sh):
+
 ```bash
-nix profile add github:phoggy/valt        # or: brew tap rayvn-central/brew && brew install valt
+brew tap rayvn-central/brew && brew install valt
 ```
 
-See the [README](https://github.com/phoggy/valt#readme) for installing Nix and other options.
+Or with [Nix](https://nixos.org/download/):
+
+```bash
+nix profile add github:phoggy/valt
+```
+
+See the [README](https://github.com/phoggy/valt#installation) for installing Nix, upgrading and other options.
 
 ## Recovery
 
-Whoever holds your paper key needs only [Nix](https://nixos.org/download/), not valt, to recover a file or archive:
+*Recovery* is what someone else does to get at your files when you can't: typically an heir, an executor or a person
+helping them, using your paper key and its passphrase to decrypt a file or extract an archive you left. They don't need
+valt installed, only [Nix](https://nixos.org/download/):
 
 ```bash
 nix run github:phoggy/valt#recover -- decrypt FILE -i KEY_FILE
 ```
 
-The paper key also explains how to recover without Nix, using `age` and `tar` directly, and how to rebuild the key file
-from its QR code or printed text.
+We suggest this for recovery, rather than installing valt, because it doesn't depend on what the computer has (Nix runs
+valt with exactly the versions of age and its other tools that valt pins and has tested together), it installs nothing,
+and it does only what recovery needs.
+
+The paper key ([sample](/valt/assets/sample-paper-key.pdf)) explains this step by step, how to rebuild the key file from its QR code or printed text, and how to
+recover without Nix, using `age` and `tar` directly.
 
 ## Libraries
 
@@ -70,8 +84,6 @@ from its QR code or printed text.
 |---|---|
 | [valt/paper-keys](/valt/api/valt-paper-keys) | Paper key PDF generation from your key info, and reminders to keep it current. |
 | [valt/key-info](/valt/api/valt-key-info) | The paper key's personal information (the key info file), and filling it in. |
-| [valt/pdf](/valt/api/valt-pdf) | PDF generation from HTML. |
-| [valt/node](/valt/api/valt-node) | Node.js and npm support, used for PDF generation. |
 
 ### Passwords
 
@@ -79,7 +91,6 @@ from its QR code or printed text.
 |---|---|
 | [valt/password](/valt/api/valt-password) | Password and passphrase generation, secure input and strength estimates. |
 | [valt/pwned](/valt/api/valt-pwned) | HaveIBeenPwned breach checking. |
-| [valt/pinentry](/valt/api/valt-pinentry) | The valt pinentry program for passphrase input. |
 
 ## Related Projects
 
