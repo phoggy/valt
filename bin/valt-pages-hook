@@ -127,13 +127,14 @@ commandHelp() {
 }
 
 # Generates the sample paper key from samples/ (a throwaway key and fictional key info), unless it is newer than all
-# that goes into it: its footer has the date it was made, so remaking it every time would change it every day.
+# that goes into it: its footer has the date it was made, so remaking it every time would change it every day. That
+# includes rayvn.pkg, since the recovery command it pins names the current release.
 
 writeSamplePaperKey() {
     local outputFile="$1"
     local samplesDir="${valtHome}/samples"
     local -a inputs=("${samplesDir}/sample.key" "${samplesDir}/key-info.json" "${valtHome}/etc/key-doc-template.typ"
-                     "${valtHome}/etc/phoggy.png" "${valtHome}/etc/fonts/"*)
+                     "${valtHome}/etc/phoggy.png" "${valtHome}/etc/fonts/"* "${valtHome}/rayvn.pkg")
     if [[ -f ${outputFile} ]]; then
         local input changed=0
         for input in "${inputs[@]}"; do
