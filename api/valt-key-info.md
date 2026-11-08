@@ -10,7 +10,7 @@ nav_order: 7
 
 The paper key's personal information (the key info file), and filling it in.
 
-See the [Key info file format](#key-info-file-format) below for details.
+See the [Key Info File Format](#key-info-file-format) below for details.
 
 ## Functions
 
@@ -214,7 +214,7 @@ file was marked completed. Says so on stderr when it converts.
 {: .args-table}
 
 
-## Key info file format
+## Key Info File Format
 
 The key info file, key-info.json in the valt config directory, is JSON: the letter's greeting, closing and author,
 the people who can help (contacts, each with a name and the ways to reach them, each with a type and a value) and

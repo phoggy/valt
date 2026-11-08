@@ -14,6 +14,10 @@ your successors, step by step, how to use it ([see a sample](/valt/assets/sample
 so that tampering is detected on decryption. Any number of files and directories can be kept together in a signed,
 encrypted *secure archive*.
 
+Keys are always post-quantum: age's hybrid of ML-KEM-768 and X25519, so files encrypted today stay protected against
+future quantum computers, even if recorded now and attacked later (see the
+[design notes](/valt/api/valt-keys#design-notes)).
+
 ## First Look
 
 ```bash

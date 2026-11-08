@@ -45,8 +45,10 @@ nothing for files that are not valt private keys.
 
 *env vars*
 
-rayvnTest_PaperKeyAnswers  Test hook: answers to use instead of prompting, in order, separated
-                           by spaces: 'yes', 'stop', 'remind:DAYS' or 'timeout'.
+| | |
+|---|---|
+| `rayvnTest_PaperKeyAnswers` | Test hook: answers to use instead of prompting, in order, separated by spaces: 'yes', 'stop', 'remind:DAYS' or 'timeout'. |
+{: .args-table}
 
 ### paperKeyCommand()
 

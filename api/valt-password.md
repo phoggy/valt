@@ -76,8 +76,11 @@ Interactively prompts for a password, storing the result in resultVarRef.
 
 *env vars*
 
-passwordVisibility          Controls input display: 'none' hides input, 'hide' masks it, 'show' reveals it (default: 'none').
-skipReadPasswordStrength    When set and non-zero, disables strength checking.
+| | |
+|---|---|
+| `passwordVisibility` | Controls input display: 'none' hides input, 'hide' masks it, 'show' reveals it (default: 'none'). |
+| `skipReadPasswordStrength` | When set and non-zero, disables strength checking. |
+{: .args-table}
 
 *returns*
 
