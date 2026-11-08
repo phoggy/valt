@@ -10,6 +10,7 @@ main() {
     testWeakPassphraseRejectedOffline
     testForceKeepsKeysWhenRejected
     testForceReplacesKeys
+    testForceKeepsReplacedKeys
 
     return 0
 }
@@ -124,6 +125,29 @@ testForceReplacesKeys() {
     assertNotEqual "${before}" "${ cat "${dir}/test.pub"; }" "--force must replace the keys"
     assertNoStagingDir "${dir}"
     [[ ${output} != *"Operation not permitted"* ]] || fail "replacing keys must not report errors: ${output}"
+}
+
+# The replaced keys are kept, renamed, since files encrypted to the old key need it.
+
+testForceKeepsReplacedKeys() {
+    local dir; dir="${ makeTempDir; }"
+    valtKeys "${strongPassphrase}" "${dir}" > /dev/null || fail "initial keys failed"
+    local oldKey; oldKey="${ cat "${dir}/test.key"; }"
+    local oldPub; oldPub="${ cat "${dir}/test.pub"; }"
+    echo 'old paper key' > "${dir}/test-key.pdf" # a stand-in for the old key's paper key
+    local output; output="${ valtKeys "${strongPassphrase}" "${dir}" --force; }"
+    assertEqual 0 $? "--force must succeed: ${output}"
+    local -a keptKeys=("${dir}"/test-replaced-*.key) keptPubs=("${dir}"/test-replaced-*.pub)
+    local -a keptPaperKeys=("${dir}"/test-replaced-*-key.pdf)
+    assertFile "${keptPaperKeys[0]}"
+    assertEqual 'old paper key' "${ cat "${keptPaperKeys[0]}"; }" "the old key's paper key must be kept with it"
+    assertFileDoesNotExist "${dir}/test-key.pdf"
+    assertEqual 1 ${#keptKeys[@]} "one replaced key must be kept"
+    assertFile "${keptKeys[0]}"
+    assertFile "${keptPubs[0]}"
+    assertEqual "${oldKey}" "${ cat "${keptKeys[0]}"; }" "the kept key must be the old one"
+    assertEqual "${oldPub}" "${ cat "${keptPubs[0]}"; }" "the kept public key must be the old one"
+    assertContains "Kept the previous key" "${output}"
 }
 
 source rayvn.up 'rayvn/test'

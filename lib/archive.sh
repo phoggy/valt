@@ -12,7 +12,7 @@
 #   newSecureArchive ([-C DIR] INPUT...) -i PATH (-r RECIPIENT | -R PATH)... [-f] [-n NAME] [-z ZONE] [-u TEXT] [-o DIR]
 #                    [--no-mac-metadata] [--no-public]
 #
-#   -i, --identity PATH        The valt.key file used to sign the archive.
+#   -i, --identity PATH        The valt private key file used to sign the archive.
 #   -r, --recipient RECIPIENT  Encrypt to the specified RECIPIENT. See the recipient() function in 'valt/keys'.
 #   -R, --recipient-file PATH  Encrypt to one or more recipients. PATH can be a valt key or contain a list of recipients (see the
 #                              newRecipientsFile() function in 'valt/keys'). Valt private key files require passphrase input
@@ -33,10 +33,10 @@
 #
 # · EXAMPLE
 #
-#   newSecureArchive project/ -R valt.pub                                 # archive project/ dir to ${USER}.valt in ${PWD}
-#   newSecureArchive project/ -R valt.pub -n backup -t -o ~/backups       # timestamped name, written to ~/backups
-#   newSecureArchive -C ~/dev/ projectX foo.txt -R valt.pub               # -C sets source root ~/dev/ and adds subsequent inputs
-#   newSecureArchive -C ~/dev/ projectX -C ~/docs/ notes.txt -R valt.pub  # each -C sets a new source root for subsequent inputs
+#   newSecureArchive project/ -R bob.pub                                  # archive project/ dir to ${USER}.valt in ${PWD}
+#   newSecureArchive project/ -R bob.pub -n backup -t -o ~/backups        # timestamped name, written to ~/backups
+#   newSecureArchive -C ~/dev/ projectX foo.txt -R bob.pub                # -C sets source root ~/dev/ and adds subsequent inputs
+#   newSecureArchive -C ~/dev/ projectX -C ~/docs/ notes.txt -R bob.pub   # each -C sets a new source root for subsequent inputs
 #
 # · NOTES
 #
@@ -209,7 +209,7 @@ newSecureArchive() {
 #   verifySecureArchive ARCHIVE -i PATH
 #
 #   ARCHIVE              Path to the .valt archive file.
-#   -i, --identity PATH  The valt.key file used to decrypt and verify signatures.
+#   -i, --identity PATH  The valt private key file used to decrypt and verify signatures.
 
 verifySecureArchive() {
     local archiveFile keyFile
@@ -422,11 +422,11 @@ _renderArchiveReadMe() {
 
     # Recovery with Nix: pinned to the valt release current now, with the latest version as the fallback
 
-    local latest="    nix run github:phoggy/valt#recover -- decrypt ${archiveName} -i <valt.key>"
+    local latest="    nix run github:phoggy/valt#recover -- decrypt ${archiveName} -i <private-key-file>"
     local recoverCommands releaseTag; releaseTag="${ valtReleaseTag; }"
     if [[ -n ${releaseTag} ]]; then
         recoverCommands="  With the valt release current when this archive was made:"$'\n\n'
-        recoverCommands+="    nix run github:phoggy/valt/${releaseTag}#recover -- decrypt ${archiveName} -i <valt.key>"$'\n\n'
+        recoverCommands+="    nix run github:phoggy/valt/${releaseTag}#recover -- decrypt ${archiveName} -i <private-key-file>"$'\n\n'
         recoverCommands+="  If that fails, with the latest version:"$'\n\n'"${latest}"
     else
         recoverCommands="${latest}"

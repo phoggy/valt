@@ -139,13 +139,13 @@ to recover without Nix, using `age` and `tar` directly.
 | `valt pass-check` | Check a password or passphrase: rate its strength, and look it up in known data breaches. |
 
 Use `valt COMMAND --help` for details. Commands that need a private key use `-i KEY_FILE`, or the default key: the
-`VALT_KEY_FILE` environment variable, else the key set with `valt default-key`, else `valt.key` in the valt config
-directory.
+`VALT_KEY_FILE` environment variable, else the key set with `valt default-key` (your first key, unless you change
+it), else `USER.key` in the valt config directory.
 
 ## Quick Start
 
 ```bash
-valt keys                          # create valt.key and valt.pub (and the paper key, if your key info is complete)
+valt keys                          # create USER.key and USER.pub (and the paper key, if your key info is complete)
 valt paper                         # (re)generate the paper key after changing your key info
 valt encrypt taxes.pdf             # writes taxes.pdf.age and taxes.pdf.age.minisig
 valt decrypt taxes.pdf.age         # verifies the signature, writes taxes.pdf
@@ -153,7 +153,10 @@ valt archive create -C ~/docs .    # writes USER-TIMESTAMP.valt and a shareable 
 valt decrypt USER-TIMESTAMP.valt   # verifies and extracts into the current directory
 ```
 
-**Back up your private key.** `valt.key` is encrypted with your passphrase, so copies are safe to
+Keys are named after your user name, e.g. `alex.key` and `alex.pub` for user `alex` (or another name with `--name`),
+so that the public keys you share with others, and theirs, say whose they are.
+
+**Back up your private key.** `USER.key` is encrypted with your passphrase, so copies are safe to
 keep: put one in a password manager, on a USB drive or in cloud storage. Without a copy, losing your
 computer leaves only the paper key to recover your files with.
 

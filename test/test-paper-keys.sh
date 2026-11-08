@@ -261,8 +261,8 @@ testKeysDefaultName() {
     local dir; dir="${ makeTempDir; }"
     local output; output="${ valt keys -o "${dir}" -q --no-pdf 2>&1; }"
     assertEqual 0 $? "keys must succeed: ${output}"
-    assertFile "${dir}/valt.key"
-    assertFile "${dir}/valt.pub"
+    assertFile "${dir}/alex.key"
+    assertFile "${dir}/alex.pub"
 }
 
 testKeysDefersPdfWhenKeyInfoIncomplete() {
@@ -294,5 +294,6 @@ testKeysHelp() {
     assertContains "Same as --no-advice --no-verify, and the default key is not offered" "${output}"
 }
 
+declare -gx USER='alex' # so that the default key name is alex
 source rayvn.up 'rayvn/test' 'valt/paper-keys'
 main "$@"

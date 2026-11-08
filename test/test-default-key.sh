@@ -10,7 +10,10 @@ main() {
     testIdentityOverridesDefault
     testSetRejectsNonValtKey
     testSetRejectsKeyFileAndClear
+    testFirstKeyBecomesDefault
     testKeysSuggestsDefault
+    testKeysNamedAfterUser
+    testGenericUserNeedsName
     testKeysDefaultOption
     testKeysAlreadyDefault
     testKeysNoDefault
@@ -57,9 +60,9 @@ testBuiltInDefault() {
     assertContains "No key exists yet; create a key pair with valt keys." "${output}"
     [[ ${output} != *"Default key:"* ]] || fail "with no key yet, there is no default key to show: ${output}"
 
-    mkdir -p "${testHome}/.config/valt" && cp "${keyFile}" "${testHome}/.config/valt/valt.key" || fail
+    mkdir -p "${testHome}/.config/valt" && cp "${keyFile}" "${testHome}/.config/valt/alex.key" || fail
     output="${ valtInTestHome default-key; }"
-    assertContains "Default key: ~/.config/valt/valt.key (from the built-in default)" "${output}"
+    assertContains "Default key: ~/.config/valt/alex.key (from the built-in default)" "${output}"
 }
 
 testSetAndClear() {
@@ -114,15 +117,48 @@ testSetRejectsKeyFileAndClear() {
     assertContains "Specify either KEY_FILE or --clear, not both" "${output}"
 }
 
-# Not on a terminal, 'valt keys' only suggests making the new key the default.
+# The first key becomes the default without asking.
+
+testFirstKeyBecomesDefault() {
+    newTestHome
+    local dir; dir="${ makeTempDir; }"
+    dir="${ cd "${dir}" && pwd -P; }"
+    local output; output="${ valtInTestHome keys -n new -o "${dir}" --no-advice --no-verify --no-pdf; }"
+    assertEqual 0 $? "keys must succeed: ${output}"
+    assertContains "Default key set to" "${output}"
+    assertInFile "defaultKeyFile='${dir}/new.key'" "${testHome}/.config/valt/valt.conf"
+}
+
+# Once there is a default key, not on a terminal, 'valt keys' only suggests making the new key the default.
 
 testKeysSuggestsDefault() {
     newTestHome
     local dir; dir="${ makeTempDir; }"
-    local output; output="${ valtInTestHome keys -n new -o "${dir}" --no-advice --no-verify --no-pdf; }"
+    valtInTestHome keys -n first -o "${dir}" --no-advice --no-verify --no-pdf > /dev/null || fail "first keys failed"
+    local before; before="${ cat "${testHome}/.config/valt/valt.conf"; }"
+    local output; output="${ valtInTestHome keys -n second -o "${dir}" --no-advice --no-verify --no-pdf; }"
     assertEqual 0 $? "keys must succeed: ${output}"
     assertContains "valt default-key" "${output}"
-    assertFileDoesNotExist "${testHome}/.config/valt/valt.conf"
+    assertEqual "${before}" "${ cat "${testHome}/.config/valt/valt.conf"; }" "the default key must not change"
+}
+
+# Keys are named after the user, unless the user name is too generic, when a name must be given (or, at a terminal,
+# is asked for).
+
+testKeysNamedAfterUser() {
+    newTestHome
+    local output; output="${ valtInTestHome keys -q --no-pdf; }"
+    assertEqual 0 $? "keys must succeed: ${output}"
+    assertFile "${testHome}/.config/valt/alex.key"
+    assertFile "${testHome}/.config/valt/alex.pub"
+}
+
+testGenericUserNeedsName() {
+    newTestHome
+    local output; output="${ USER=root valtInTestHome keys -q --no-pdf; }"
+    assertNotEqual 0 $? "keys must fail for a generic user name: ${output}"
+    assertContains "too generic to name a key by" "${output}"
+    assertEqual '' "${ ls "${testHome}/.config/valt" 2> /dev/null | grep '\.key$'; }" "no key must be made"
 }
 
 testKeysDefaultOption() {
@@ -169,5 +205,6 @@ testKeysQuickWithDefault() {
     assertInFile "defaultKeyFile='${dir}/new.key'" "${testHome}/.config/valt/valt.conf"
 }
 
+declare -gx USER='alex' # so that the default key is alex.key
 source rayvn.up 'rayvn/test' 'valt/keys'
 main "$@"

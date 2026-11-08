@@ -452,7 +452,7 @@ testCommandOffersRegenerationOnlyOnChange() {
     mkdir -p "${configDir}" || fail
     local -x rayvnTest_ValtKeyPassphrase='valt-test-passphrase-12345'
     local skipKeyPassphraseAdvice=1 allowWeakKeyPassphrase=1
-    newValtKeys valt "${configDir}" pub key
+    newValtKeys alex "${configDir}" pub key
 
     local json; json="${ downloadJson "Offer"; }"
     keyInfoCommandWith output "${json}" "${info}" "${downloads}"
@@ -643,5 +643,6 @@ testCommandTimeout() {
 # Use a temp HOME, so that the real valt config is not touched
 
 declare -gx HOME; HOME="${ mktemp -d; }"
+declare -gx USER='alex' # so that the default key is alex.key
 source rayvn.up 'rayvn/test' 'rayvn/config' 'valt/key-info' 'valt/paper-keys'
 main "$@"

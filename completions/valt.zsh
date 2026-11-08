@@ -118,11 +118,11 @@ _valt() {
                 keys)
                     _arguments \
                     '(--allow-weak-passphrase)'--allow-weak-passphrase'[Accept a passphrase that fails the strength and breach check. Not recommended: the passphrase is all that protects the private key.]' \
-                    '(--default -d --no-default)'{--default,-d}'[Make the new key the default key (see '\''valt default-key'\'') without asking. Otherwise you are asked, unless it already is the default.]' \
-                    '(--force -f)'{--force,-f}'[Replace existing key files, once the new ones have been created.]' \
+                    '(--default -d --no-default)'{--default,-d}'[Make the new key the default key (see '\''valt default-key'\'') without asking. Otherwise the first key becomes the default, and you are asked about later ones.]' \
+                    '(--force -f)'{--force,-f}'[Replace existing key files, once the new ones have been created (asking first, at a terminal). The old ones are kept, renamed NAME-replaced-TIMESTAMP, with their paper key, since files encrypted to the old key need it.]' \
                     '(--help -h)'{--help,-h}'[Print this help message.]' \
                     '(--key-info -k)'{--key-info,-k}'[Key info file to use instead of the default for PDF generation.]:key-info:_files' \
-                    '(--name -n)'{--name,-n}'[Name to use for key files, e.g. bob -> bob.pub, bob.key.]:name:' \
+                    '(--name -n)'{--name,-n}'[Name for the key files, e.g. bob -> bob.pub, bob.key (default: your user name, so that shared public keys say whose they are; asked for if it is too generic, e.g. root).]:name:' \
                     '(--no-advice)'--no-advice'[Do not show passphrase advice.]' \
                     '(--default -d --no-default)'--no-default'[Do not make the new key the default key, and do not ask.]' \
                     '(--no-pdf)'--no-pdf'[Do not generate the paper key PDF.]' \

@@ -25,10 +25,10 @@
 # · EXAMPLE
 #
 #   local test="my secret"
-#   echo "${test}" | encrypt -R "${keyDir}/valt.pub" -o "test.enc"  # Encrypt content of stdin using public key to test.enc file.
-#   encrypt -v test -R "${keyDir}/valt.pub" -o "test.enc"           # Encrypt value of test var using public key to test.enc file.
-#   encrypt "test.txt" -R "${keyDir}/valt.pub" -o "test.enc"        # Encrypt test.txt file to test.enc file.
-#   encrypt "foo" -R "${keyDir}/valt.pub"  -o "foo.tar.xz"          # Encrypt tar file created from foo directory.
+#   echo "${test}" | encrypt -R "${keyDir}/bob.pub" -o "test.enc"  # Encrypt content of stdin using public key to test.enc file.
+#   encrypt -v test -R "${keyDir}/bob.pub" -o "test.enc"           # Encrypt value of test var using public key to test.enc file.
+#   encrypt "test.txt" -R "${keyDir}/bob.pub" -o "test.enc"        # Encrypt test.txt file to test.enc file.
+#   encrypt "foo" -R "${keyDir}/bob.pub"  -o "foo.tar.xz"          # Encrypt tar file created from foo directory.
 
 encrypt() {
     _parseEncryptArgs "$@"

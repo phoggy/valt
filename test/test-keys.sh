@@ -45,8 +45,8 @@ testNewValtKeysDefaultName() {
     local dir; dir="${ makeTempDir; }"
     local defaultPubFile defaultKeyFile
     newValtKeys - "${dir}" defaultPubFile defaultKeyFile
-    assertEqual "${dir}/valt.pub" "${defaultPubFile}"
-    assertEqual "${dir}/valt.key" "${defaultKeyFile}"
+    assertEqual "${dir}/alex.pub" "${defaultPubFile}"
+    assertEqual "${dir}/alex.key" "${defaultKeyFile}"
     assertFile "${defaultPubFile}"
     assertFile "${defaultKeyFile}"
 }
@@ -153,5 +153,6 @@ testValtReleaseTag() {
     assertEqual '' "${ valtReleaseTag "${pkg}"; }" "a version without a release date has no tag"
 }
 
+declare -gx USER='alex' # so that the default key name is alex
 source rayvn.up 'rayvn/test' 'valt/keys'
 main "$@"

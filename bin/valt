@@ -70,11 +70,11 @@ SECTION="--+-+-----+-++(-++(---++++(---+( ARGUMENT PARSING )+---)++++---)++-)++-
 declare -gA cliSpec=(
     # Generate an age key pair, with the private key encrypted by a passphrase, plus a PDF paper key as backup
     # documentation. A strong passphrase is highly encouraged; advice and an opportunity to generate one will be offered.
-    #   --name        Name to use for key files, e.g. bob -> bob.pub, bob.key.
+    #   --name        Name for the key files, e.g. bob -> bob.pub, bob.key (default: your user name, so that shared public keys say whose they are; asked for if it is too generic, e.g. root).
     #   --output-dir  Directory for the key files (default: the valt config directory).
-    #   --force       Replace existing key files, once the new ones have been created.
+    #   --force       Replace existing key files, once the new ones have been created (asking first, at a terminal). The old ones are kept, renamed NAME-replaced-TIMESTAMP, with their paper key, since files encrypted to the old key need it.
     #   --allow-weak-passphrase  Accept a passphrase that fails the strength and breach check. Not recommended: the passphrase is all that protects the private key.
-    #   --default     Make the new key the default key (see 'valt default-key') without asking. Otherwise you are asked, unless it already is the default.
+    #   --default     Make the new key the default key (see 'valt default-key') without asking. Otherwise the first key becomes the default, and you are asked about later ones.
     #   --no-default  Do not make the new key the default key, and do not ask.
     #   --no-verify   Do not verify keys.
     #   --no-advice   Do not show passphrase advice.
@@ -101,7 +101,7 @@ declare -gA cliSpec=(
     # (key-doc-style.typ) are in the valt 'etc' directory. Every value in the key info file is available
     # to the template as data.NAME (e.g. data.author; each of data.contacts has a name and ways, each with
     # a type and value); data.generated holds values set by valt.
-    ['keys']='keys(--name|-n:str=valt --output-dir|-o:dir --force|-f --allow-weak-passphrase --default|-d --no-default [--default|--no-default] --no-verify --no-advice --quick|-q --no-pdf --key-info|-k:file --template|-t:file --style|-c:file --help|-h)'
+    ['keys']='keys(--name|-n:str --output-dir|-o:dir --force|-f --allow-weak-passphrase --default|-d --no-default [--default|--no-default] --no-verify --no-advice --quick|-q --no-pdf --key-info|-k:file --template|-t:file --style|-c:file --help|-h)'
 
     # Generate the paper key PDF for an existing key pair, personalized from your key info. The PDF is written
     # next to the key and replaces any existing one, so this can be re-run whenever your key info changes. The
@@ -255,7 +255,7 @@ declare -gA cliSpec=(
     #
     # With no arguments, shows the default key and where it comes from. The default is, in order:
     # the VALT_KEY_FILE environment variable, the setting made here (stored in valt.conf in the
-    # valt config directory), or valt.key in the valt config directory.
+    # valt config directory), or NAME.key in the valt config directory, NAME being your user name.
     ['default-key']='defaultKey(file? --clear --help|-h)'
 )
 
@@ -547,7 +547,7 @@ defaultKeyCmdUsage() {
     echo
     echo "With no arguments, shows the default key and where it comes from. The default is, in order:"
     echo "the VALT_KEY_FILE environment variable, the setting made here (stored in valt.conf in the"
-    echo "valt config directory), or valt.key in the valt config directory."
+    echo "valt config directory), or NAME.key in the valt config directory, NAME being your user name."
     declare -F defaultKeyCmdUsageExtra > /dev/null && defaultKeyCmdUsageExtra
     bye "$@"
 }
@@ -678,7 +678,6 @@ keyInfoCmdUsage() {
 }
 
 parseKeysArgs() {
-    _opts+=(['name']="valt")
     local _prevFailHandler="${_failHandler}"
     declare -g _failHandler=keysCmdUsage
     local _value _mutex
@@ -733,14 +732,19 @@ keysCmdUsage() {
     echo "                 [--no-advice] [--no-pdf] [--no-verify] [-o OUTPUT-DIR] [-q] [-c STYLE]"
     echo "                 [-t TEMPLATE]"
     echo
-    option "-n, --name NAME" "Name to use for key files, e.g. bob -> bob.pub, bob.key. (default:" 33
-    option "" "valt)" 33
+    option "-n, --name NAME" "Name for the key files, e.g. bob -> bob.pub, bob.key (default: your" 33
+    option "" "user name, so that shared public keys say whose they are; asked for" 33
+    option "" "if it is too generic, e.g. root)." 33
     option "-o, --output-dir OUTPUT-DIR" "Directory for the key files (default: the valt config directory)." 33
-    option "-f, --force" "Replace existing key files, once the new ones have been created." 33
+    option "-f, --force" "Replace existing key files, once the new ones have been created" 33
+    option "" "(asking first, at a terminal). The old ones are kept, renamed" 33
+    option "" "NAME-replaced-TIMESTAMP, with their paper key, since files" 33
+    option "" "encrypted to the old key need it." 33
     option "--allow-weak-passphrase" "Accept a passphrase that fails the strength and breach check. Not" 33
     option "" "recommended: the passphrase is all that protects the private key." 33
     option "-d, --default" "Make the new key the default key (see 'valt default-key') without" 33
-    option "" "asking. Otherwise you are asked, unless it already is the default." 33
+    option "" "asking. Otherwise the first key becomes the default, and you are" 33
+    option "" "asked about later ones." 33
     option "--no-default" "Do not make the new key the default key, and do not ask." 33
     option "--no-verify" "Do not verify keys." 33
     option "--no-advice" "Do not show passphrase advice." 33
@@ -1041,6 +1045,7 @@ SECTION="--+-+-----+-++(-++(---++++(---+( COMMANDS )+---)++++---)++-)++-+------+
 keysCmd() {
     require 'valt/paper-keys'
     local name="${_opts['name']}"
+    [[ -n ${name} ]] || name="${ defaultValtKeyName; }" || askKeyName name
     assertValidFileName "${name}"
     local outputDir="${_opts['output-dir']:-${valtConfigDir}}"
     local publicKeyFile="${outputDir}/${name}.${valtPublicKeySuffix}"
@@ -1051,12 +1056,19 @@ keysCmd() {
     (( _opts['no-advice'] || _opts['quick'] )) && declare -gx skipKeyPassphraseAdvice=1
     (( _opts['allow-weak-passphrase'] )) && declare -gx allowWeakKeyPassphrase=1
 
-    if (( ! _opts['force'] )); then
-        assertFileDoesNotExist "${privateKeyFile}"
-        assertFileDoesNotExist "${publicKeyFile}"
+    # Replacing keys keeps the old ones, renamed: files encrypted to the old key can only be decrypted with it
+
+    local replacedName=''
+    if [[ -e ${privateKeyFile} || -e ${publicKeyFile} ]]; then
+        if (( ! _opts['force'] )); then
+            assertFileDoesNotExist "${privateKeyFile}"
+            assertFileDoesNotExist "${publicKeyFile}"
+        fi
+        replacedName="${name}-replaced-${ printf '%(%Y-%m-%d_%H.%M.%S)T' -1; }"
+        confirmKeyReplacement "${privateKeyFile}" "${replacedName}"
     fi
 
-    createKeys "${name}" "${outputDir}" "${publicKeyFile}" "${privateKeyFile}" ${verify} "${_opts['force']:-0}"
+    createKeys "${name}" "${outputDir}" "${publicKeyFile}" "${privateKeyFile}" ${verify} "${replacedName}"
     (( offerDefault )) && offerDefaultKey "${privateKeyFile}" "${_opts['default']:-0}"
 
     # The paper key's next steps include backing up the private key; without one, say so here
@@ -1358,14 +1370,14 @@ readSecret() {
 }
 
 createKeys() {
-    local name="$1" outputDir="$2" publicKeyFile="$3" privateKeyFile="$4" verify=$5 replace=$6
+    local name="$1" outputDir="$2" publicKeyFile="$3" privateKeyFile="$4" verify=$5 replacedName="${6:-}"
     echo
     header -u "Generating Keys"
 
     # When replacing, create the new keys elsewhere first, so that a failure (e.g. a rejected passphrase) leaves the
-    # existing keys in place.
+    # existing keys in place; then keep the existing ones, renamed to replacedName.
 
-    if (( replace )); then
+    if [[ -n ${replacedName} ]]; then
 
         # Stage in the output directory, so that the move is a rename on the same file system
 
@@ -1373,6 +1385,7 @@ createKeys() {
         addExitHandler removeKeysStagingDir
         withUmask 0077 mkdir "${keysStagingDir}" || fail "could not create ${keysStagingDir}"
         newValtKeys "${name}" "${keysStagingDir}" || fail
+        keepReplacedKeys "${privateKeyFile}" "${publicKeyFile}" "${outputDir}/${replacedName}"
         mv -f "${keysStagingDir}/${name}.${valtPublicKeySuffix}" "${publicKeyFile}" || fail
         mv -f "${keysStagingDir}/${name}.${valtPrivateKeySuffix}" "${privateKeyFile}" || fail
         removeKeysStagingDir
@@ -1392,6 +1405,65 @@ createKeys() {
         show "  · A file encrypted with" cyan "${name}.pub" "decrypts with passphrase and the" cyan "${name}.key" "private key. ${successCheckMark}"
         show "  · A signature created with" cyan "${name}.key" "for the encrypted file matches. ${successCheckMark} "
     fi
+}
+
+# Sets the named var to a name for a new key, asked for at a terminal (for when the user name is too generic to name
+# it by; see defaultValtKeyName), otherwise fails.
+
+askKeyName() {
+    local -n askedNameRef=$1
+    [[ -t 0 && -t 1 ]] || fail "your user name (${USER:-none}) is too generic to name a key by; give a name with --name"
+    require 'rayvn/prompt'
+    echo
+    show "Your user name" bold "${USER:-}" "is too generic to name your key by, since public keys are shared."
+    while true; do
+        request "Name for the key, e.g. your first name" askedNameRef true || bye
+        [[ ${askedNameRef} =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] && return 0
+        warn "Use letters, digits, '.', '_' or '-', starting with a letter or digit."
+    done
+}
+
+# Asks, at a terminal, whether to replace an existing key (which --force asks for), saying that it will be kept as
+# replacedName; exits if not. Without a terminal, --force is taken as the answer.
+
+confirmKeyReplacement() {
+    local keyFile="$1" replacedName="$2"
+    [[ -t 0 && -t 1 ]] || return 0
+    require 'rayvn/prompt'
+    local choiceIndex=1
+    echo
+    show "Files encrypted to" bold "${ tildePath "${keyFile}"; }" "can only be decrypted with it, so it will be kept as" \
+         bold "${replacedName}.${valtPrivateKeySuffix}" glue ", along with its public key and paper key."
+    confirm "Replace it with a new key?" yes no choiceIndex true
+    (( choiceIndex == 0 )) || bye "Cancelled; ${ tildePath "${keyFile}"; } is unchanged."
+}
+
+# Keeps the keys being replaced, and the private key's paper key, by renaming them to the given base path (the
+# public key and paper key only if they exist), saying where they are.
+
+keepReplacedKeys() {
+    local privateKeyFile="$1" publicKeyFile="$2" basePath="$3"
+    local keptKey="${basePath}.${valtPrivateKeySuffix}" keptPub="${basePath}.${valtPublicKeySuffix}"
+    local paperKey; paperKey="${ _paperKeyFile "${privateKeyFile}"; }"
+    local -a kept=()
+    if [[ -e ${privateKeyFile} ]]; then
+        mv "${privateKeyFile}" "${keptKey}" || fail "could not keep ${privateKeyFile} as ${keptKey}"
+        kept+=("${ tildePath "${keptKey}"; }")
+        if [[ -e ${paperKey} ]]; then
+            local keptPaperKey; keptPaperKey="${ _paperKeyFile "${keptKey}"; }"
+            mv "${paperKey}" "${keptPaperKey}" || fail "could not keep ${paperKey} as ${keptPaperKey}"
+            kept+=("${ tildePath "${keptPaperKey}"; }")
+        fi
+    fi
+    if [[ -e ${publicKeyFile} ]]; then
+        mv "${publicKeyFile}" "${keptPub}" || fail "could not keep ${publicKeyFile} as ${keptPub}"
+        kept+=("${ tildePath "${keptPub}"; }")
+    fi
+    (( ${#kept[@]} )) || return 0
+    show "Kept the previous key, for the files encrypted to it:" nl
+    printList "${kept[@]}"
+    echo "Keep it, its backups and its printed paper key copies for as long as you have such files."
+    echo
 }
 
 # Generates the paper key for privateKeyFile using the key-info, template and style options.
@@ -1501,9 +1573,9 @@ openPaperKey() {
     return 0
 }
 
-# Makes keyFile the default key if makeDefault, or if the user agrees when asked (only on a terminal), unless it is
-# already the default; otherwise shows how to do so later. The question preselects yes when there is no default key
-# yet, and no when another one exists, so that a quick test key does not replace it by accident.
+# Makes keyFile the default key if makeDefault or there is no default key yet (the first key), or if the user agrees
+# when asked (only on a terminal), unless it is already the default; otherwise shows how to do so later. The question
+# preselects no, so that a quick test key does not replace the default by accident.
 
 offerDefaultKey() {
     local keyFile; keyFile="${ cd "${ dirname "$1"; }" && pwd -P; }/${ basename "$1"; }"
@@ -1513,12 +1585,13 @@ offerDefaultKey() {
     [[ ${keyFile} == "${defaultKey}" ]] && return 0
 
     local path; path="${ tildePath "${keyFile}"; }"
-    if (( ! makeDefault )) && [[ -t 0 && -t 1 ]]; then
+    if [[ ! -f "${defaultKey}" ]]; then
+        makeDefault=1 # the first key: no need to ask
+    elif (( ! makeDefault )) && [[ -t 0 && -t 1 ]]; then
         require 'rayvn/prompt'
-        local choiceIndex=1 preselectNo=false
-        [[ -f "${defaultKey}" ]] && preselectNo=true
+        local choiceIndex=1
         echo
-        confirm "Use ${path} as your default key, when no key is given?" yes no choiceIndex "${preselectNo}"
+        confirm "Use ${path} as your default key, when no key is given?" yes no choiceIndex true
         (( choiceIndex == 0 )) && makeDefault=1
     fi
 
