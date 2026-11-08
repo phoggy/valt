@@ -19,8 +19,8 @@ See the [Design Notes](#design-notes) below for details.
 Create new valt keys, encrypting the private key with a passphrase. May show passphrase advice and offer to generate
 passphrases. Produces keys that combine age and minisign keys:
 
-valt.pub: age public key + minisign public key
-valt.key: age public key + minisign public key + age secret key + minisign secret key
+NAME.pub: age public key + minisign public key
+NAME.key: age public key + minisign public key + age secret key + minisign secret key
 
 
 *usage*
@@ -31,16 +31,16 @@ valt.key: age public key + minisign public key + age secret key + minisign secre
 | | |
 |---|---|
 | `A` | '-' may be passed for any arg to enable passing a subsequent value. |
-| `keyName` *(string)* | Optional name to use instead of 'valt', e.g. 'test' -> test.key & test.pub. |
+| `keyName` *(string)* | Optional name for the key files, e.g. 'test' -> test.key & test.pub (default: the user name, see defaultValtKeyName, else 'valt'). |
 | `keyDir` *(string)* | Optional directory path where key files will be written (default: ~/.config/valt). |
-| `valtPubFileResultVar` *(stringRef)* | Optional var name to assign the valt.pub file. |
-| `valtKeyFileResultVar` *(stringRef)* | Optional var name to assign the valt.key file. |
+| `valtPubFileResultVar` *(stringRef)* | Optional var name to assign the public key file. |
+| `valtKeyFileResultVar` *(stringRef)* | Optional var name to assign the private key file. |
 {: .usage-table}
 
 *example*
 
 ```bash
-newValtKeys                      # creates valt.pub and valt.key files in the ~/.config/valt/ directory.
+newValtKeys                      # creates USER.pub and USER.key files in the ~/.config/valt/ directory.
 newValtKeys - - pubFile keyFile  # same as above but assigns key paths to pubFile keyFile vars.
 newValtKeys frodo                # creates frodo.pub and frodo.key in the ~/.config/valt/ directory.
 ```
@@ -67,8 +67,8 @@ file and verifies the signature.
 
 | | |
 |---|---|
-| `valtPubFile` *(string)* | Path to the valt.pub file. |
-| `valtKeyFile` *(string)* | Path to the valt.key file. |
+| `valtPubFile` *(string)* | Path to the valt public key file. |
+| `valtKeyFile` *(string)* | Path to the valt private key file. |
 {: .usage-table}
 
 ### keyType()
@@ -220,8 +220,14 @@ commit may not be published. Outputs nothing if the version is neither.
 ### defaultValtKeyFile()
 
 Output the path of the default valt private key file, used when no key is specified: VALT_KEY_FILE if set, else the
-defaultKeyFile setting in valt.conf in the valt config directory (see setDefaultValtKeyFile), else valt.key in the
-valt config directory.
+defaultKeyFile setting in valt.conf in the valt config directory (see setDefaultValtKeyFile), else NAME.key in the
+valt config directory, NAME being the default key name (see defaultValtKeyName), or valt if there is none.
+
+### defaultValtKeyName()
+
+Output the name for a new key when none is given: the user name, so that keys (above all public keys, which are
+shared) are told apart by whose they are, e.g. alex.key and alex.pub. Outputs nothing, and fails, if the user
+name is a generic one, such as root, admin or ubuntu, or not usable as a file name.
 
 ### defaultValtKeyFileSource()
 
@@ -260,12 +266,13 @@ is checked.
 
 ### Key Files
 
-A valt private key (`valt.key`) is encrypted with a passphrase, and holds the age private key, with both minisign
-keys and the age public key as comments. A valt public key (`valt.pub`) is plain text: the age public key, with the
-minisign public key as comments. Since the private key holds every key, signature verification and encryption also
-accept it.
+Keys are named after the user name by default, e.g. `alex.key` and `alex.pub` for user `alex`, so that public keys,
+which are shared, say whose they are. A valt private key (`NAME.key`) is encrypted with a passphrase, and holds the
+age private key, with both minisign keys and the age public key as comments. A valt public key (`NAME.pub`) is plain
+text: the age public key, with the minisign public key as comments. Since the private key holds every key,
+signature verification and encryption also accept it.
 
-An example `valt.pub`:
+An example public key, `bob.pub`:
 
     # created: 2026-04-08T15:20:15-07:00
     #
@@ -274,7 +281,7 @@ An example `valt.pub`:
     #
     age1pq1m43p0m52f544e868gyh09rx0wrr6jg8thvcr5cekpdkhzapwa7jjdgh54zlnjp0wny04tcae7h3k5x0s25l3znxpvvq  [ ... ]
 
-A `valt.key` before it is encrypted (never stored like this):
+A private key, `bob.key`, before it is encrypted (never stored like this):
 
     # created: 2026-03-10T16:57:47-07:00
     #
@@ -296,16 +303,19 @@ And as stored, encrypted with the passphrase:
 
 ### Which Key Each Operation Needs
 
-- Encrypting and signing: `valt.key`, for the private signing key and the public age key.
-- Decrypting: `valt.key`, for the private age key.
-- Verifying a signature: `valt.pub`, for the public signing key.
-- Full verification (decrypting too): `valt.key`, for the public signing keys and the private age key.
-- Extracting an archive: `valt.key`.
+- Encrypting and signing: the private key, for the private signing key and the public age key.
+- Decrypting: the private key, for the private age key.
+- Verifying a signature: the public key, for the public signing key.
+- Full verification (decrypting too): the private key, for the public signing keys and the private age key.
+- Extracting an archive: the private key.
 
 ### Storing Keys
 
-Keep backup copies of `valt.key`: being encrypted, it is safe in a password manager, on a USB drive or in cloud
-storage, and the paper key is a printed copy. `valt.pub` can be shared anywhere, e.g. on GitHub.
+Keep backup copies of the private key: being encrypted, it is safe in a password manager, on a USB drive or in
+cloud storage, and the paper key is a printed copy. The public key can be shared anywhere, e.g. on GitHub.
+
+`valt keys --force` replaces a key, but keeps the old one, renamed `NAME-replaced-TIMESTAMP.key` (with its public
+key and paper key), since only it can decrypt the files encrypted to it.
 
 ### Passphrases
 

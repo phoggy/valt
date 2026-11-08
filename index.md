@@ -21,7 +21,7 @@ future quantum computers, even if recorded now and attacked later (see the
 ## First Look
 
 ```bash
-valt keys                          # create valt.key and valt.pub (and the paper key, once your key info is complete)
+valt keys                          # create USER.key and USER.pub (and the paper key, once your key info is complete)
 valt encrypt taxes.pdf             # writes taxes.pdf.age and taxes.pdf.age.minisig
 valt decrypt taxes.pdf.age         # verifies the signature, writes taxes.pdf
 valt archive create -C ~/docs .    # writes USER-TIMESTAMP.valt and a shareable .valt.pub
@@ -29,7 +29,9 @@ valt decrypt USER-TIMESTAMP.valt   # verifies and extracts into the current dire
 valt pass-check -u file            # rates a passphrase and checks it against known breaches
 ```
 
-- Keys default to `valt.key` and `valt.pub` in the valt config directory; most commands take `-i KEY_FILE` to use another.
+- Keys are named after your user name, e.g. `alex.key` and `alex.pub` for user `alex` (or another name with
+  `--name`), so that the public keys you share, and the ones others share with you, say whose they are. Your first key
+  is the default; most commands take `-i KEY_FILE` to use another.
 - Your own key is always a recipient. Add others with `-r AGE_PUBLIC_KEY` or `-R their.pub`, or leave yours out with
   `--no-self`.
 - The private key is only as safe as its passphrase, so `valt keys` rejects weak or breached ones. `valt passphrase`

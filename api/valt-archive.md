@@ -26,7 +26,7 @@ NOTES below for details.
 
 | | |
 |---|---|
-| `-i, --identity PATH` | The valt.key file used to sign the archive. |
+| `-i, --identity PATH` | The valt private key file used to sign the archive. |
 | `-r, --recipient RECIPIENT` | Encrypt to the specified RECIPIENT. See the recipient() function in 'valt/keys'. |
 | `-R, --recipient-file PATH` | Encrypt to one or more recipients. PATH can be a valt key or contain a list of recipients (see the newRecipientsFile() function in 'valt/keys'). Valt private key files require passphrase input for decryption. Can be repeated. |
 | `-f, --force` | Overwrite any existing output file (default: fail). |
@@ -43,10 +43,10 @@ NOTES below for details.
 *example*
 
 ```bash
-newSecureArchive project/ -R valt.pub                                 # archive project/ dir to ${USER}.valt in ${PWD}
-newSecureArchive project/ -R valt.pub -n backup -t -o ~/backups       # timestamped name, written to ~/backups
-newSecureArchive -C ~/dev/ projectX foo.txt -R valt.pub               # -C sets source root ~/dev/ and adds subsequent inputs
-newSecureArchive -C ~/dev/ projectX -C ~/docs/ notes.txt -R valt.pub  # each -C sets a new source root for subsequent inputs
+newSecureArchive project/ -R bob.pub                                  # archive project/ dir to ${USER}.valt in ${PWD}
+newSecureArchive project/ -R bob.pub -n backup -t -o ~/backups        # timestamped name, written to ~/backups
+newSecureArchive -C ~/dev/ projectX foo.txt -R bob.pub                # -C sets source root ~/dev/ and adds subsequent inputs
+newSecureArchive -C ~/dev/ projectX -C ~/docs/ notes.txt -R bob.pub   # each -C sets a new source root for subsequent inputs
 ```
 
 *notes*
@@ -102,7 +102,7 @@ and the inner payload signature (requires decryption with the private key).
 | | |
 |---|---|
 | `ARCHIVE` | Path to the .valt archive file. |
-| `-i, --identity PATH` | The valt.key file used to decrypt and verify signatures. |
+| `-i, --identity PATH` | The valt private key file used to decrypt and verify signatures. |
 {: .usage-table}
 
 ### extractSecureArchive()
