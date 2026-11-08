@@ -59,7 +59,7 @@ Outputs the paper command for a private key file, omitting the path if it is the
 
 | | |
 |---|---|
-| `keyFile` *(string)* | Path to a private key file. |
+| `keyFile` *(file)* | Path to a private key file. |
 {: .args-table}
 
 ### newPaperKey()

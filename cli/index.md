@@ -20,10 +20,12 @@ Commands
 
     keys         Create a key pair with an encrypted private key and a paper key as backup.
     paper        Create or regenerate the paper key for an existing key pair.
+    key-info     Fill in the paper key's personal information in a web page.
     encrypt      Encrypt and sign a single file.
     decrypt      Decrypt a file, or verify and extract a secure archive.
     archive      Create, verify or extract a signed, encrypted archive of files and directories.
     verify       Verify a key pair, and optionally files encrypted or archived with it.
+    public-key   Recreate a public key file (.pub) from its private key.
     default-key  Show or set the default private key file, used when no key is given.
     passphrase   Generate random passphrases.
     password     Generate random passwords.
@@ -47,8 +49,9 @@ Debug Options
 
 Environment Variables
 
-    RAYVN_PROMPT_TIMEOUT  Default prompt timeout seconds (default: 30).
-    VALT_KEY_FILE         The default private key file; overrides the 'valt default-key' setting.
+    RAYVN_PROMPT_TIMEOUT         Default prompt timeout seconds (default: 30).
+    VALT_KEY_FILE                The default private key file; overrides the 'valt default-key' setting.
+    VALT_NO_PAPER_KEY_REMINDERS  When set, valt does not remind you to print and store your paper key.
 ```
 
 ## Shell Completions
@@ -69,14 +72,19 @@ Usage: valt keys [-d | --no-default] [--allow-weak-passphrase] [-f] [-k KEY-INFO
                  [--no-advice] [--no-pdf] [--no-verify] [-o OUTPUT-DIR] [-q] [-c STYLE]
                  [-t TEMPLATE]
 
-    -n, --name NAME              Name to use for key files, e.g. bob -> bob.pub, bob.key. (default:
-                                 valt)
+    -n, --name NAME              Name for the key files, e.g. bob -> bob.pub, bob.key (default: your
+                                 user name, so that shared public keys say whose they are; asked for
+                                 if it is too generic, e.g. root).
     -o, --output-dir OUTPUT-DIR  Directory for the key files (default: the valt config directory).
-    -f, --force                  Replace existing key files, once the new ones have been created.
+    -f, --force                  Replace existing key files, once the new ones have been created
+                                 (asking first, at a terminal). The old ones are kept, renamed
+                                 NAME-replaced-TIMESTAMP, with their paper key, since files
+                                 encrypted to the old key need it.
     --allow-weak-passphrase      Accept a passphrase that fails the strength and breach check. Not
                                  recommended: the passphrase is all that protects the private key.
     -d, --default                Make the new key the default key (see 'valt default-key') without
-                                 asking. Otherwise you are asked, unless it already is the default.
+                                 asking. Otherwise the first key becomes the default, and you are
+                                 asked about later ones.
     --no-default                 Do not make the new key the default key, and do not ask.
     --no-verify                  Do not verify keys.
     --no-advice                  Do not show passphrase advice.
@@ -153,7 +161,9 @@ Usage: valt key-info [-d DOWNLOADS] [-e] [-k KEY-INFO] [-t TIMEOUT]
 The page works offline and sends nothing anywhere: Save downloads valt-key-info-ID.json,
 encrypted with a one-time key, which valt imports and then deletes. Cancel leaves the key info
 file unchanged. Without a browser to show the page on, e.g. over ssh, the file is edited in your
-editor instead, as with --edit.
+editor instead, as with --edit: $VISUAL or $EDITOR, run by the shell as git does. valt adds the
+wait option of editors known to open their own window (e.g. idea, code); for others, it asks you
+to say when you have saved the file.
 ```
 
 ### valt verify
@@ -209,7 +219,7 @@ Usage: valt default-key [KEY_FILE] [--clear]
 
 With no arguments, shows the default key and where it comes from. The default is, in order:
 the VALT_KEY_FILE environment variable, the setting made here (stored in valt.conf in the
-valt config directory), or valt.key in the valt config directory.
+valt config directory), or NAME.key in the valt config directory, NAME being your user name.
 ```
 
 ## Files
