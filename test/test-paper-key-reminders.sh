@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 
-# The printed and stored questions that remindPaperKey asks, with answers given by rayvnTest_PaperKeyAnswers. HOME is a
+# The printed, stored and backed up questions that remindPaperKey asks, with answers given by rayvnTest_PaperKeyAnswers. HOME is a
 # temp dir, so that the answers are recorded there rather than in the real valt config.
 
 main() {
     init "$@"
 
     testAsksPrintedThenStored
+    testStoredAsksBackupOnly
     testPrintedThenRemindAsksTheRest
-    testNotedThenRemindAsksStoredOnly
+    testNotedThenRemindAsksTheRest
     testRemindPostpones
     testNoAnswerRemindsTomorrow
     testRemindZeroDaysAsksNextTime
@@ -94,13 +95,30 @@ assertRemindInDays() {
 
 testAsksPrintedThenStored() {
     local key info pdf output leftover; newPaperKeySetup key info pdf
-    remindWith output leftover 'yes yes yes' "${key}" "${info}"
-    assertEqual '' "${leftover}" "all three questions must be asked"
+    remindWith output leftover 'yes yes yes yes' "${key}" "${info}"
+    assertEqual '' "${leftover}" "all four questions must be asked"
     assertContains "ready if ever needed" "${output}"
-    assertState "${pdf}" stored
+    assertContains "private key is backed up" "${output}"
+    assertState "${pdf}" backedUp
 
     remindWith output leftover 'yes' "${key}" "${info}"
-    assertEqual 'yes' "${leftover}" "a stored paper key must not be asked about"
+    assertEqual 'yes' "${leftover}" "a backed up key must not be asked about"
+}
+
+# A paper key stored before the backup question existed is asked only that, and not told again that it is ready.
+
+testStoredAsksBackupOnly() {
+    local key info pdf output leftover; newPaperKeySetup key info pdf
+    _writePaperKeyState "${pdf}" stored 0
+    remindWith output leftover 'remind:3' "${key}" "${info}"
+    [[ ${output} == *"ready if ever needed"* ]] && fail "a stored paper key must not be called ready again"
+    assertState "${pdf}" stored
+    assertRemindInDays "${pdf}" 3
+
+    _writePaperKeyState "${pdf}" stored 0 # the reminder is now due
+    remindWith output leftover 'yes yes' "${key}" "${info}"
+    assertEqual 'yes' "${leftover}" "only the backup question must be asked"
+    assertState "${pdf}" backedUp
 }
 
 testPrintedThenRemindAsksTheRest() {
@@ -114,21 +132,21 @@ testPrintedThenRemindAsksTheRest() {
     assertEqual 'yes' "${leftover}" "nothing must be asked before the reminder is due"
 
     _writePaperKeyState "${pdf}" printed 0 # the reminder is now due
-    remindWith output leftover 'yes yes' "${key}" "${info}"
-    assertEqual '' "${leftover}" "the passphrase and stored questions must be asked"
-    assertState "${pdf}" stored
+    remindWith output leftover 'yes yes yes' "${key}" "${info}"
+    assertEqual '' "${leftover}" "the passphrase, stored and backup questions must be asked"
+    assertState "${pdf}" backedUp
 }
 
-testNotedThenRemindAsksStoredOnly() {
+testNotedThenRemindAsksTheRest() {
     local key info pdf output leftover; newPaperKeySetup key info pdf
     remindWith output leftover 'yes yes remind:1' "${key}" "${info}"
     assertState "${pdf}" noted
     assertRemindInDays "${pdf}" 1
 
     _writePaperKeyState "${pdf}" noted 0 # the reminder is now due
-    remindWith output leftover 'yes yes' "${key}" "${info}"
-    assertEqual 'yes' "${leftover}" "only the stored question must be asked"
-    assertState "${pdf}" stored
+    remindWith output leftover 'yes yes yes' "${key}" "${info}"
+    assertEqual 'yes' "${leftover}" "only the stored and backup questions must be asked"
+    assertState "${pdf}" backedUp
 }
 
 testRemindPostpones() {
@@ -144,9 +162,9 @@ testRemindZeroDaysAsksNextTime() {
     remindWith output leftover 'yes remind:0' "${key}" "${info}"
     assertContains "I'll ask again the next time you use valt." "${output}"
     assertState "${pdf}" printed
-    remindWith output leftover 'yes yes' "${key}" "${info}"
+    remindWith output leftover 'yes yes yes' "${key}" "${info}"
     assertEqual '' "${leftover}" "0 days must ask again the next time"
-    assertState "${pdf}" stored
+    assertState "${pdf}" backedUp
 }
 
 testNoAnswerRemindsTomorrow() {
@@ -168,12 +186,12 @@ testStopAsking() {
 
 testRegeneratedPaperKeyAsksAgain() {
     local key info pdf output leftover; newPaperKeySetup key info pdf
-    remindWith output leftover 'yes yes yes' "${key}" "${info}"
-    assertState "${pdf}" stored
+    remindWith output leftover 'yes yes yes yes' "${key}" "${info}"
+    assertState "${pdf}" backedUp
 
     echo "regenerated" > "${pdf}" # same path, new contents
     assertState "${pdf}" new
-    remindWith output leftover 'yes yes yes' "${key}" "${info}"
+    remindWith output leftover 'yes yes yes yes' "${key}" "${info}"
     assertEqual '' "${leftover}" "a regenerated paper key must be asked about again"
 }
 

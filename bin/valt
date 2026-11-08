@@ -129,7 +129,9 @@ declare -gA cliSpec=(
     # The page works offline and sends nothing anywhere: Save downloads valt-key-info-ID.json,
     # encrypted with a one-time key, which valt imports and then deletes. Cancel leaves the key info
     # file unchanged. Without a browser to show the page on, e.g. over ssh, the file is edited in your
-    # editor instead, as with --edit.
+    # editor instead, as with --edit: $VISUAL or $EDITOR, run by the shell as git does. valt adds the
+    # wait option of editors known to open their own window (e.g. idea, code); for others, it asks you
+    # to say when you have saved the file.
     ['key-info']='keyInfo(--key-info|-k:str --downloads|-d:dir --timeout|-t:+int=60 --edit|-e --help|-h)'
 
     # Decrypt an encrypted file, or verify and extract a secure archive (.valt). You will be prompted
@@ -668,7 +670,9 @@ keyInfoCmdUsage() {
     echo "The page works offline and sends nothing anywhere: Save downloads valt-key-info-ID.json,"
     echo "encrypted with a one-time key, which valt imports and then deletes. Cancel leaves the key info"
     echo "file unchanged. Without a browser to show the page on, e.g. over ssh, the file is edited in your"
-    echo "editor instead, as with --edit."
+    echo "editor instead, as with --edit: \$VISUAL or \$EDITOR, run by the shell as git does. valt adds the"
+    echo "wait option of editors known to open their own window (e.g. idea, code); for others, it asks you"
+    echo "to say when you have saved the file."
     declare -F keyInfoCmdUsageExtra > /dev/null && keyInfoCmdUsageExtra
     bye "$@"
 }
@@ -1055,11 +1059,15 @@ keysCmd() {
     createKeys "${name}" "${outputDir}" "${publicKeyFile}" "${privateKeyFile}" ${verify} "${_opts['force']:-0}"
     (( offerDefault )) && offerDefaultKey "${privateKeyFile}" "${_opts['default']:-0}"
 
-    (( _opts['no-pdf'] )) && return 0
-    if isKeyInfoComplete "${_opts['key-info']:-${valtConfigDir}/key-info.json}"; then
+    # The paper key's next steps include backing up the private key; without one, say so here
+
+    if (( _opts['no-pdf'] )); then
+        showKeyBackupAdvice "${privateKeyFile}"
+    elif isKeyInfoComplete "${_opts['key-info']:-${valtConfigDir}/key-info.json}"; then
         generatePaperKey "${privateKeyFile}"
         openPaperKey "${privateKeyFile}"
     else
+        showKeyBackupAdvice "${privateKeyFile}"
         showPaperKeyDeferred "${privateKeyFile}"
     fi
 }
@@ -1411,7 +1419,7 @@ generatePaperKey() {
     show "Paper key file:" cyan "${ tildePath "${paperKeyFile}"; }"
     echo
 
-    showPaperKeyNextSteps ${replacing}
+    showPaperKeyNextSteps "${privateKeyFile}" ${replacing}
 }
 
 # Decrypts a single file, verifying its signature first if present.
@@ -1675,6 +1683,59 @@ removeKeyInfoPageDir() {
     return 0
 }
 
+# Sets the named vars to the editor command, from $VISUAL, else $EDITOR, else vi, and its name (for messages). The
+# command is run by the shell, as git does, so it may hold arguments and quoted paths. Editors that open their own
+# window, e.g. IntelliJ's idea or VS Code's code, return at once unless told to wait, so their wait option is added if
+# missing.
+
+editorCommand() {
+    local -n commandRef=$1
+    local -n nameRef=$2
+    commandRef="${VISUAL:-${EDITOR:-vi}}"
+    local -a words; mapfile -t words < <(sh -c "set -- ${commandRef}; printf '%s\n' \"\$@\"" 2> /dev/null)
+    nameRef="${words[0]:-${commandRef}}"
+    nameRef="${nameRef##*/}"
+    local wait=''
+    case ${nameRef} in
+        idea | pycharm | webstorm | goland | clion | rubymine | phpstorm | rider | rustrover) wait='--wait' ;;
+        code | code-insiders | codium | cursor | windsurf | zed) wait='--wait' ;;
+        subl | mate) wait='-w' ;;
+    esac
+    [[ -z ${wait} ]] || memberOf --wait words || memberOf -w words || commandRef+=" ${wait}"
+    return 0
+}
+
+# Runs an editor command (see editorCommand) on a file. An editor with its own window that is not on editorCommand's
+# list returns at once, before the file is edited: if it returns within a few seconds and the file is unchanged, asks
+# the user to say when they have saved it. Fails if they choose to discard their changes.
+
+runEditor() {
+    local file="$1" command="$2" name="$3"
+    local before="${file}.before" started=${EPOCHSECONDS}
+    cp "${file}" "${before}" || fail
+    sh -c "${command}"' "$@"' "${name}" "${file}" || fail "could not run ${command}"
+    local quick=0
+    (( EPOCHSECONDS - started < 3 )) && cmp -s "${file}" "${before}" && quick=1
+    rm -f "${before}"
+    (( quick )) || return 0
+
+    if (( ! _editorWaitHintShown )); then
+        show nl bold "${name}" "returned at once, so it is probably editing the file in its own window."
+        show "To have valt wait for it to close the file instead, add its wait option to" bold "VISUAL" glue \
+             ", e.g." bold "${name} --wait" glue "."
+        declare -g _editorWaitHintShown=1
+    fi
+    local -a doneChoices=("Done: I saved it" "Discard changes")
+    local doneIndex result
+    echo
+    while true; do # editing takes a while, so ask again on a timeout; ESC discards
+        choose "Edit and save the file, then:" doneChoices doneIndex false 0 0 0 3600 && break
+        result=$?
+        (( result == 124 )) || { doneIndex=1; break; }
+    done
+    (( doneIndex == 0 ))
+}
+
 # Edits the key info file in the user's editor, for when there is no browser to show the key info page on (e.g. over
 # ssh) or --edit was given: a draft in secure temp storage is edited until it is complete, or the user saves it
 # incomplete or discards it, then replaces the key info file if it changed.
@@ -1683,14 +1744,14 @@ editKeyInfo() {
     local keyInfoFile="$1"
     [[ -t 0 && -t 1 ]] || fail "editing the key info needs a terminal; or edit ${ tildePath "${keyInfoFile}"; } by hand"
     require 'rayvn/prompt'
-    local -a editor; read -r -a editor <<< "${VISUAL:-${EDITOR:-vi}}"
+    local editor editorName; editorCommand editor editorName
     local secureDir; makeSecureTempDir secureDir
     local draft="${secureDir}/key-info.json"
     newKeyInfoDraft "${keyInfoFile}" "${draft}"
 
     if ! canOpenUrls; then
         show nl "There is no browser here to show the key info page on (e.g. over ssh), so edit the file instead."
-        show "First, the essentials. The full guide is at" blue "${valtGuideUrl}"
+        show "First, the essentials. The full guide is at" blue "${valtGuideUrl}" nl
         printList "${ show "Your" bold "private key" "decrypts your files. It is itself encrypted with your" \
                          bold "passphrase" glue ", so both are needed."; }" \
                   "${ show "The" bold "paper key" "is a printed backup of it, with instructions and the people who can help."; }" \
@@ -1698,32 +1759,32 @@ editKeyInfo() {
                          "notes."; }" \
                   "${ show "If the passphrase is lost, the files" bold "cannot be recovered" glue ", by anyone."; }"
     fi
-    show nl "The key info is JSON:"
-    printList "${ show bold "greeting" glue "," bold "closing" "and" bold "author" glue ": the letter's."; }" \
-              "${ show bold "contacts" glue ": the people who can help, each with a" bold "name" "and the" \
-                       bold "ways" "to reach them."; }" \
-              "${ show bold "ways" glue ": each a" bold "type" "(phone, email, social or address) and a" bold "value" \
-                       glue "; add" bold '"preferred": true' "to the one to try first."; }" \
-              "${ show bold "notes" glue ": anything else the reader should know, one item per line."; }"
-    echo "Ways and people left empty are dropped."
+    show nl "Your key info is JSON. Replace each" bold "<placeholder>" "with yours: any left are ignored, as are ways" \
+         "and people left empty." nl "A way's type is phone, email, social or address; add" bold '"preferred": true' \
+         "to the one to try first."
     local -a problems choices=("Edit again" "Save it incomplete" "Discard changes")
-    local choiceIndex
+    local choiceIndex checked="${secureDir}/checked.json"
     while true; do
-        "${editor[@]}" "${draft}" || fail "could not run ${editor[*]}"
-        tidyKeyInfoDraft "${draft}"
-        mapfile -t problems < <(keyInfoProblems "${draft}")
+        runEditor "${draft}" "${editor}" "${editorName}" || { show "Discarded;" bold "${ tildePath "${keyInfoFile}"; }" "is unchanged."; return 0; }
+
+        # Check a tidied copy, so that editing again still shows the placeholders
+
+        cp "${draft}" "${checked}" || fail
+        tidyKeyInfoDraft "${checked}"
+        mapfile -t problems < <(keyInfoProblems "${checked}")
         (( ${#problems[@]} )) || break
-        show nl "Your key info still needs:"
+        show nl "Your key info still needs:" nl
         printList "${problems[@]}"
         echo
         choose "What next?" choices choiceIndex || choiceIndex=2
         case ${choiceIndex} in
             0) ;;
-            1) jq -e . "${draft}" > /dev/null 2>&1 && break
+            1) jq -e . "${checked}" > /dev/null 2>&1 && break
                warn "It is not valid JSON, so cannot be saved; edit it again or discard it." ;;
             *) show "Discarded;" bold "${ tildePath "${keyInfoFile}"; }" "is unchanged."; return 0 ;;
         esac
     done
+    mv "${checked}" "${draft}" || fail
 
     if [[ ${ keyInfoValues "${draft}"; } == "${ keyInfoValues "${keyInfoFile}"; }" ]]; then
         show "No changes to" bold "${ tildePath "${keyInfoFile}"; }" glue "."

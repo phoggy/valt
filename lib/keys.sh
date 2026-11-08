@@ -718,8 +718,9 @@ _hasRecipientValue() {
 # allowWeakKeyPassphrase is set, when it need only be confirmed). Unless skipKeyPassphraseAdvice is set, the advice is
 # shown the first times, then the question whether the user already has a strong passphrase: if not, or with no answer,
 # generated ones are offered to choose from, as they are again whenever the one entered is rejected. With
-# rayvnTest_ValtKeyPassphrase set, the advice and question are still shown, but that is the passphrase rather than one
-# entered (checked only if rayvnTest_CheckKeyPassphraseStrength is set).
+# rayvnTest_ValtKeyPassphrase set, that is the passphrase rather than one entered (checked only if
+# rayvnTest_CheckKeyPassphraseStrength is set): the advice is still shown, but the question is not, the answer taken
+# as yes.
 
 _readNewKeyPassphrase() {
     local -n _rnkpResultRef=$1
@@ -730,17 +731,18 @@ _readNewKeyPassphrase() {
         if (( _adviceCount <= 1 )); then
             _showPrivateKeyPassphraseAdvice
             adviceShown=1
-            confirm "Do you already have a strong, memorable passphrase?" no yes choiceIndex
-            case $? in
-                0) (( choiceIndex == 0 )) && offerGenerated=1 ;;
-                124) offerGenerated=1 ;; # timed out: take it as no, and offer some
-                *) bye ;;                # cancelled
-            esac
+            if [[ -z ${rayvnTest_ValtKeyPassphrase} ]]; then # a test passphrase: take the answer as yes
+                confirm "Do you already have a strong, memorable passphrase?" no yes choiceIndex
+                case $? in
+                    0) (( choiceIndex == 0 )) && offerGenerated=1 ;;
+                    124) offerGenerated=1 ;; # timed out: take it as no, and offer some
+                    *) bye ;;                # cancelled
+                esac
+            fi
         fi
     fi
 
     if [[ -n ${rayvnTest_ValtKeyPassphrase} ]]; then
-        (( offerGenerated )) && _showGeneratedPassphrases
         _rnkpResultRef="${rayvnTest_ValtKeyPassphrase}"
         (( rayvnTest_CheckKeyPassphraseStrength && ! allowWeakKeyPassphrase )) && _assertPassphraseStrength _rnkpResultRef
         return 0

@@ -34,8 +34,9 @@ main() {
     testCommandWarnsWhenDownloadKept
     testValuesIgnoreLayout
     testCommandOffersRegenerationOnlyOnChange
-    testDraftHasAPersonToFillIn
+    testDraftHasPlaceholdersToFillIn
     testDraftKeepsValues
+    testTidyDropsPlaceholderWays
     testTidyDropsEmptyWaysAndPeople
     testTidyLeavesInvalidJsonAlone
     testCommandEditsWithoutDisplay
@@ -465,13 +466,21 @@ testCommandOffersRegenerationOnlyOnChange() {
 
 # ---- editing by hand, without a browser ----
 
-testDraftHasAPersonToFillIn() {
+testDraftHasPlaceholdersToFillIn() {
     local draft="${testDir}/draft-new.json"
     newKeyInfoDraft "${testDir}/missing.json" "${draft}"
+    assertEqual '<your full name, e.g. Bob Barker>' "${ keyInfoValue "${draft}" author; }"
+    assertEqual 1 "${ jq '.contacts | length' "${draft}"; }" "a new draft must have a sample person"
+    assertEqual 'phone email social address' "${ jq -r '[.contacts[0].ways[].type] | join(" ")' "${draft}"; }" \
+        "the sample person must show every type of way"
+    assertEqual 1 "${ jq '.notes | length' "${draft}"; }" "a new draft must have a sample note"
+
+    tidyKeyInfoDraft "${draft}" # as on saving, which drops placeholders left in
     assertEqual '' "${ keyInfoValue "${draft}" author; }"
-    assertEqual '[{"name":"","ways":[{"type":"phone","value":""},{"type":"email","value":""}]}]' \
-        "${ jq -c '.contacts' "${draft}"; }" "a new draft must have a person to fill in"
+    assertEqual '[]' "${ jq -c '.contacts' "${draft}"; }"
     assertEqual '[]' "${ jq -c '.notes' "${draft}"; }"
+    assertEqual 'null' "${ jq -c '.authorShortName' "${draft}"; }"
+    assertContains "your name (the signature)" "${ keyInfoProblems "${draft}"; }"
 }
 
 testDraftKeepsValues() {
@@ -479,9 +488,21 @@ testDraftKeepsValues() {
     writeKeyInfo "${info}"
     jq '.favoriteColor = "blue"' "${info}" > "${info}.tmp" && mv "${info}.tmp" "${info}"
     newKeyInfoDraft "${info}" "${draft}"
-    assertEqual '""' "${ jq '.authorShortName' "${draft}"; }" "a draft must show the optional short name, to fill in"
-    tidyKeyInfoDraft "${draft}" # as on saving, which drops an empty short name
+    assertContains '<optional:' "${ jq -r '.authorShortName' "${draft}"; }" \
+        "a draft must show the optional short name, to fill in"
+    tidyKeyInfoDraft "${draft}" # as on saving, which drops the short name's placeholder
     assertEqual "${ keyInfoValues "${info}"; }" "${ keyInfoValues "${draft}"; }" "a draft must hold the current values"
+}
+
+# A partly filled in sample person keeps what was filled in, and loses the ways still holding placeholders.
+
+testTidyDropsPlaceholderWays() {
+    local draft="${testDir}/draft-partial.json"
+    newKeyInfoDraft "${testDir}/missing.json" "${draft}"
+    jq '.contacts[0].name = "Pat" | .contacts[0].ways[1].value = "pat@example.com"' "${draft}" > "${draft}.tmp" \
+        && mv "${draft}.tmp" "${draft}" || fail
+    tidyKeyInfoDraft "${draft}"
+    assertEqual '[{"name":"Pat","ways":[{"type":"email","value":"pat@example.com"}]}]' "${ jq -c '.contacts' "${draft}"; }"
 }
 
 testTidyDropsEmptyWaysAndPeople() {

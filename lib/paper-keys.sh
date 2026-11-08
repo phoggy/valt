@@ -13,7 +13,8 @@ preparePaperKey() {
 
 # ◇ Warns if a valt private key has no paper key, or if its paper key is older than the key or
 #   the key info file. Otherwise, when at a terminal, asks whether the paper key has been printed
-#   and its copies stored securely, offering to be reminded in a number of days or to stop asking.
+#   and its copies stored securely, and whether the private key file has been backed up, offering
+#   to be reminded in a number of days or to stop asking.
 #   The answers are kept per paper key, so a regenerated paper key is asked about again. Does
 #   nothing for files that are not valt private keys.
 #
@@ -46,7 +47,7 @@ remindPaperKey() {
         warn "Your key info has changed since the paper key for" bold "${key}" "was generated; regenerate it with" \
              bold blue "${command}"
     elif [[ -n ${rayvnTest_PaperKeyAnswers:-} ]] || [[ -t 0 && -t 1 ]]; then
-        _askAboutPaperKey "${paperKeyFile}"
+        _askAboutPaperKey "${paperKeyFile}" "${keyFile}"
     fi
     return 0
 }
@@ -99,17 +100,21 @@ newPaperKey() {
 #
 # · ARGS
 #
+#   keyFile (string)    Path to the private key file the paper key was made from, for the step to back it up.
 #   [replacing] (bool)  1 if the paper key replaced an earlier one, adding a step to destroy its printed copies
 #                       (default: 0).
 
 showPaperKeyNextSteps() {
-    local replacing=${1:-0}
+    local keyFile="$1"
+    local replacing=${2:-0}
     local -a steps=(
         "${ show bold "Print" italic primary "at least" bold "one copy."; }"
         "${ show bold "Decide on your passphrase:" "write it on the last page, or, more securely, say in the Notes" \
                "where to find it."; }"
         "${ show bold "Store copies in secure locations" glue ", e.g. a safe deposit box or fire safe, and/or with" \
                "trusted people."; }"
+        "${ show bold "Back up your private key file" glue ":" "copy" cyan "${ tildePath "${keyFile}"; }" \
+               "to a password manager, USB drive or cloud storage (it is encrypted, so copies are safe)."; }"
     )
     (( replacing )) && steps+=("${ show bold "Destroy any printed copies of the previous paper key" glue \
                                     ", so that its outdated information is not relied upon."; }")
@@ -121,6 +126,22 @@ showPaperKeyNextSteps() {
     echo
     echo "To remind you of these critical steps, valt will ask whether you have done them the next time you use it,"
     echo "until you confirm them."
+}
+
+# ◇ Shows why and how to back up a private key file: copies are safe to keep, since it is encrypted with its
+#   passphrase, and without one, losing the computer leaves only the paper key (if any) to recover files with.
+#
+# · ARGS
+#
+#   keyFile (string)  Path to the private key file.
+
+showKeyBackupAdvice() {
+    local keyFile="$1"
+    echo
+    header 2 "Back Up Your Private Key"
+    show "Copy" cyan "${ tildePath "${keyFile}"; }" "to at least one other place: a password manager (as an attachment), a"
+    echo "USB drive, or cloud storage. It is encrypted with your passphrase, so a copy is useless to anyone without it."
+    echo "Without a copy, losing this computer leaves only a paper key, if you have made one, to recover your files with."
 }
 
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/paper-keys' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
@@ -150,14 +171,15 @@ _init_valt_paper-keys() {
 }
 
 # Asks whether the paper key has been printed, whether the passphrase is written on the copies (or where to find it is
-# noted), and whether the copies are stored securely, starting from the first not yet answered yes, unless all are done,
-# the user stopped the questions, or the reminder date they chose has not passed. Answers are kept in the state file.
+# noted), whether the copies are stored securely, and whether the private key file is backed up, starting from the
+# first not yet answered yes, unless all are done, the user stopped the questions, or the reminder date they chose has
+# not passed. Answers are kept in the state file.
 
 _askAboutPaperKey() {
-    local pdfFile="$1"
+    local pdfFile="$1" keyFile="$2"
     local state remindAfter reminder
     _readPaperKeyState "${pdfFile}" state remindAfter
-    [[ ${state} == stored || ${state} == stopped ]] && return 0
+    [[ ${state} == backedUp || ${state} == stopped ]] && return 0
     (( remindAfter > EPOCHSECONDS )) && return 0
 
     require 'rayvn/prompt'
@@ -174,11 +196,18 @@ _askAboutPaperKey() {
         reminder="Have you written your passphrase on the last page of the copies, or added notes saying where to find it?"
         _askPaperKeyQuestion "${pdfFile}" printed "${reminder}" || return 0
         _writePaperKeyState "${pdfFile}" noted 0
+        state=noted
     fi
-    reminder="Have you stored your paper key copies somewhere secure, e.g. a safe deposit box, fire safe and/or with people you trust?"
-    _askPaperKeyQuestion "${pdfFile}" noted "${reminder}" || return 0
-    _writePaperKeyState "${pdfFile}" stored 0
-    show nl "Great. Your paper keys are now ready if ever needed."
+    if [[ ${state} == noted ]]; then
+        reminder="Have you stored your paper key copies somewhere secure, e.g. a safe deposit box, fire safe and/or with people you trust?"
+        _askPaperKeyQuestion "${pdfFile}" noted "${reminder}" || return 0
+        _writePaperKeyState "${pdfFile}" stored 0
+        show nl "Great. Your paper keys are now ready if ever needed."
+    fi
+    reminder="Have you backed up your private key file, ${ tildePath "${keyFile}"; }, e.g. in a password manager, on a USB drive or in cloud storage?"
+    _askPaperKeyQuestion "${pdfFile}" stored "${reminder}" || return 0
+    _writePaperKeyState "${pdfFile}" backedUp 0
+    show nl "Great. Your private key is backed up."
 }
 
 # Asks a yes / remind me / stop asking question about the paper key, in its current state. Succeeds on yes; otherwise

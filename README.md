@@ -149,5 +149,9 @@ valt archive create -C ~/docs .    # writes USER-TIMESTAMP.valt and a shareable 
 valt decrypt USER-TIMESTAMP.valt   # verifies and extracts into the current directory
 ```
 
+**Back up your private key.** `valt.key` is encrypted with your passphrase, so copies are safe to
+keep: put one in a password manager, on a USB drive or in cloud storage. Without a copy, losing your
+computer leaves only the paper key to recover your files with.
+
 To encrypt for someone else as well, add `-r AGE_PUBLIC_KEY` or `-R their.pub` (both can be
 repeated). Use `--no-self` to leave your own key out.

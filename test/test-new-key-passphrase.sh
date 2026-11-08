@@ -141,7 +141,8 @@ testAdviceShownOnlyAtFirst() {
     [[ ${output} != *"Normally you will need only a single key pair"* ]] || fail "the advice must be shown only at first"
 }
 
-# A preset passphrase (as try onboard --bob uses) is not entered, but the advice and question are still shown
+# A preset passphrase (as try onboard --bob uses) is not entered, and the advice is still shown, but not the question
+# whether the user already has a strong one: that is taken as yes, so no generated ones are offered (the mock confirm would answer no)
 
 testPresetPassphraseIsNotEntered() {
     local output rayvnTest_ValtKeyPassphrase="${strong}"
@@ -149,7 +150,7 @@ testPresetPassphraseIsNotEntered() {
     assertContains "|${strong}" "${output}"
     assertEqual '' "${ cat "${useCaseLog}"; }" "a preset passphrase must not be asked for"
     assertContains "Normally you will need only a single key pair" "${output}" "the advice must still be shown"
-    assertContains "randomly generated" "${output}" "answering no must still offer generated passphrases"
+    [[ ${output} != *"randomly generated"* ]] || fail "a preset passphrase must not be offered generated ones"
 }
 
 # Use a temp HOME, so that the real valt config is not touched

@@ -71,8 +71,10 @@ newKeyInfoPage() {
     _nkipKeysRef="${id} ${encryptionKey} ${macKey}"
 }
 
-# ◇ Writes the key info file's values to a file for editing by hand: pretty printed, with every value the page edits
-#   (empty if not yet set), and an empty person to fill in if there is no one yet.
+# ◇ Writes the key info file's values to a file for editing by hand: pretty printed, with every value the page edits.
+#   Those not yet set are filled with short placeholders in angle brackets that say what goes there, e.g.
+#   "<your full name, e.g. Bob Barker>", and if there is no one yet, a sample person with each type of way to reach
+#   them, so that the file explains itself. Placeholders left in are dropped on saving (see tidyKeyInfoDraft).
 #
 # · ARGS
 #
@@ -84,15 +86,27 @@ newKeyInfoDraft() {
     migrateLegacyKeyInfo "${keyInfoFile}"
     local existing='{}'
     [[ -f ${keyInfoFile} ]] && existing="${ jq -c 'if type == "object" then . else {} end' "${keyInfoFile}" 2> /dev/null; }"
-    jq --argjson page "${ _pageKeyInfoJson "${keyInfoFile}"; }" '
-        $page + del(.greeting, .closing, .author, .contacts, .notes)
-        | if (.contacts | length) == 0
-          then .contacts = [{name: "", ways: [{type: "phone", value: ""}, {type: "email", value: ""}]}] else . end
+    jq --argjson page "${ _pageKeyInfoJson "${keyInfoFile}"; }" "${_keyInfoJq}"'
+        def orPlaceholder($placeholder): if text then . else $placeholder end;
+        $page + del(.greeting, .closing, .author, .authorShortName, .contacts, .notes)
+        | .greeting |= orPlaceholder("<e.g. Greetings,>")
+        | .closing |= orPlaceholder("<e.g. I hope you never need this!>")
+        | .author |= orPlaceholder("<your full name, e.g. Bob Barker>")
+        | .authorShortName |= orPlaceholder("<optional: what the instructions call you after your full name, e.g. a nickname>")
+        | if (.contacts | length) > 0 then . else .contacts = [{
+              name: "<someone who has agreed to help, with computer skills, e.g. Pat Helper>",
+              ways: [{type: "phone", value: "<phone number>", preferred: true},
+                     {type: "email", value: "<email address>"},
+                     {type: "social", value: "<e.g. @pat on Signal>"},
+                     {type: "address", value: "<postal address>"}]}] end
+        | if (.notes | length) > 0 then . else
+              .notes = ["<optional: anything else the reader should know, e.g. where to find the passphrase>"] end
     ' <<< "${existing:-{\}}" > "${draftFile}" || fail "could not write ${draftFile}"
 }
 
-# ◇ Tidies a key info file edited by hand, as the page does on save: ways with no value, and people with no name or way,
-#   are dropped. Leaves a file that is not valid JSON alone, for keyInfoProblems to report.
+# ◇ Tidies a key info file edited by hand, as the page does on save: placeholders left in (values in angle brackets,
+#   see newKeyInfoDraft) are emptied, then ways with no value, people with no name or way, empty notes and an empty
+#   short name are dropped. Leaves a file that is not valid JSON alone, for keyInfoProblems to report.
 #
 # · ARGS
 #
@@ -102,8 +116,10 @@ tidyKeyInfoDraft() {
     local draftFile="$1"
     jq -e 'type == "object"' "${draftFile}" > /dev/null 2>&1 || return 0
     local tidy; tidy="${ jq "${_keyInfoJq}"'
-        .contacts = [(.contacts // [])[]? | .ways = [(.ways // [])[]? | select(.value | text)]
+        walk(if type == "string" and test("^\\s*<.*>\\s*$"; "s") then "" else . end)
+        | .contacts = [(.contacts // [])[]? | .ways = [(.ways // [])[]? | select(.value | text)]
                      | select(if .name | text then true else .ways | length > 0 end)]
+        | if .notes | type == "array" then .notes = [.notes[] | select(type != "string" or text)] else . end
         | if (.authorShortName // "") | text then . else del(.authorShortName) end
     ' "${draftFile}"; }" || fail "could not read ${draftFile}"
     printf '%s\n' "${tidy}" > "${draftFile}" || fail "could not write ${draftFile}"
