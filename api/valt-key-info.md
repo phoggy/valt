@@ -36,8 +36,10 @@ page, for decryptKeyInfoDownload. The paper key's fonts are embedded too, for th
 
 ### newKeyInfoDraft()
 
-Writes the key info file's values to a file for editing by hand: pretty printed, with every value the page edits
-(empty if not yet set), and an empty person to fill in if there is no one yet.
+Writes the key info file's values to a file for editing by hand: pretty printed, with every value the page edits.
+Those not yet set are filled with short placeholders in angle brackets that say what goes there, e.g.
+"<your full name, e.g. Bob Barker>", and if there is no one yet, a sample person with each type of way to reach
+them, so that the file explains itself. Placeholders left in are dropped on saving (see tidyKeyInfoDraft).
 
 
 *args*
@@ -50,8 +52,9 @@ Writes the key info file's values to a file for editing by hand: pretty printed,
 
 ### tidyKeyInfoDraft()
 
-Tidies a key info file edited by hand, as the page does on save: ways with no value, and people with no name or way,
-are dropped. Leaves a file that is not valid JSON alone, for keyInfoProblems to report.
+Tidies a key info file edited by hand, as the page does on save: placeholders left in (values in angle brackets,
+see newKeyInfoDraft) are emptied, then ways with no value, people with no name or way, empty notes and an empty
+short name are dropped. Leaves a file that is not valid JSON alone, for keyInfoProblems to report.
 
 
 *args*

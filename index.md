@@ -30,6 +30,8 @@ valt pass-check -u file            # rates a passphrase and checks it against kn
   `--no-self`.
 - The private key is only as safe as its passphrase, so `valt keys` rejects weak or breached ones. `valt passphrase`
   generates strong, memorable ones.
+- **Back up your private key.** It is encrypted with its passphrase, so copies are safe to keep: put one in a password
+  manager, on a USB drive or in cloud storage. Without a copy, losing your computer leaves only the paper key.
 
 See the [CLI reference](/valt/cli/) for every command and option.
 

@@ -29,7 +29,8 @@ needs if not (see keyInfoProblems).
 
 Warns if a valt private key has no paper key, or if its paper key is older than the key or
 the key info file. Otherwise, when at a terminal, asks whether the paper key has been printed
-and its copies stored securely, offering to be reminded in a number of days or to stop asking.
+and its copies stored securely, and whether the private key file has been backed up, offering
+to be reminded in a number of days or to stop asking.
 The answers are kept per paper key, so a regenerated paper key is asked about again. Does
 nothing for files that are not valt private keys.
 
@@ -85,6 +86,20 @@ later (see remindPaperKey).
 
 | | |
 |---|---|
+| `keyFile` *(string)* | Path to the private key file the paper key was made from, for the step to back it up. |
 | `[replacing]` *(bool)* | 1 if the paper key replaced an earlier one, adding a step to destroy its printed copies (default: 0). |
+{: .args-table}
+
+### showKeyBackupAdvice()
+
+Shows why and how to back up a private key file: copies are safe to keep, since it is encrypted with its
+passphrase, and without one, losing the computer leaves only the paper key (if any) to recover files with.
+
+
+*args*
+
+| | |
+|---|---|
+| `keyFile` *(string)* | Path to the private key file. |
 {: .args-table}
 
