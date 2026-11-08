@@ -313,15 +313,13 @@ extractSecureArchive() {
     tar xJf "${innerDir}/${_archivePayloadName}" -C "${destDir}" || fail
 }
 
-# ◇ Extract the public portion of a secure archive, creating a .valt.pub file alongside it.
-#   The .valt.pub contains the signature, public keys, and README but not the encrypted payload,
-#   making it safe to share publicly. Useful when the .valt.pub was not retained from creation.
+# ◇ Extracts the public portion of a secure archive, writing ARCHIVE.pub (e.g. NAME.valt.pub) alongside it. It holds
+#   the signature, public keys and README but not the encrypted payload, so is safe to share publicly. Useful when the
+#   .pub file was not kept from creation.
 #
-# · USAGE
+# · ARGS
 #
-#   extractPublicArchive ARCHIVE
-#
-#   ARCHIVE  Path to the .valt archive file.
+#   archive (file)  Path to the secure archive (.valt) file.
 
 extractPublicArchive() {
     assertFile "$1"

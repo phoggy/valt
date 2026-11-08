@@ -13,7 +13,8 @@ usage() {
     echo "    PAGES_DIR  The pages dir (valt's gh-pages worktree)."
     echo
     echo "Writes guide/index.html: the guide to keys and passphrases, from the key info page's explanatory tabs. And"
-    echo "assets/sample-paper-key.pdf, the sample paper key, from samples/ (when it, the template or fonts change)."
+    echo "assets/sample-paper-key.pdf, the sample paper key, from samples/ (when it, the template or fonts change). And"
+    echo "refreshes the help shown on the CLI page, cli/index.md, from valt's current --help output."
     echo
     echo "Options:"
     echo
@@ -26,6 +27,52 @@ main() {
     writeKeyInfoGuide "${pagesDir}/guide/index.html"
     show "Wrote" bold "${ tildePath "${pagesDir}/guide/index.html"; }"
     writeSamplePaperKey "${pagesDir}/assets/sample-paper-key.pdf"
+    refreshCliPage "${pagesDir}/cli/index.md"
+}
+
+# Refreshes the help on the CLI page from valt's current --help output, leaving the rest of the page (written by hand)
+# as it is: the code block under '## Usage' gets 'valt --help', and the one under each '### valt COMMAND' heading
+# (e.g. '### valt archive create') gets that command's --help.
+
+refreshCliPage() {
+    local pageFile="$1"
+    [[ -f ${pageFile} ]] || { warn "No CLI page to refresh at ${ tildePath "${pageFile}"; }"; return 0; }
+    local -a lines=() refreshed=()
+    mapfile -t lines < "${pageFile}"
+    local line command='' skipping=0
+    for line in "${lines[@]}"; do
+        if (( skipping )); then
+            [[ ${line} == '```' ]] && { refreshed+=("${line}"); skipping=0; }
+            continue
+        fi
+        refreshed+=("${line}")
+        if [[ ${line} == '## Usage' ]]; then
+            command='valt'
+        elif [[ ${line} =~ ^'### '(valt( [a-z-]+)+)$ ]]; then
+            command="${BASH_REMATCH[1]}"
+        elif [[ ${line} == '```' && -n ${command} ]]; then
+            refreshed+=("${ commandHelp "${command}"; }")
+            command=''
+            skipping=1
+        elif [[ ${line} == '#'* ]]; then
+            command='' # another heading before a code block: nothing to refresh
+        fi
+    done
+    printf '%s\n' "${refreshed[@]}" > "${pageFile}" || fail "could not write ${pageFile}"
+    show "Refreshed the help on" bold "${ tildePath "${pageFile}"; }"
+}
+
+# Outputs the --help of a valt command line, e.g. 'valt archive create', as plain text, with the home directory
+# shown as ~ and no blank lines at the start or end.
+
+commandHelp() {
+    local -a words; read -r -a words <<< "$1"
+    local help; help="${ "${valtHome}/bin/valt" "${words[@]:1}" --help 2>&1; }"
+    help="${ stripAnsi "${help}"; }"
+    help="${help//${HOME}/\~}"
+    while [[ ${help} == $'\n'* ]]; do help="${help#$'\n'}"; done # no blank lines at the start or end
+    while [[ ${help} == *$'\n' ]]; do help="${help%$'\n'}"; done
+    printf '%s' "${help}"
 }
 
 # Generates the sample paper key from samples/ (a throwaway key and fictional key info), unless it is newer than all

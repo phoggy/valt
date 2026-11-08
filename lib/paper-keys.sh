@@ -56,7 +56,7 @@ remindPaperKey() {
 #
 # · ARGS
 #
-#   keyFile (string)  Path to a private key file.
+#   keyFile (file)  Path to a private key file.
 
 paperKeyCommand() {
     local keyFile="$1"
