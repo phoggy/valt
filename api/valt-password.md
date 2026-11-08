@@ -21,7 +21,7 @@ Generates a random password of random length within a given range.
 
 | | |
 |---|---|
-| `resultVarName` *(string)* | Name of the variable to receive the password. |
+| `resultVarName` *(stringRef)* | Name of the variable to receive the password. |
 | `[minLength]` *(int)* | Minimum password length (default: 24). |
 | `[maxLength]` *(int)* | Maximum password length (default: 32). |
 {: .args-table}
@@ -35,7 +35,7 @@ Generates a random passphrase using the Orchard Street Long word list (17,576 wo
 
 | | |
 |---|---|
-| `resultVarName` *(string)* | Name of the variable to receive the passphrase. |
+| `resultVarName` *(stringRef)* | Name of the variable to receive the passphrase. |
 | `[wordCount]` *(int)* | Number of words in the passphrase (default: 5). |
 | `[separator]` *(string)* | String placed between words (default: ' '). |
 {: .args-table}
@@ -68,7 +68,7 @@ Interactively prompts for a password, storing the result in resultVarRef.
 | | |
 |---|---|
 | `prompt` *(string)* | Label displayed before the input field. |
-| `resultVarRef` *(string)* | Name of the variable to receive the entered password. |
+| `resultVarRef` *(stringRef)* | Name of the variable to receive the entered password. |
 | `[strengthUseCase]` *(string)* | If provided, estimates password strength and breach status; either 'account' (online/offline attacks against a service whose password hashing you don't control) or 'file' (offline attacks against an Age-encrypted file or private key, at Age's default scrypt work factor). |
 | `[threatLevel]` *(string)* | Guessing power to judge the strength verdict against: 'casual', 'motivated', 'professional', or 'nation-state' (default: 'professional'). |
 | `[timeout]` *(int)* | Seconds to wait for input (default: 30). |
