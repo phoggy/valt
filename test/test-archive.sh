@@ -335,7 +335,7 @@ newTaggedArchive() {
 }
 
 testMacMetadataKeptByDefault() {
-    (( onMacOS )) && command -v xattr > /dev/null || return 0
+    (( onMacOS && _bsdTar )) && command -v xattr > /dev/null || return 0 # only macOS tar keeps it (not GNU tar, e.g. in Nix)
     local archive; newTaggedArchive archive
     local destDir; destDir="${ makeTempDir; }"
     extractSecureArchive -i "${keyFile}" -o "${destDir}" "${archive}" > /dev/null 2>&1 || fail "extract failed"

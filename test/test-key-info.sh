@@ -224,7 +224,7 @@ INFO
     assertEqual 'blue' "${ keyInfoValue "${info}" favoriteColor; }" "other values must be kept"
     assertEqual 'null' "${ keyInfoValue "${info}" completed; }" "completed is no longer used"
     assertTrue "a converted complete key.info must be complete" isKeyInfoComplete "${info}"
-    local mode; mode="${ stat -f '%Lp' "${info}" 2> /dev/null || stat -c '%a' "${info}"; }"
+    local mode; mode="${ stat -c '%a' "${info}" 2> /dev/null || stat -f '%Lp' "${info}"; }" # GNU first: its -f means something else
     assertEqual 600 "${mode}"
 }
 
@@ -337,7 +337,7 @@ testImportedFileIsPrivate() {
     local info="${testDir}/private.json" json="${testDir}/private-download.json"
     downloadJson "Me" > "${json}"
     importKeyInfo "${json}" "${info}"
-    local mode; mode="${ stat -f '%Lp' "${info}" 2> /dev/null || stat -c '%a' "${info}"; }"
+    local mode; mode="${ stat -c '%a' "${info}" 2> /dev/null || stat -f '%Lp' "${info}"; }" # GNU first: its -f means something else
     assertEqual 600 "${mode}" "the key info file holds contacts' details, so must be readable only by its owner"
 }
 
