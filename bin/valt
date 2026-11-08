@@ -1765,7 +1765,7 @@ editorCommand() {
     local -n commandRef=$1
     local -n nameRef=$2
     commandRef="${VISUAL:-${EDITOR:-vi}}"
-    local -a words; mapfile -t words < <(sh -c "set -- ${commandRef}; printf '%s\n' \"\$@\"" 2> /dev/null)
+    local -a words; mapfile -t words < <(bash -c "set -- ${commandRef}; printf '%s\n' \"\$@\"" 2> /dev/null)
     nameRef="${words[0]:-${commandRef}}"
     nameRef="${nameRef##*/}"
     local wait=''
@@ -1786,7 +1786,7 @@ runEditor() {
     local file="$1" command="$2" name="$3"
     local before="${file}.before" started=${EPOCHSECONDS}
     cp "${file}" "${before}" || fail
-    sh -c "${command}"' "$@"' "${name}" "${file}" || fail "could not run ${command}"
+    bash -c "${command}"' "$@"' "${name}" "${file}" || fail "could not run ${command}"
     local quick=0
     (( EPOCHSECONDS - started < 3 )) && cmp -s "${file}" "${before}" && quick=1
     rm -f "${before}"
