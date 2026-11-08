@@ -7,9 +7,9 @@
 #
 # · ARGS
 #
-#   resultVarName (string)  Name of the variable to receive the password.
-#   [minLength] (int)       Minimum password length (default: 24).
-#   [maxLength] (int)       Maximum password length (default: 32).
+#   resultVarName (stringRef)  Name of the variable to receive the password.
+#   [minLength] (int)          Minimum password length (default: 24).
+#   [maxLength] (int)          Maximum password length (default: 32).
 
 generatePassword() {
     local -n _passwordRef=$1
@@ -35,9 +35,9 @@ generatePassword() {
 #
 # · ARGS
 #
-#   resultVarName (string)  Name of the variable to receive the passphrase.
-#   [wordCount] (int)       Number of words in the passphrase (default: 5).
-#   [separator] (string)    String placed between words (default: ' ').
+#   resultVarName (stringRef)  Name of the variable to receive the passphrase.
+#   [wordCount] (int)          Number of words in the passphrase (default: 5).
+#   [separator] (string)       String placed between words (default: ' ').
 
 generatePassphrase() {
     local -n _phraseRef=$1
@@ -80,7 +80,7 @@ readConfirmedPassword() {
 # · ARGS
 #
 #   prompt (string)             Label displayed before the input field.
-#   resultVarRef (string)       Name of the variable to receive the entered password.
+#   resultVarRef (stringRef)    Name of the variable to receive the entered password.
 #   [strengthUseCase] (string)  If provided, estimates password strength and breach status; either 'account'
 #                               (online/offline attacks against a service whose password hashing you don't
 #                               control) or 'file' (offline attacks against an Age-encrypted file or private
