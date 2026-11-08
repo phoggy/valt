@@ -495,7 +495,7 @@ For a secure archive, first unpack it, which needs no key:
 tar xJf FILE.valt
 ```
 
-Then follow the instructions in the `README.txt` file it contains. They use `age` to decrypt, `tar` to unpack, and
+Then follow the instructions in the `README.txt` file it contains: they use `age` to decrypt, `tar` to unpack, and
 optionally `minisign` to confirm nothing has been tampered with.
 
 In all cases you will be prompted to enter the passphrase that protects the private key.
