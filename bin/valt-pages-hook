@@ -14,7 +14,8 @@ usage() {
     echo
     echo "Writes guide/index.html: the guide to keys and passphrases, from the key info page's explanatory tabs. And"
     echo "assets/sample-paper-key.pdf, the sample paper key, from samples/ (when it, the template or fonts change). And"
-    echo "refreshes the help shown on the CLI page, cli/index.md, from valt's current --help output."
+    echo "refreshes the help shown on the CLI page, cli/index.md, from valt's current --help output, adding any new"
+    echo "commands under Other Commands (to be moved by hand) and warning about commands valt no longer has."
     echo
     echo "Options:"
     echo
@@ -32,13 +33,16 @@ main() {
 
 # Refreshes the help on the CLI page from valt's current --help output, leaving the rest of the page (written by hand)
 # as it is: the code block under '## Usage' gets 'valt --help', and the one under each '### valt COMMAND' heading
-# (e.g. '### valt archive create') gets that command's --help.
+# (e.g. '### valt archive create') gets that command's --help. Commands not on the page yet are added, under '## Other
+# Commands' (before '## Recovery'), to be moved to where they belong; commands on the page that valt no longer has are
+# reported, to be removed by hand.
 
 refreshCliPage() {
     local pageFile="$1"
     [[ -f ${pageFile} ]] || { warn "No CLI page to refresh at ${ tildePath "${pageFile}"; }"; return 0; }
     local -a lines=() refreshed=()
     mapfile -t lines < "${pageFile}"
+    addMissingCommands lines
     local line command='' skipping=0
     for line in "${lines[@]}"; do
         if (( skipping )); then
@@ -60,6 +64,53 @@ refreshCliPage() {
     done
     printf '%s\n' "${refreshed[@]}" > "${pageFile}" || fail "could not write ${pageFile}"
     show "Refreshed the help on" bold "${ tildePath "${pageFile}"; }"
+}
+
+# Adds a section, with an empty code block for refreshCliPage to fill, for each valt command that has no '### valt
+# COMMAND' heading in the named array of page lines, under '## Other Commands' (added before '## Recovery', or at the
+# end, if not there yet). Warns about headings for commands valt no longer has.
+
+addMissingCommands() {
+    local -n pageLinesRef=$1
+    local -a commands=() missing=()
+    mapfile -t commands < <(gawk '/^declare -gA cliSpec=\(/ { on = 1; next } on && /^\)/ { exit }
+                                   on && match($0, /^    \[.([a-z][a-z -]*).\]=/, m) { print m[1] }' "${valtHome}/bin/valt")
+    (( ${#commands[@]} )) || fail "found no commands in ${valtHome}/bin/valt"
+
+    local -A documented=()
+    local line command
+    for line in "${pageLinesRef[@]}"; do
+        [[ ${line} =~ ^'### valt '([a-z][a-z -]*)$ ]] && documented["${BASH_REMATCH[1]}"]=1
+    done
+    for command in "${commands[@]}"; do
+        [[ -v documented["${command}"] ]] || missing+=("${command}")
+        unset 'documented[${command}]'
+    done
+    for command in "${!documented[@]}"; do
+        warn "The CLI page documents" bold "valt ${command}" glue ", which valt no longer has; remove it by hand."
+    done
+    (( ${#missing[@]} )) || return 0
+
+    # Insert at the end of '## Other Commands', or add that section before '## Recovery' (or at the end)
+
+    local -i i at=${#pageLinesRef[@]} other=-1
+    for (( i = 0; i < ${#pageLinesRef[@]}; i++ )); do
+        [[ ${pageLinesRef[i]} == '## Other Commands' ]] && other=i
+    done
+    for (( i = other + 1; i < ${#pageLinesRef[@]}; i++ )); do
+        if (( other >= 0 )); then
+            [[ ${pageLinesRef[i]} == '## '* ]] && { at=i; break; }
+        else
+            [[ ${pageLinesRef[i]} == '## Recovery' ]] && { at=i; break; }
+        fi
+    done
+    local -a added=()
+    (( other >= 0 )) || added+=('## Other Commands' '')
+    for command in "${missing[@]}"; do
+        added+=("### valt ${command}" '' '```' '```' '')
+        show "Added" bold "valt ${command}" "to the CLI page, under Other Commands: move it to where it belongs."
+    done
+    pageLinesRef=("${pageLinesRef[@]:0:${at}}" "${added[@]}" "${pageLinesRef[@]:${at}}")
 }
 
 # Outputs the --help of a valt command line, e.g. 'valt archive create', as plain text, with the home directory
