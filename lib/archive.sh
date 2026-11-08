@@ -46,30 +46,30 @@
 #     - Corruption or tampering can be detected with confidence.
 #     - Provides a formal provenance chain for legal/financial docs.
 #
-#   Valt File Structure
+#   **Valt file structure**
 #
-#   backup-2026-05-28_23.14_PDT.valt
-#   │
-#   ├── encrypted.tar.xz.age
-#   │   ├── payload.tar
-#   │   ├── payload.tar.minisig
-#   │   ├── minisign.pub
-#   │   ├── age.pub
-#   │   └── README.txt
-#   ├── encrypted.tar.xz.age.minisig
-#   ├── minisign.pub
-#   ├── age.pub
-#   └── README.txt
+#       backup-2026-05-28_23.14_PDT.valt
+#       │
+#       ├── encrypted.tar.xz.age
+#       │   ├── payload.tar
+#       │   ├── payload.tar.minisig
+#       │   ├── minisign.pub
+#       │   ├── age.pub
+#       │   └── README.txt
+#       ├── encrypted.tar.xz.age.minisig
+#       ├── minisign.pub
+#       ├── age.pub
+#       └── README.txt
 #
 #   The encrypted tar structure ensures there is always a valid payload signature to use even if the outer one is missing or
 #   tampered with. The unencrypted files can be shared publicly and are packaged as a separate file:
 #
-#   backup-2026-05-28_23.14_PDT.valt.pub
-#   │
-#   ├── encrypted.tar.age.minisig
-#   ├── minisign.pub
-#   ├── age.pub
-#   └── README.txt
+#       backup-2026-05-28_23.14_PDT.valt.pub
+#       │
+#       ├── encrypted.tar.xz.age.minisig
+#       ├── minisign.pub
+#       ├── age.pub
+#       └── README.txt
 #
 #   This file can be recreated from the original via the extractPublicArchive function.
 #
@@ -360,7 +360,7 @@ _init_valt_archive() {
 
     #   backup-2026-05-28_23.14_PDT.valt.pub
     #   │
-    #   ├── encrypted.tar.age.minisig        _archiveEncryptedSigName
+    #   ├── encrypted.tar.xz.age.minisig        _archiveEncryptedSigName
     #   ├── minisign.pub                      _archiveSigPubName
     #   ├── age.pub                           _archiveAgePubName
     #   └── README.txt                        _archiveReadMeName

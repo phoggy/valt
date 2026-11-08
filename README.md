@@ -8,6 +8,10 @@ and explains to your successors how to use it
 ([see a sample](https://rayvn.ink/valt/assets/sample-paper-key.pdf)). Files are encrypted to your own
 key (and optionally to others), and signed so that tampering is detected on decryption.
 
+Keys are always post-quantum: age's hybrid of ML-KEM-768 and X25519, so files encrypted today stay protected against
+future quantum computers, even if recorded now and attacked later (see the
+[design notes](https://rayvn.ink/valt/api/valt-keys#design-notes)).
+
 New to keys and passphrases? The [guide](https://rayvn.ink/valt/guide/) explains how valt's keys and paper key
 work, where to keep the passphrase, and what makes a passphrase strong.
 

@@ -6,7 +6,7 @@
 # Use via: require 'valt/key-info'
 
 #@notes
-# ## Key info file format
+# ## Key Info File Format
 #
 # The key info file, key-info.json in the valt config directory, is JSON: the letter's greeting, closing and author,
 # the people who can help (contacts, each with a name and the ways to reach them, each with a type and a value) and
