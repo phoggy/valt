@@ -127,7 +127,7 @@ to recover without Nix, using `age` and `tar` directly.
 | `valt paper` | Create or regenerate the paper key for an existing key pair. |
 | `valt key-info` | Fill in the paper key's personal information (`key-info.json`) in a web page, or your editor. |
 | `valt encrypt FILE` | Encrypt and sign a single file. |
-| `valt decrypt FILE` | Decrypt a file, or verify and extract a secure archive. |
+| `valt decrypt FILE` | Decrypt a file, or verify and extract a [secure archive](https://rayvn.ink/valt/api/valt-archive#secure-archives). |
 | `valt archive create INPUT...` | Create a signed, encrypted archive of files and directories. |
 | `valt archive verify ARCHIVE` | Verify both signatures of a secure archive without extracting it. |
 | `valt archive extract ARCHIVE` | Verify and extract a secure archive. |
