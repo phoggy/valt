@@ -78,7 +78,7 @@ nix profile add github:phoggy/valt
 To install a specific version:
 
 ```bash
-nix profile add github:phoggy/valt/v0.1.1
+nix profile add github:phoggy/valt/v0.2.0
 ```
 
 To upgrade to the latest version:
