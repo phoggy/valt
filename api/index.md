@@ -7,7 +7,7 @@ has_children: true
 
 # API Reference
 
-Documentation for all public functions in rayvn's shared libraries.
+Documentation for all public functions in valt's libraries.
 
 ### Encryption
 

@@ -103,4 +103,4 @@ recover without Nix, using `age` and `tar` directly.
 ## Related Projects
 
 - [rayvn](/rayvn) — the shared library framework valt is built on
-- [wardn](/wardn) — encrypted Bitwarden vault backups *(renovating, coming soon)*
+- [wardn](/wardn) — encrypted Bitwarden vault backup and restore, using valt's secure archives
