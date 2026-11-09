@@ -12,7 +12,7 @@ Public key encryption for files and archives, using [age](https://age-encryption
 valt creates a passphrase-protected key pair, plus a printable *paper key*: a PDF that backs up the key and explains to
 your successors, step by step, how to use it ([see a sample](/valt/assets/sample-paper-key.pdf)). Files are encrypted to your own key (and optionally to others), and signed
 so that tampering is detected on decryption. Any number of files and directories can be kept together in a signed,
-encrypted *secure archive*.
+encrypted [*secure archive*](/valt/api/valt-archive#secure-archives).
 
 Keys are always post-quantum: age's hybrid of ML-KEM-768 and X25519, so files encrypted today stay protected against
 future quantum computers, even if recorded now and attacked later (see the
@@ -103,4 +103,4 @@ recover without Nix, using `age` and `tar` directly.
 ## Related Projects
 
 - [rayvn](/rayvn) — the shared library framework valt is built on
-- [wardn](/wardn) — encrypted Bitwarden vault backup and restore, using valt's secure archives
+- [wardn](/wardn) — encrypted Bitwarden vault backup and restore, using valt's [secure archives](/valt/api/valt-archive#secure-archives)

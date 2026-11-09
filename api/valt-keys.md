@@ -10,7 +10,7 @@ nav_order: 1
 
 Key pair generation, verification and recipients.
 
-See the [Design Notes](#design-notes) below for details.
+See [Design Notes](#design-notes) below for details.
 
 ## Functions
 

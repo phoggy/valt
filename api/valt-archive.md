@@ -10,13 +10,15 @@ nav_order: 5
 
 Signed, encrypted secure archives of files and directories.
 
+See [Secure Archives](#secure-archives) below for details.
+
 ## Functions
 
 ### newSecureArchive()
 
 Create an encrypted, signed archive from one or more files, directories and archives. The archive file path is written to
 standard output. Also creates the public version of the archive (same path plus ".pub" suffix) unless --no-public. See
-NOTES below for details.
+Secure Archives below for details.
 
 
 *usage*
@@ -48,45 +50,6 @@ newSecureArchive project/ -R bob.pub -n backup -t -o ~/backups        # timestam
 newSecureArchive -C ~/dev/ projectX foo.txt -R bob.pub                # -C sets source root ~/dev/ and adds subsequent inputs
 newSecureArchive -C ~/dev/ projectX -C ~/docs/ notes.txt -R bob.pub   # each -C sets a new source root for subsequent inputs
 ```
-
-*notes*
-
-
-Encryption provides confidentiality while signatures provide authenticity/integrity:
-
-  - Files can be stored somewhere less trusted (cloud, shared NAS).
-  - Corruption or tampering can be detected with confidence.
-  - Provides a formal provenance chain for legal/financial docs.
-
-**Valt file structure**
-
-    backup-2026-05-28_23.14_PDT.valt
-    │
-    ├── encrypted.tar.xz.age
-    │   ├── payload.tar
-    │   ├── payload.tar.minisig
-    │   ├── minisign.pub
-    │   ├── age.pub
-    │   └── README.txt
-    ├── encrypted.tar.xz.age.minisig
-    ├── minisign.pub
-    ├── age.pub
-    └── README.txt
-
-The encrypted tar structure ensures there is always a valid payload signature to use even if the outer one is missing or
-tampered with. The unencrypted files can be shared publicly and are packaged as a separate file:
-
-    backup-2026-05-28_23.14_PDT.valt.pub
-    │
-    ├── encrypted.tar.xz.age.minisig
-    ├── minisign.pub
-    ├── age.pub
-    └── README.txt
-
-This file can be recreated from the original via the extractPublicArchive function.
-
-Only tar, age and minisign are required for access to the contents of a valt archive. The verifySecureArchive and
-extractSecureArchive functions simplify the process.
 
 ### verifySecureArchive()
 
@@ -137,3 +100,47 @@ the signature, public keys and README but not the encrypted payload, so is safe 
 | `archive` *(file)* | Path to the secure archive (.valt) file. |
 {: .args-table}
 
+
+## Secure Archives
+
+A secure archive (a `.valt` file) holds any number of files and directories, encrypted with age to one or more
+recipients and signed with minisign. Encryption keeps the contents private; the signatures prove who made it and that
+nothing has changed since. So an archive can be stored somewhere less trusted, such as cloud storage or a shared NAS;
+corruption or tampering is detected with confidence; and it gives a provenance chain, e.g. for legal or financial
+documents.
+
+It is a tar file. The files are packed in a payload, which is signed, then encrypted together with the signature,
+the public keys and a README; the encrypted file is signed again, and kept next to its signature, the public keys and
+a README with instructions for anyone opening it:
+
+    backup-2026-05-28_23.14_PDT.valt
+    │
+    ├── encrypted.tar.xz.age
+    │   ├── payload.tar
+    │   ├── payload.tar.minisig
+    │   ├── minisign.pub
+    │   ├── age.pub
+    │   └── README.txt
+    ├── encrypted.tar.xz.age.minisig
+    ├── minisign.pub
+    ├── age.pub
+    └── README.txt
+
+The signature inside the encryption means there is always a valid payload signature to check, even if the outer one is
+missing or has been tampered with.
+
+The unencrypted parts can be shared publicly, as a separate *public companion* (`.valt.pub`), which shows who made the
+archive and lets anyone check its outer signature without being able to open it:
+
+    backup-2026-05-28_23.14_PDT.valt.pub
+    │
+    ├── encrypted.tar.xz.age.minisig
+    ├── minisign.pub
+    ├── age.pub
+    └── README.txt
+
+`valt archive create` makes both; a missing public companion can be recreated from the archive (extractPublicArchive).
+
+Opening an archive needs only tar, age and minisign, as its README explains; `valt decrypt` (or `valt archive
+extract`) verifies both signatures and extracts it in one step, and `valt archive verify` checks it without
+extracting.

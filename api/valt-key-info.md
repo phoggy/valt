@@ -10,7 +10,7 @@ nav_order: 7
 
 The paper key's personal information (the key info file), and filling it in.
 
-See the [Key Info File Format](#key-info-file-format) below for details.
+See [Key Info File Format](#key-info-file-format) below for details.
 
 ## Functions
 
