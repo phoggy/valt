@@ -36,6 +36,9 @@ valt pass-check -u file            # rates a passphrase and checks it against kn
   `--no-self`.
 - The private key is only as safe as its passphrase, so `valt keys` rejects weak or breached ones. `valt passphrase`
   generates strong, memorable ones.
+- An archive made by another program, such as a [wardn](/wardn) vault backup, can say how to restore it, in its
+  [manifest](/valt/api/valt-archive#manifests): `valt decrypt` then offers to restore it with that program (installed,
+  or with Nix or Homebrew) rather than extracting its files.
 - **Back up your private key.** It is encrypted with its passphrase, so copies are safe to keep: put one in a password
   manager, on a USB drive or in cloud storage. Without a copy, losing your computer leaves only the paper key.
 

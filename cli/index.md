@@ -261,7 +261,7 @@ Usage: valt encrypt FILE [-a] [--delete] [-f] [-i IDENTITY] [--no-self] [--no-si
 Decrypt an encrypted file, or verify and extract a secure archive (.valt). You will be prompted for
 the passphrase that protects the private key.
 
-Usage: valt decrypt FILE [-f] [-i IDENTITY] [-o OUTPUT]
+Usage: valt decrypt FILE [--extract] [-f] [-i IDENTITY] [-o OUTPUT]
 
     FILE                     The encrypted file (.age) or secure archive (.valt).
     -i, --identity IDENTITY  The private key file (default: the default key; see 'valt
@@ -270,11 +270,15 @@ Usage: valt decrypt FILE [-f] [-i IDENTITY] [-o OUTPUT]
                              without .age). For an archive, the existing directory to extract into
                              (default: the current directory).
     -f, --force              Overwrite an existing output file.
+    --extract                For an archive made by another program that says how to restore it
+                             (e.g. a wardn vault backup), extract its files instead of restoring it.
     -h, --help               Print this help message.
 
 If a signature file (FILE.minisig) is present, it is verified before decrypting and decryption
 stops if it does not match. A warning is shown if there is no signature. Archives always contain
-signatures, which are verified before extracting.
+signatures, which are verified before extracting. An archive made by another program, e.g. a wardn
+vault backup, can say what it is and how to restore it: valt then offers to restore it with that
+program (installed, or with Nix or Homebrew), rather than extracting its files.
 ```
 
 ## Archives
@@ -344,13 +348,16 @@ Usage: valt archive verify ARCHIVE [-i IDENTITY]
 ```
 Verify and extract a secure archive (.valt). Same as 'valt decrypt ARCHIVE'.
 
-Usage: valt archive extract ARCHIVE [-i IDENTITY] [-o OUTPUT-DIR]
+Usage: valt archive extract ARCHIVE [--extract] [-i IDENTITY] [-o OUTPUT-DIR]
 
     ARCHIVE                      The secure archive (.valt).
     -i, --identity IDENTITY      Your private key file (default: the default key; see 'valt
                                  default-key').
     -o, --output-dir OUTPUT-DIR  The existing directory to extract into (default: the current
                                  directory).
+    --extract                    For an archive made by another program that says how to restore it
+                                 (e.g. a wardn vault backup), extract its files instead of restoring
+                                 it.
     -h, --help                   Print this help message.
 ```
 
