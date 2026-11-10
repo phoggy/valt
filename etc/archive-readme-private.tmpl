@@ -7,7 +7,7 @@ ${ARCHIVE_NAME} by ${AUTHOR}
 You have decrypted and expanded the encrypted archive. The payload and its signature are in the
 same directory as this file.
 
-${NOTES_SECTION}
+${NOTES_SECTION}${RESTORE_SECTION}
 ▋ Files
 ───────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -16,7 +16,9 @@ ${NOTES_SECTION}
   └── encrypted.tar.xz.age            (you decrypted this)
       ├── payload.tar                 The archive payload. Contains the original files.
       ├── payload.tar.minisig         Cryptographic signature of the payload.
-      ├── minisign.pub                Public key used to verify the signature above.
+      ├── manifest.json               What the archive is (and how to restore it, if needed).
+      ├── manifest.json.minisig       Cryptographic signature of the manifest.
+      ├── minisign.pub                Public key used to verify the signatures above.
       ├── age.pub                     Public key used when encrypting this archive.
       └── README.txt                  This file.
 

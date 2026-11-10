@@ -138,6 +138,11 @@ to recover without Nix, using `age` and `tar` directly.
 | `valt password` | Generate random passwords. |
 | `valt pass-check` | Check a password or passphrase: rate its strength, and look it up in known data breaches. |
 
+An archive made by another program can say what it is and how to restore it, in its
+[manifest](https://rayvn.ink/valt/api/valt-archive#manifests): a [wardn](https://rayvn.ink/wardn) vault backup, for
+example, is restored by importing it with wardn, not by extracting its files. `valt decrypt` then offers to restore it
+that way, with the program if it is installed, or with Nix or Homebrew; add `--extract` to extract its files instead.
+
 Use `valt COMMAND --help` for details. Commands that need a private key use `-i KEY_FILE`, or the default key: the
 `VALT_KEY_FILE` environment variable, else the key set with `valt default-key` (your first key, unless you change
 it), else `USER.key` in the valt config directory.

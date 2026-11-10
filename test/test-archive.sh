@@ -41,6 +41,17 @@ main() {
     testExtractSecureArchiveCustomOutputDir
     testExtractSecureArchiveFailsOnTamperedOuter
 
+    # Manifests
+    testManifestInsideEncryptionAndSigned
+    testDefaultManifest
+    testInvalidManifestRejected
+    testManifestHandlerDecidesExtraction
+    testDefaultManifestHandled
+    testRestorePathways
+    testShowRestoreCommands
+    testReadmeRestoreSection
+    testDecryptCommandRestoresInsteadOfExtracting
+
     # Validation
     testMissingIdentityFails
     testMissingRecipientFails
@@ -421,6 +432,156 @@ testMissingInputFails() {
     ( newSecureArchive -i "${keyFile}" -R "${pubFile}" ) 2> /dev/null \
         && fail "must fail without input files"
     return 0
+}
+
+# ─── Manifests ───────────────────────────────────────────────────────────────
+
+# Writes a wardn-like manifest to a file, setting the named var to its path; with 'no-nix', it offers no Nix way.
+
+newManifestFile() {
+    local -n _nmfRef=$1
+    local nix='"nix": "github:phoggy/wardn/v0.2.0#restore",'
+    [[ ${2:-} == no-nix ]] && nix=''
+    _nmfRef="${ makeTempDir; }/manifest.json"
+    cat > "${_nmfRef}" << MANIFEST
+{ "kind": "wardn vault backup", "tool": "wardn", "version": "0.2.0", "extract": "discouraged",
+  "restore": { "args": ["restore", "{archive}", "-i", "{identity}"], ${nix} "brew": "rayvn-central/brew/wardn" } }
+MANIFEST
+}
+
+# Creates an archive of the test input with a manifest, setting the named vars to the archive and manifest paths.
+
+newManifestArchive() {
+    local -n _nmaArchiveRef=$1
+    local -n _nmaManifestRef=$2
+    newManifestFile _nmaManifestRef
+    local outputDir; outputDir="${ makeTempDir; }"
+    _nmaArchiveRef="${ newSecureArchive -C "${testInputDir}" file1.txt -i "${keyFile}" -R "${pubFile}" -n test -o "${outputDir}" \
+        -m "${_nmaManifestRef}"; }" || fail "creating an archive with a manifest failed"
+}
+
+testManifestInsideEncryptionAndSigned() {
+    local archive manifest; newManifestArchive archive manifest
+    local outer inner; outer="${ makeTempDir; }"; inner="${ makeTempDir; }"
+    tar xJf "${archive}" -C "${outer}" || fail
+    [[ ! -e ${outer}/${_archiveManifestName} ]] || fail "the manifest must not be outside the encryption"
+    decrypt -i "${keyFile}" -o "${inner}/decrypted.tar.xz" "${outer}/${_archiveEncryptedName}" || fail
+    tar xJf "${inner}/decrypted.tar.xz" -C "${inner}" || fail
+    assertEqual "${ jq -c . "${manifest}"; }" "${ jq -c 'del(.valtVersion, .archiveVersion)' "${inner}/${_archiveManifestName}"; }" \
+        "the manifest given must be kept, with only the versions added"
+    assertEqual "${_archiveVersion}" "${ jq -r .archiveVersion "${inner}/${_archiveManifestName}"; }"
+    [[ -n ${ jq -r '.valtVersion // empty' "${inner}/${_archiveManifestName}"; } ]] || fail "the valt version must be added"
+    verifyFileSignature "${keyFile}" "${inner}/${_archiveManifestName}" "${inner}/${_archiveManifestSigName}"
+}
+
+# An archive made without a manifest gets the default: a valt secure archive, with the versions it was made with
+
+testDefaultManifest() {
+    local manifest="${innerExtractDir}/${_archiveManifestName}"
+    assertFile "${manifest}"
+    verifyFileSignature "${keyFile}" "${manifest}" "${innerExtractDir}/${_archiveManifestSigName}"
+    assertEqual 'valt secure archive' "${ jq -r .kind "${manifest}"; }"
+    assertEqual 'valt' "${ jq -r .tool "${manifest}"; }"
+    assertEqual "${ jq -r .valtVersion "${manifest}"; }" "${ jq -r .version "${manifest}"; }"
+    assertEqual 'null' "${ jq -r .restore "${manifest}"; }" "the default manifest offers no restore"
+}
+
+testInvalidManifestRejected() {
+    local bad; bad="${ makeTempDir; }/bad.json"
+    echo '{ "tool": "wardn" }' > "${bad}" # no kind
+    local output; output="${ ( newSecureArchive -C "${testInputDir}" file1.txt -i "${keyFile}" -R "${pubFile}" -n bad \
+        -o "${ makeTempDir; }" -m "${bad}" ) 2>&1; }"
+    assertContains "not a valid archive manifest" "${output}"
+    echo '{ "kind": "x", "tool": "rm -rf", "restore": { "args": [] } }' > "${bad}" # not a command name
+    output="${ ( newSecureArchive -C "${testInputDir}" file1.txt -i "${keyFile}" -R "${pubFile}" -n bad \
+        -o "${ makeTempDir; }" -m "${bad}" ) 2>&1; }"
+    assertContains "not a valid archive manifest" "${output}"
+}
+
+handlerSaysNo() { cp "$1" "${handledManifest}"; return 1; }
+handlerSaysYes() { cp "$1" "${handledManifest}"; return 0; }
+
+testManifestHandlerDecidesExtraction() {
+    local archive manifest; newManifestArchive archive manifest
+    declare -g handledManifest; handledManifest="${ makeTempDir; }/handled.json"
+    local outputDir; outputDir="${ makeTempDir; }"
+    extractSecureArchive "${archive}" -i "${keyFile}" -o "${outputDir}" --manifest-handler handlerSaysNo || fail
+    assertFileDoesNotExist "${outputDir}/file1.txt"
+    assertEqual "${ jq -c . "${manifest}"; }" "${ jq -c 'del(.valtVersion, .archiveVersion)' "${handledManifest}"; }" "the handler must get the manifest"
+    extractSecureArchive "${archive}" -i "${keyFile}" -o "${outputDir}" --manifest-handler handlerSaysYes || fail
+    assertFile "${outputDir}/file1.txt"
+}
+
+# With the default manifest, the handler is given it (here deciding not to extract), and valt decrypt extracts quietly
+
+testDefaultManifestHandled() {
+    declare -g handledManifest; handledManifest="${ makeTempDir; }/handled.json"
+    local outputDir; outputDir="${ makeTempDir; }"
+    extractSecureArchive "${archiveFile}" -i "${keyFile}" -o "${outputDir}" --manifest-handler handlerSaysNo || fail
+    assertEqual 'valt secure archive' "${ jq -r .kind "${handledManifest}"; }"
+    local output; output="${ rayvnTest_ValtKeyPassphrase="${rayvnTest_ValtKeyPassphrase}" valt decrypt "${archiveFile}" \
+        -i "${keyFile}" -o "${outputDir}" 2>&1 < /dev/null; }"
+    assertEqual 0 $? "decrypt must succeed: ${output}"
+    assertFile "${outputDir}/file1.txt"
+    [[ ${output} != *'This archive is'* ]] || fail "a plain valt archive needs no explaining: ${output}"
+}
+
+# The program installed comes first, then Nix, then Homebrew, which is not offered once the program is installed
+
+testRestorePathways() {
+    local manifest noNix; newManifestFile manifest; newManifestFile noNix no-nix
+    local -a pathways
+    local -x rayvnTest_ArchiveCommands
+    rayvnTest_ArchiveCommands='wardn nix brew'; archiveRestorePathways "${manifest}" pathways
+    assertEqual 'installed nix' "${pathways[*]}"
+    rayvnTest_ArchiveCommands='nix brew'; archiveRestorePathways "${manifest}" pathways
+    assertEqual 'nix brew' "${pathways[*]}"
+    rayvnTest_ArchiveCommands='brew'; archiveRestorePathways "${manifest}" pathways
+    assertEqual 'brew' "${pathways[*]}"
+    rayvnTest_ArchiveCommands='nix'; archiveRestorePathways "${noNix}" pathways
+    assertEqual '' "${pathways[*]}" "a manifest with no Nix way must not offer Nix"
+    rayvnTest_ArchiveCommands=''; archiveRestorePathways "${manifest}" pathways
+    assertEqual '' "${pathways[*]}"
+}
+
+testShowRestoreCommands() {
+    local manifest; newManifestFile manifest
+    local output; output="${ showArchiveRestoreCommands "${manifest}" backup.valt '<key>'; }"
+    assertContains 'wardn restore backup.valt -i <key>' "${output}"
+    assertContains 'nix run github:phoggy/wardn/v0.2.0#restore -- restore backup.valt -i <key>' "${output}"
+    assertContains 'brew install rayvn-central/brew/wardn' "${output}"
+}
+
+testReadmeRestoreSection() {
+    local archive manifest; newManifestArchive archive manifest
+    local outer; outer="${ makeTempDir; }"
+    tar xJf "${archive}" -C "${outer}" || fail
+    local readme; readFile "${outer}/${_archiveReadMeName}" readme
+    assertContains '▋ Restore' "${readme}"
+    assertContains 'This archive is a wardn vault backup, made with wardn 0.2.0.' "${readme}"
+    assertContains "nix run github:phoggy/wardn/v0.2.0#restore -- restore ${ baseName "${archive}"; } -i <private-key-file>" \
+        "${readme}"
+    [[ ${ cat "${outerExtractDir}/${_archiveReadMeName}"; } != *'▋ Restore'* ]] || fail "an archive without a manifest needs no Restore section"
+}
+
+# Without a terminal, valt decrypt shows how to restore rather than extracting; --extract extracts, with a warning
+
+testDecryptCommandRestoresInsteadOfExtracting() {
+    local archive manifest; newManifestArchive archive manifest
+    local outputDir; outputDir="${ makeTempDir; }"
+    local output; output="${ rayvnTest_ValtKeyPassphrase="${rayvnTest_ValtKeyPassphrase}" valt decrypt "${archive}" \
+        -i "${keyFile}" -o "${outputDir}" 2>&1 < /dev/null; }"
+    assertEqual 0 $? "decrypt must succeed: ${output}"
+    output="${ stripAnsi "${output}"; }"
+    assertContains 'This archive is a wardn vault backup, made with wardn 0.2.0.' "${output}"
+    assertContains "restore ${archive} -i" "${output}"
+    assertFileDoesNotExist "${outputDir}/file1.txt"
+
+    output="${ rayvnTest_ValtKeyPassphrase="${rayvnTest_ValtKeyPassphrase}" valt decrypt "${archive}" -i "${keyFile}" \
+        -o "${outputDir}" --extract 2>&1 < /dev/null; }"
+    assertEqual 0 $? "decrypt --extract must succeed: ${output}"
+    assertContains 'extracting its files as asked' "${ stripAnsi "${output}"; }"
+    assertFile "${outputDir}/file1.txt"
 }
 
 source rayvn.up 'rayvn/test' 'valt/archive' 'valt/decrypt'

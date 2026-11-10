@@ -63,6 +63,7 @@ _valt() {
                                     ;;
                                 extract)
                                     _arguments \
+                                    '(--extract)'--extract'[For an archive made by another program that says how to restore it (e.g. a wardn vault backup), extract its files instead of restoring it.]' \
                                     '(--help -h)'{--help,-h}'[Print this help message.]' \
                                     '(--identity -i)'{--identity,-i}'[Your private key file (default: the default key; see '\''valt default-key'\'').]:identity:_files' \
                                     '(--output-dir -o)'{--output-dir,-o}'[The existing directory to extract into (default: the current directory).]:output-dir:_files -/' \
@@ -80,6 +81,7 @@ _valt() {
                     ;;
                 decrypt)
                     _arguments \
+                    '(--extract)'--extract'[For an archive made by another program that says how to restore it (e.g. a wardn vault backup), extract its files instead of restoring it.]' \
                     '(--force -f)'{--force,-f}'[Overwrite an existing output file.]' \
                     '(--help -h)'{--help,-h}'[Print this help message.]' \
                     '(--identity -i)'{--identity,-i}'[The private key file (default: the default key; see '\''valt default-key'\'').]:identity:_files' \

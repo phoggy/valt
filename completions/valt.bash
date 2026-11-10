@@ -39,7 +39,7 @@ __valtComplete() {
             local _relIdx=$(( cword - 3 ))
             ;;
         "archive extract")
-            [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--help --identity --output-dir -h -i -o" -- "${cur}")); return; }
+            [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--extract --help --identity --output-dir -h -i -o" -- "${cur}")); return; }
             case "${prev}" in
                 --identity|-i) COMPREPLY=($(compgen -f -- "${cur}")); return ;;
                 --output-dir|-o) COMPREPLY=($(compgen -d -- "${cur}")); return ;;
@@ -58,7 +58,7 @@ __valtComplete() {
         *)
             case "${words[1]}" in
                 decrypt)
-                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--force --help --identity --output -f -h -i -o" -- "${cur}")); return; }
+                    [[ "${cur}" == -* ]] && { COMPREPLY=($(compgen -W "--extract --force --help --identity --output -f -h -i -o" -- "${cur}")); return; }
                     case "${prev}" in
                         --identity|-i) COMPREPLY=($(compgen -f -- "${cur}")); return ;;
                     esac

@@ -140,11 +140,14 @@ declare -gA cliSpec=(
     #   --identity  The private key file (default: the default key; see 'valt default-key').
     #   --output    For a file, the output file ('-' for standard output; default: FILE without .age). For an archive, the existing directory to extract into (default: the current directory).
     #   --force     Overwrite an existing output file.
+    #   --extract   For an archive made by another program that says how to restore it (e.g. a wardn vault backup), extract its files instead of restoring it.
     #
     # If a signature file (FILE.minisig) is present, it is verified before decrypting and decryption
     # stops if it does not match. A warning is shown if there is no signature. Archives always contain
-    # signatures, which are verified before extracting.
-    ['decrypt']='decrypt(file --identity|-i:file --output|-o:str --force|-f --help|-h)'
+    # signatures, which are verified before extracting. An archive made by another program, e.g. a wardn
+    # vault backup, can say what it is and how to restore it: valt then offers to restore it with that
+    # program (installed, or with Nix or Homebrew), rather than extracting its files.
+    ['decrypt']='decrypt(file --identity|-i:file --output|-o:str --force|-f --extract --help|-h)'
 
     # Encrypt a single file to FILE.age and sign it with your private key (FILE.age.minisig). Your own
     # public key is always a recipient unless --no-self is given. Use 'valt archive create' for
@@ -194,7 +197,8 @@ declare -gA cliSpec=(
     #   ARCHIVE       The secure archive (.valt).
     #   --identity    Your private key file (default: the default key; see 'valt default-key').
     #   --output-dir  The existing directory to extract into (default: the current directory).
-    ['archive extract']='archiveExtract(file --identity|-i:file --output-dir|-o:dir --help|-h)'
+    #   --extract     For an archive made by another program that says how to restore it (e.g. a wardn vault backup), extract its files instead of restoring it.
+    ['archive extract']='archiveExtract(file --identity|-i:file --output-dir|-o:dir --extract --help|-h)'
 
     # Generate random passphrases. Passphrases are made of words chosen at random from a list of
     # 17,576, so they are much easier to remember than random passwords of similar strength. Use
@@ -394,11 +398,13 @@ parseArchiveExtractArgs() {
     local _argIndex=0 _value
     while (( $# > 0 )); do
         case "$1" in
+            --extract) _opts+=(['extract']="1"); shift ;;
+            --extract=*) fail "--extract does not accept a value" ;;
             --help | -h) _opts+=(['help']="1"); shift ;;
             --help=*) fail "--help does not accept a value" ;;
-            --identity | -i) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--output-dir|--identity|-o|-h|-i|--help)$ ) ]] && fail "missing value for --identity"; assertFile "$2"; _opts+=(['identity']="$2"); shift 2 ;;
+            --identity | -i) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--extract|--output-dir|--identity|-o|-h|-i|--help)$ ) ]] && fail "missing value for --identity"; assertFile "$2"; _opts+=(['identity']="$2"); shift 2 ;;
             --identity=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --identity"; assertFile "${_value}"; _opts+=(['identity']="${_value}"); shift ;;
-            --output-dir | -o) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--output-dir|--identity|-o|-h|-i|--help)$ ) ]] && fail "missing value for --output-dir"; assertDirectory "$2"; _opts+=(['output-dir']="$2"); shift 2 ;;
+            --output-dir | -o) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--extract|--output-dir|--identity|-o|-h|-i|--help)$ ) ]] && fail "missing value for --output-dir"; assertDirectory "$2"; _opts+=(['output-dir']="$2"); shift 2 ;;
             --output-dir=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --output-dir"; assertDirectory "${_value}"; _opts+=(['output-dir']="${_value}"); shift ;;
             --) shift
                 while (( $# > 0 )); do
@@ -416,13 +422,16 @@ archiveExtractCmdUsage() {
     echo
     show bold "Verify and extract a secure archive (.valt). Same as 'valt decrypt ARCHIVE'."
     echo
-    show "Usage:" bold blue "valt archive extract" "ARCHIVE [-i IDENTITY] [-o OUTPUT-DIR]"
+    show "Usage:" bold blue "valt archive extract" "ARCHIVE [--extract] [-i IDENTITY] [-o OUTPUT-DIR]"
     echo
     option "ARCHIVE" "The secure archive (.valt)." 33
     option "-i, --identity IDENTITY" "Your private key file (default: the default key; see 'valt" 33
     option "" "default-key')." 33
     option "-o, --output-dir OUTPUT-DIR" "The existing directory to extract into (default: the current" 33
     option "" "directory)." 33
+    option "--extract" "For an archive made by another program that says how to restore it" 33
+    option "" "(e.g. a wardn vault backup), extract its files instead of restoring" 33
+    option "" "it." 33
     option "-h, --help" "Print this help message." 33
     declare -F archiveExtractCmdUsageExtra > /dev/null && archiveExtractCmdUsageExtra
     bye "$@"
@@ -471,13 +480,15 @@ parseDecryptArgs() {
     local _argIndex=0 _value
     while (( $# > 0 )); do
         case "$1" in
+            --extract) _opts+=(['extract']="1"); shift ;;
+            --extract=*) fail "--extract does not accept a value" ;;
             --force | -f) _opts+=(['force']="1"); shift ;;
             --force=*) fail "--force does not accept a value" ;;
             --help | -h) _opts+=(['help']="1"); shift ;;
             --help=*) fail "--help does not accept a value" ;;
-            --identity | -i) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--output|--identity|-f|-o|-h|-i|--help|--force)$ ) ]] && fail "missing value for --identity"; assertFile "$2"; _opts+=(['identity']="$2"); shift 2 ;;
+            --identity | -i) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--output|--extract|--identity|-f|-o|-h|-i|--help|--force)$ ) ]] && fail "missing value for --identity"; assertFile "$2"; _opts+=(['identity']="$2"); shift 2 ;;
             --identity=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --identity"; assertFile "${_value}"; _opts+=(['identity']="${_value}"); shift ;;
-            --output | -o) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--output|--identity|-f|-o|-h|-i|--help|--force)$ ) ]] && fail "missing value for --output"; _opts+=(['output']="$2"); shift 2 ;;
+            --output | -o) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--output|--extract|--identity|-f|-o|-h|-i|--help|--force)$ ) ]] && fail "missing value for --output"; _opts+=(['output']="$2"); shift 2 ;;
             --output=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --output"; _opts+=(['output']="${_value}"); shift ;;
             --) shift
                 while (( $# > 0 )); do
@@ -496,7 +507,7 @@ decryptCmdUsage() {
     show bold "Decrypt an encrypted file, or verify and extract a secure archive (.valt). You will be prompted for"
     show bold "the passphrase that protects the private key."
     echo
-    show "Usage:" bold blue "valt decrypt" "FILE [-f] [-i IDENTITY] [-o OUTPUT]"
+    show "Usage:" bold blue "valt decrypt" "FILE [--extract] [-f] [-i IDENTITY] [-o OUTPUT]"
     echo
     option "FILE" "The encrypted file (.age) or secure archive (.valt)." 29
     option "-i, --identity IDENTITY" "The private key file (default: the default key; see 'valt" 29
@@ -505,11 +516,15 @@ decryptCmdUsage() {
     option "" "without .age). For an archive, the existing directory to extract into" 29
     option "" "(default: the current directory)." 29
     option "-f, --force" "Overwrite an existing output file." 29
+    option "--extract" "For an archive made by another program that says how to restore it" 29
+    option "" "(e.g. a wardn vault backup), extract its files instead of restoring it." 29
     option "-h, --help" "Print this help message." 29
     echo
     echo "If a signature file (FILE.minisig) is present, it is verified before decrypting and decryption"
     echo "stops if it does not match. A warning is shown if there is no signature. Archives always contain"
-    echo "signatures, which are verified before extracting."
+    echo "signatures, which are verified before extracting. An archive made by another program, e.g. a wardn"
+    echo "vault backup, can say what it is and how to restore it: valt then offers to restore it with that"
+    echo "program (installed, or with Nix or Homebrew), rather than extracting its files."
     declare -F decryptCmdUsageExtra > /dev/null && decryptCmdUsageExtra
     bye "$@"
 }
@@ -1192,7 +1207,7 @@ archiveVerifyCmd() {
     local keyFile; keyFile="${ identityKeyFile; }"
     assertFile "${keyFile}" "private key file"
     show "Verifying secure archive" cyan "${ tildePath "${archive}"; }"
-    verifySecureArchive "${archive}" -i "${keyFile}" || fail
+    verifySecureArchive "${archive}" -i "${keyFile}" --manifest-handler showArchiveManifest || fail
     show "Signatures verified for" bold "${ tildePath "${archive}"; }"
 }
 
@@ -1543,8 +1558,88 @@ extractArchive() {
     local file="$1" keyFile="$2" destDir="$3"
     require 'valt/archive'
     show "Verifying and extracting secure archive" cyan "${ tildePath "${file}"; }"
-    extractSecureArchive "${file}" -i "${keyFile}" -o "${destDir}" || fail
-    show "Extracted to" bold "${ tildePath "${destDir}"; }"
+    declare -g _manifestArchiveFile="${file}" _manifestKeyFile="${keyFile}" _manifestExtract=0
+    extractSecureArchive "${file}" -i "${keyFile}" -o "${destDir}" --manifest-handler handleArchiveManifest || fail
+    (( _manifestExtract )) && show "Extracted to" bold "${ tildePath "${destDir}"; }"
+    return 0
+}
+
+# The manifest handler for extracting (see Manifests in valt/archive): says what the archive is and, if its manifest
+# offers it, restores it with the program that made it, in a way available here, rather than extracting its files.
+# Succeeds, so that the files are extracted, with --extract, if the user chooses to, or if the manifest offers no way to
+# restore; a manifest that discourages extracting gets a warning first. Without a terminal, shows the commands instead.
+
+handleArchiveManifest() {
+    local manifestFile="$1"
+    local about; about="${ _archiveManifestAbout "${manifestFile}"; }"
+    local discouraged=0
+    [[ ${ jq -r '.extract // "allowed"' "${manifestFile}"; } == discouraged ]] && discouraged=1
+    local warning="its files are what the program restores from, e.g. unencrypted secrets"
+
+    if (( _opts['extract'] )) || [[ -z ${ jq -r '.restore // empty' "${manifestFile}"; } ]]; then
+        (( discouraged )) && warn "This archive is ${about}; extracting its files as asked, though ${warning}."
+        declare -g _manifestExtract=1
+        return 0
+    fi
+
+    local tool; tool="${ jq -r '.tool' "${manifestFile}"; }"
+    local version; version="${ jq -r '.version // empty' "${manifestFile}"; }"
+    show nl "This archive is" bold "${about}" glue ". Rather than extracting its files, restore it with" bold "${tool}" \
+         glue "."
+    local -a pathways=()
+    archiveRestorePathways "${manifestFile}" pathways
+
+    if (( ${#pathways[@]} == 0 )); then
+        show nl "Neither ${tool}, Nix nor Homebrew is on this computer. Install one (see" blue "https://nixos.org/download" \
+             "or" blue "https://brew.sh" glue "), then run one of:" nl
+        showArchiveRestoreCommands "${manifestFile}" "${_manifestArchiveFile}" "${ tildePath "${_manifestKeyFile}"; }" 4
+        show nl "Or, to extract its files instead, add" bold "--extract" glue "."
+        return 1
+    fi
+    if [[ ! -t 0 || ! -t 1 ]]; then
+        show nl "To restore it, run one of:" nl
+        showArchiveRestoreCommands "${manifestFile}" "${_manifestArchiveFile}" "${ tildePath "${_manifestKeyFile}"; }" 4
+        show nl "Or, to extract its files instead, add" bold "--extract" glue "."
+        return 1
+    fi
+
+    require 'rayvn/prompt'
+    local -a choices=() actions=()
+    local pathway
+    for pathway in "${pathways[@]}"; do
+        case ${pathway} in
+            installed) choices+=("Restore with ${tool} (installed)") ;;
+            nix) choices+=("Restore with ${tool}${version:+ ${version}}, run by Nix (installs nothing)") ;;
+            brew) choices+=("Install ${tool} with Homebrew, then restore") ;;
+        esac
+        actions+=("${pathway}")
+    done
+    if (( discouraged )); then
+        choices+=("Extract the files instead (not recommended: ${warning})")
+    else
+        choices+=("Extract the files instead")
+    fi
+    actions+=(extract)
+    choices+=("Cancel")
+    actions+=(cancel)
+
+    local choice
+    echo
+    choose "What next?" choices choice || return 1
+    case ${actions[choice]} in
+        extract) declare -g _manifestExtract=1; return 0 ;;
+        cancel) return 1 ;;
+    esac
+    echo
+    runArchiveRestore "${manifestFile}" "${actions[choice]}" "${_manifestArchiveFile}" "${_manifestKeyFile}" ||
+        fail "${tool} could not restore ${ tildePath "${_manifestArchiveFile}"; }"
+    return 1
+}
+
+# The manifest handler for verifying: says what the archive is.
+
+showArchiveManifest() {
+    show "This archive is" bold "${ _archiveManifestAbout "$1"; }" glue "."
 }
 
 # Removes the directory in which replacement keys are created, if any (also run on exit, e.g. after a failure).

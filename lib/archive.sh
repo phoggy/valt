@@ -12,15 +12,17 @@
 # corruption or tampering is detected with confidence; and it gives a provenance chain, e.g. for legal or financial
 # documents.
 #
-# It is a tar file. The files are packed in a payload, which is signed, then encrypted together with the signature,
-# the public keys and a README; the encrypted file is signed again, and kept next to its signature, the public keys and
-# a README with instructions for anyone opening it:
+# It is a tar file. The files are packed in a payload, which is signed, then encrypted together with the signature, a
+# signed manifest (see Manifests below), the public keys and a README; the encrypted file is signed again, and kept next
+# to its signature, the public keys and a README with instructions for anyone opening it:
 #
 #     backup-2026-05-28_23.14_PDT.valt
 #     │
 #     ├── encrypted.tar.xz.age
 #     │   ├── payload.tar
 #     │   ├── payload.tar.minisig
+#     │   ├── manifest.json
+#     │   ├── manifest.json.minisig
 #     │   ├── minisign.pub
 #     │   ├── age.pub
 #     │   └── README.txt
@@ -47,6 +49,35 @@
 # Opening an archive needs only tar, age and minisign, as its README explains; `valt decrypt` (or `valt archive
 # extract`) verifies both signatures and extracts it in one step, and `valt archive verify` checks it without
 # extracting.
+#
+# ### Manifests
+#
+# Every archive has a manifest (`manifest.json`, inside the encryption and signed) saying what it is, with the valt and
+# archive format versions it was made with; by default, a valt secure archive:
+#
+#     { "kind": "valt secure archive", "tool": "valt", "version": "0.3.0", "valtVersion": "0.3.0", "archiveVersion": "1.0" }
+#
+# An archive made by another program, e.g. a wardn vault backup, can give its own, saying what it is and how to restore
+# it (valt adds the versions): restoring a vault backup means importing it with wardn, not extracting the vault's
+# unencrypted export. For example:
+#
+#     {
+#       "kind": "wardn vault backup",
+#       "tool": "wardn",
+#       "version": "0.2.0",
+#       "extract": "discouraged",
+#       "restore": {
+#         "args": ["restore", "{archive}", "-i", "{identity}"],
+#         "nix": "github:phoggy/wardn/v0.2.0#restore",
+#         "brew": "rayvn-central/brew/wardn"
+#       }
+#     }
+#
+# Before extracting, `valt decrypt` says what the archive is and offers to restore it with the program, in whichever
+# ways this computer can: the program if it is installed, Nix (running the pinned release without installing it), or
+# Homebrew (installing it first). It extracts the files only if asked to (`--extract`), and warns when the manifest
+# discourages it. Nothing in the archive is run: the manifest only names a published program. Like the rest of the
+# archive, it is only accepted when signed by the key that decrypts it. The archive's README gives the same commands.
 #@end
 
 # ◇ Create an encrypted, signed archive from one or more files, directories and archives. The archive file path is written to
@@ -56,7 +87,7 @@
 # · USAGE
 #
 #   newSecureArchive ([-C DIR] INPUT...) -i PATH (-r RECIPIENT | -R PATH)... [-f] [-n NAME] [-z ZONE] [-u TEXT] [-o DIR]
-#                    [--no-mac-metadata] [--no-public]
+#                    [-m PATH] [--no-mac-metadata] [--no-public]
 #
 #   -i, --identity PATH        The valt private key file used to sign the archive.
 #   -r, --recipient RECIPIENT  Encrypt to the specified RECIPIENT. See the recipient() function in 'valt/keys'.
@@ -69,6 +100,9 @@
 #                              zone name such as 'America/Los_Angeles' (default: local).
 #   -u, --user-text TEXT       User text to include in readme. Can contain '\n'.
 #   -o, --output-dir DIR       Specify the archive destination directory path (default: ${PWD}).
+#   -m, --manifest PATH        A manifest (JSON) saying what the archive is and how to restore it, for an archive made
+#                              by another program, e.g. a wardn vault backup (default: one saying that it is a valt
+#                              secure archive). See Manifests below.
 #   --no-mac-metadata          Do not keep the macOS metadata (extended attributes such as Finder tags, ACLs and file
 #                              flags) of the INPUT files. It is kept by default, but only macOS tar restores it; other
 #                              tars may warn about it. Metadata is never kept for the archive's own files.
@@ -101,6 +135,7 @@ newSecureArchive() {
     local currentDir="${PWD}"
     local stripMetadata=0
     local createPublic=1
+    local manifestFile=''
 
     # Parse options
 
@@ -114,6 +149,7 @@ newSecureArchive() {
             -z | --zone) shift; timeZoneName="$1" ;;
             -u | --user-text) shift; userReadmeText="$1" ;;
             -o | --output-dir) shift; assertDirectory "$1"; destDir="$1" ;;
+            -m | --manifest) shift; _assertArchiveManifest "$1"; manifestFile="$1" ;;
             --no-mac-metadata) stripMetadata=1 ;;
             --no-public) createPublic=0 ;;
             -C ) shift; tarArgs+=(-C "$1"); [[ "$1" == /* ]] && currentDir="$1" || currentDir="${PWD}/$1" ;;
@@ -175,9 +211,25 @@ newSecureArchive() {
     assertFile "${tempFile}"
     mv "${tempFile}" "${workDir}/${_archiveSigPubName}" || fail
 
+    # Write the manifest and sign it: the one given, or a default saying that this is a valt secure archive, either way
+    # with the valt and archive format versions it was made with
+
+    local valtVersion; valtVersion=${ gawk -F"'" '/^projectVersion=/{print $2}' "${valtHome}/rayvn.pkg"; }
+    local versions='{valtVersion: $valtVersion, archiveVersion: $archiveVersion}'
+    if [[ -n ${manifestFile} ]]; then
+        jq --arg valtVersion "${valtVersion}" --arg archiveVersion "${_archiveVersion}" ". + ${versions}" \
+           "${manifestFile}" > "${workDir}/${_archiveManifestName}" || fail
+    else
+        jq -n --arg valtVersion "${valtVersion}" --arg archiveVersion "${_archiveVersion}" \
+           "{kind: \"valt secure archive\", tool: \"valt\", version: \$valtVersion} + ${versions}" \
+           > "${workDir}/${_archiveManifestName}" || fail
+    fi
+    signFile "${privateKey}" "${workDir}/${_archiveManifestName}" || fail
+
     # Create the private README file
 
-    _privateReadMe "${workDir}/${_archiveReadMeName}" "${archiveName}" "${userReadmeText}" "${timestamp}"
+    _privateReadMe "${workDir}/${_archiveReadMeName}" "${archiveName}" "${userReadmeText}" "${timestamp}" \
+                   "${manifestFile}"
 
     # Create the payload file and sign it
 
@@ -191,11 +243,12 @@ newSecureArchive() {
 
     # Remove the payload files so we only have the encrypted forms
 
-    rm "${workDir}/${_archivePayloadName}" "${workDir}/${_archivePayloadSigName}"|| fail
+    rm -f "${workDir}/${_archivePayloadName}" "${workDir}/${_archivePayloadSigName}" "${workDir}/${_archiveManifestName}" \
+          "${workDir}/${_archiveManifestSigName}" || fail
 
     # Create the public README file (overwrites the private one already in the encrypted tar)
 
-    _publicReadMe "${workDir}/${_archiveReadMeName}" "${archiveName}" "${userReadmeText}" "${timestamp}"
+    _publicReadMe "${workDir}/${_archiveReadMeName}" "${archiveName}" "${userReadmeText}" "${timestamp}" "${manifestFile}"
 
     # Create the archive files
 
@@ -210,21 +263,23 @@ newSecureArchive() {
 }
 
 # ◇ Verify the signatures of a secure archive. Checks both the outer encrypted archive signature
-#   and the inner payload signature (requires decryption with the private key).
+#   and the inner payload signature (requires decryption with the private key), and the manifest's, if any.
 #
 # · USAGE
 #
-#   verifySecureArchive ARCHIVE -i PATH
+#   verifySecureArchive ARCHIVE -i PATH [--manifest-handler FN]
 #
-#   ARCHIVE              Path to the .valt archive file.
-#   -i, --identity PATH  The valt private key file used to decrypt and verify signatures.
+#   ARCHIVE                Path to the .valt archive file.
+#   -i, --identity PATH    The valt private key file used to decrypt and verify signatures.
+#   --manifest-handler FN  A function to call with the path of the archive's verified manifest, if it has one.
 
 verifySecureArchive() {
-    local archiveFile keyFile
+    local archiveFile keyFile manifestHandler=''
 
     while (( $# )); do
         case "$1" in
             -i | --identity) shift; _assertValtKey "$1"; keyFile="$1" ;;
+            --manifest-handler) shift; manifestHandler="$1" ;;
             *) [[ -z ${archiveFile} ]] || invalidArgs "unexpected argument: $1"
                assertFile "$1"; archiveFile="$1" ;;
         esac
@@ -256,10 +311,14 @@ verifySecureArchive() {
     decrypt -i "${keyFile}" -o "${innerDir}/decrypted.tar.xz" "${outerDir}/${_archiveEncryptedName}" || fail
     tar xJf "${innerDir}/decrypted.tar.xz" -C "${innerDir}" || fail
 
-    # Verify inner payload signature
+    # Verify inner payload signature, and the manifest's
 
     verifyFileSignature "${keyFile}" "${innerDir}/${_archivePayloadName}" \
                         "${innerDir}/${_archivePayloadSigName}"
+    _verifyArchiveManifest "${keyFile}" "${innerDir}"
+    [[ -n ${manifestHandler} && -f ${innerDir}/${_archiveManifestName} ]] &&
+        "${manifestHandler}" "${innerDir}/${_archiveManifestName}"
+    return 0
 }
 
 # ◇ Verify and extract the contents of a secure archive into a directory.
@@ -267,18 +326,21 @@ verifySecureArchive() {
 #
 # · USAGE
 #
-#   extractSecureArchive -i PATH [-o DIR] ARCHIVE
+#   extractSecureArchive -i PATH [-o DIR] [--manifest-handler FN] ARCHIVE
 #
 #   ARCHIVE (file)               The secure archive file to extract.
 #   -i, --identity PATH (file)   The valt key file used to decrypt and verify signatures.
 #   -o, --output-dir DIR (dir)   Directory to extract contents into (default: ${PWD}).
+#   --manifest-handler FN        A function to call with the path of the archive's verified manifest, if it has one
+#                                (see Manifests below), before extracting: extracting goes ahead only if it succeeds.
 
 extractSecureArchive() {
-    local archiveFile keyFile destDir="${PWD}"
+    local archiveFile keyFile destDir="${PWD}" manifestHandler=''
 
     while (( $# )); do
         case "$1" in
             -i | --identity) shift; _assertValtKey "$1"; keyFile="$1" ;;
+            --manifest-handler) shift; manifestHandler="$1" ;;
             -o | --output-dir) shift; assertDirectory "$1"; destDir="$1" ;;
             *) [[ -z ${archiveFile} ]] || invalidArgs "unexpected argument: $1"
                assertFile "$1"; archiveFile="$1" ;;
@@ -311,10 +373,17 @@ extractSecureArchive() {
     decrypt -i "${keyFile}" -o "${innerDir}/decrypted.tar.xz" "${outerDir}/${_archiveEncryptedName}" || fail
     tar xJf "${innerDir}/decrypted.tar.xz" -C "${innerDir}" || fail
 
-    # Verify inner payload signature
+    # Verify inner payload signature, and the manifest's
 
     verifyFileSignature "${keyFile}" "${innerDir}/${_archivePayloadName}" \
                         "${innerDir}/${_archivePayloadSigName}"
+    _verifyArchiveManifest "${keyFile}" "${innerDir}"
+
+    # A manifest handler decides whether to extract, e.g. restoring with the program that made the archive instead
+
+    if [[ -n ${manifestHandler} && -f ${innerDir}/${_archiveManifestName} ]]; then
+        "${manifestHandler}" "${innerDir}/${_archiveManifestName}" || return 0
+    fi
 
     # Extract payload to destination
 
@@ -339,6 +408,86 @@ extractPublicArchive() {
 }
 
 
+# ◇ Set the named array to the ways an archive's manifest offers to restore it that are available here, in order of
+#   preference: 'installed' (its program is on the PATH), 'nix' (with Nix, running the program's pinned release without
+#   installing it) and 'brew' (with Homebrew, installing the program first). Empty if it offers none, or none of them is
+#   available.
+#
+# · ARGS
+#
+#   manifestFile (file)       The archive's manifest (see Manifests in the notes).
+#   pathwaysRef (arrayRef)    Name of the array to set.
+#
+# · ENV VARS
+#
+#   rayvnTest_ArchiveCommands  Test hook: the commands to treat as available, separated by spaces, instead of looking
+#                              them up on the PATH.
+
+archiveRestorePathways() {
+    local manifestFile="$1"
+    local -n _arpPathwaysRef=$2
+    _arpPathwaysRef=()
+    [[ -n ${ jq -r '.restore // empty' "${manifestFile}"; } ]] || return 0
+    local tool; tool="${ jq -r '.tool' "${manifestFile}"; }"
+    local installed=0
+    _archiveCommandAvailable "${tool}" && { installed=1; _arpPathwaysRef+=(installed); }
+    [[ -n ${ jq -r '.restore.nix // empty' "${manifestFile}"; } ]] && _archiveCommandAvailable nix && _arpPathwaysRef+=(nix)
+    (( installed )) || { [[ -n ${ jq -r '.restore.brew // empty' "${manifestFile}"; } ]] && _archiveCommandAvailable brew &&
+                         _arpPathwaysRef+=(brew); }
+    return 0
+}
+
+# ◇ Restore an archive the way its manifest says, by one of the ways archiveRestorePathways lists. Returns the
+#   restoring program's status.
+#
+# · ARGS
+#
+#   manifestFile (file)  The archive's manifest.
+#   pathway (string)     'installed', 'nix' or 'brew'.
+#   archiveFile (file)   The archive to restore.
+#   keyFile (file)       The private key file to restore it with.
+
+runArchiveRestore() {
+    local manifestFile="$1" pathway="$2" archiveFile="$3" keyFile="$4"
+    local -a args=()
+    _archiveRestoreArgs "${manifestFile}" "${archiveFile}" "${keyFile}" args
+    local tool; tool="${ jq -r '.tool' "${manifestFile}"; }"
+    case ${pathway} in
+        installed) "${tool}" "${args[@]}" ;;
+        nix) nix run "${ jq -r '.restore.nix' "${manifestFile}"; }" -- "${args[@]}" ;;
+        brew) brew install "${ jq -r '.restore.brew' "${manifestFile}"; }" && "${tool}" "${args[@]}" ;;
+        *) fail "unknown restore pathway: ${pathway}" ;;
+    esac
+}
+
+# ◇ Output the commands to restore an archive the way its manifest says, one way per paragraph (with the program
+#   installed, with Nix, with Homebrew), whether or not each is available here.
+#
+# · ARGS
+#
+#   manifestFile (file)  The archive's manifest.
+#   archive (string)     The archive's path or name, as shown in the commands.
+#   keyFile (string)     The private key file's path, or a placeholder such as '<private-key-file>'.
+#   [indent] (int)       Spaces to indent by (default: 0).
+
+showArchiveRestoreCommands() {
+    local manifestFile="$1" archive="$2" keyFile="$3" indent="${4:-0}"
+    local pad; pad="${ printf '%*s' "${indent}" ''; }"
+    local -a args=()
+    _archiveRestoreArgs "${manifestFile}" "${archive}" "${keyFile}" args
+    local tool nix brew command
+    tool="${ jq -r '.tool' "${manifestFile}"; }"
+    nix="${ jq -r '.restore.nix // empty' "${manifestFile}"; }"
+    brew="${ jq -r '.restore.brew // empty' "${manifestFile}"; }"
+    command="${ printf '%s' "${tool}"; printf ' %s' "${args[@]}"; }"
+    printf '%sWith %s installed:\n\n%s    %s\n' "${pad}" "${tool}" "${pad}" "${command}"
+    [[ -n ${nix} ]] && printf '\n%sWith Nix, without installing it:\n\n%s    nix run %s --%s\n' "${pad}" "${pad}" "${nix}" \
+        "${ printf ' %s' "${args[@]}"; }"
+    [[ -n ${brew} ]] && printf '\n%sWith Homebrew, installing it first:\n\n%s    brew install %s\n%s    %s\n' "${pad}" \
+        "${pad}" "${brew}" "${pad}" "${command}"
+    return 0
+}
+
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/archive' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 
@@ -356,6 +505,8 @@ _init_valt_archive() {
     #   ├── encrypted.tar.xz.age              _archiveEncryptedName
     #   │   ├── payload.tar                   _archivePayloadName
     #   │   ├── payload.tar.minisig          _archivePayloadSigName
+    #   │   ├── manifest.json                 _archiveManifestName (archives made by valt 0.2.0 and earlier have none)
+    #   │   ├── manifest.json.minisig        _archiveManifestSigName
     #   │   ├── minisign.pub                  _archiveSigPubName
     #   │   ├── age.pub                       _archiveAgePubName
     #   │   └── README.txt                    _archiveReadMeName
@@ -378,13 +529,17 @@ _init_valt_archive() {
     declare -gr _archivePayloadName="payload.tar"
     declare -gr _archivePayloadSigName="${_archivePayloadName}.${_signatureFileSuffix}"
 
+    declare -gr _archiveManifestName="manifest.json"
+    declare -gr _archiveManifestSigName="${_archiveManifestName}.${_signatureFileSuffix}"
+
     declare -gr _archiveEncryptedName="encrypted.${_tarFileExtension}.${_ageFileExtension}"
     declare -gr _archiveEncryptedSigName="${_archiveEncryptedName}.${_signatureFileSuffix}"
 
     # File name lists
 
-    declare -gr _archiveEncryptedFiles=("${_archivePayloadName}" "${_archivePayloadSigName}" "${_archiveAgePubName}" \
-                                        "${_archiveSigPubName}" "${_archiveReadMeName}")
+    declare -gr _archiveEncryptedFiles=("${_archivePayloadName}" "${_archivePayloadSigName}" "${_archiveManifestName}" \
+                                        "${_archiveManifestSigName}" "${_archiveAgePubName}" "${_archiveSigPubName}" \
+                                        "${_archiveReadMeName}")
 
     declare -gr _archiveFiles=("${_archiveEncryptedName}" "${_archiveEncryptedSigName}" "${_archiveAgePubName}" \
                                "${_archiveSigPubName}" "${_archiveReadMeName}")
@@ -398,11 +553,11 @@ _init_valt_archive() {
 }
 
 _publicReadMe() {
-    _renderArchiveReadMe "archive-readme-public.tmpl" "$1" "$2" "$3" "$4"
+    _renderArchiveReadMe "archive-readme-public.tmpl" "$1" "$2" "$3" "$4" "${5:-}"
 }
 
 _privateReadMe() {
-    _renderArchiveReadMe "archive-readme-private.tmpl" "$1" "$2" "$3" "$4"
+    _renderArchiveReadMe "archive-readme-private.tmpl" "$1" "$2" "$3" "$4" "${5:-}"
 }
 
 _renderArchiveReadMe() {
@@ -411,6 +566,7 @@ _renderArchiveReadMe() {
     local archiveName="$3"
     local userText="$4"
     local created="$5"
+    local manifestFile="${6:-}"
 
     local template; readFile "${valtHome}/etc/${templateName}" template
 
@@ -424,6 +580,21 @@ _renderArchiveReadMe() {
         local divider='───────────────────────────────────────────────────────────────────────────────────────────────────'
         userText="${userText//\\n/$'\n'}"
         notesSection=$'\n▋ Notes\n'"${divider}"$'\n\n'"${userText}"$'\n'
+    fi
+
+    # How to restore an archive made by another program, from its manifest
+
+    local restoreSection=''
+    if [[ -n ${manifestFile} ]]; then
+        local divider='───────────────────────────────────────────────────────────────────────────────────────────────────'
+        local about; about="${ _archiveManifestAbout "${manifestFile}"; }"
+        restoreSection=$'\n▋ Restore\n'"${divider}"$'\n\n'"  This archive is ${about}."
+        if [[ -n ${ jq -r '.restore // empty' "${manifestFile}"; } ]]; then
+            restoreSection+=$'\n'"  Rather than extracting its files, restore it, in any of these ways:"$'\n\n'
+            restoreSection+="${ showArchiveRestoreCommands "${manifestFile}" "${archiveName}" '<private-key-file>' 2; }"$'\n'
+            restoreSection+=$'\n'"  valt decrypt ${archiveName} offers whichever of these this computer can do."
+        fi
+        restoreSection+=$'\n'
     fi
 
     # Recovery with Nix: pinned to the valt release current now, with the latest version as the fallback
@@ -447,6 +618,7 @@ _renderArchiveReadMe() {
         "AGE_VERSION:${ageVersion}"
         "MINISIGN_VERSION:${minisignVersion}"
         "NOTES_SECTION:${notesSection}"
+        "RESTORE_SECTION:${restoreSection}"
         "ENCRYPTED_NAME:${_archiveEncryptedName}"
         "ENCRYPTED_SIG_NAME:${_archiveEncryptedSigName}"
         "PAYLOAD_NAME:${_archivePayloadName}"
@@ -461,6 +633,55 @@ _renderArchiveReadMe() {
     done
 
     printf '%s\n' "${template}" > "${outputFile}"
+}
+
+# Fails unless a file is a valid archive manifest: a JSON object with a kind, an optional extract of 'allowed' (the
+# default) or 'discouraged', and, to offer restoring, a tool (a command name), restore.args (strings, in which
+# {archive} and {identity} are replaced) and, optionally, restore.nix (a flake app) and restore.brew (a formula).
+_assertArchiveManifest() {
+    local manifestFile="$1"
+    assertFile "${manifestFile}" "manifest file"
+    # lint-skip-start (jq program)
+    jq -e '
+        def text: type == "string" and length > 0;
+        type == "object" and (.kind | text)
+        and ((.extract // "allowed") | . == "allowed" or . == "discouraged")
+        and (if has("restore") then
+                (.tool | text and test("^[A-Za-z0-9][A-Za-z0-9._-]*$"))
+                and (.restore.args | type == "array" and all(type == "string"))
+                and ((.restore.nix // "x") | text) and ((.restore.brew // "x") | text)
+             else true end)
+    ' "${manifestFile}" > /dev/null 2>&1 || invalidArgs "${manifestFile} is not a valid archive manifest"
+    # lint-skip-end
+}
+
+# Verifies the manifest in an archive's decrypted inner dir against its signature, if there is a manifest.
+_verifyArchiveManifest() {
+    local keyFile="$1" innerDir="$2"
+    [[ -f ${innerDir}/${_archiveManifestName} ]] || return 0
+    verifyFileSignature "${keyFile}" "${innerDir}/${_archiveManifestName}" "${innerDir}/${_archiveManifestSigName}"
+}
+
+# Outputs what a manifest says the archive is, e.g. 'a wardn vault backup, made with wardn 0.2.0'.
+_archiveManifestAbout() {
+    jq -r '"a \(.kind)" + (if .tool then ", made with \(.tool)" + (if .version then " \(.version)" else "" end) else "" end)' "$1"
+}
+
+# Sets the named array to a manifest's restore args, with {archive} and {identity} replaced.
+_archiveRestoreArgs() {
+    local manifestFile="$1" archive="$2" keyFile="$3"
+    local -n _araArgsRef=$4
+    mapfile -t _araArgsRef < <(jq -r --arg archive "${archive}" --arg identity "${keyFile}" \
+        '.restore.args[] | gsub("\\{archive\\}"; $archive) | gsub("\\{identity\\}"; $identity)' "${manifestFile}")
+}
+
+# Succeeds if a command is available: on the PATH, or listed in rayvnTest_ArchiveCommands when that is set.
+_archiveCommandAvailable() {
+    if [[ -v rayvnTest_ArchiveCommands ]]; then
+        [[ " ${rayvnTest_ArchiveCommands} " == *" $1 "* ]]
+    else
+        command -v "$1" > /dev/null 2>&1
+    fi
 }
 
 _checkOutputConflict() {

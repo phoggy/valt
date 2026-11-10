@@ -446,6 +446,8 @@ key.
   checked first, and decryption stops if the file has been tampered with.
 - A secure archive is verified and its contents are extracted into the current directory. Use `-o DIRECTORY` to extract
   somewhere else.
+- An archive made by another program, such as a backup of a password vault, may say so: you are then told what it is
+  and offered to restore it with that program instead, which is usually what you want. Follow what it says.
 
 This downloads and runs the recovery tool automatically; no other software needs to be installed. If you used the
 Intel Mac installer (or Nix reports that flakes are not enabled), add this right after `nix`:
@@ -470,7 +472,9 @@ If you installed `valt`, the equivalent is:
 valt decrypt FILE -i KEY_FILE
 ```
 
-`FILE` and `KEY_FILE` are as above, and so are the results.
+`FILE` and `KEY_FILE` are as above, and so are the results: for an archive made by another program, such as a backup
+of a password vault, you are told what it is and offered to restore it with that program instead, which is usually what
+you want.
 
 == Decrypting Manually
 
@@ -496,7 +500,8 @@ tar xJf FILE.valt
 ```
 
 Then follow the instructions in the `README.txt` file it contains: they use `age` to decrypt, `tar` to unpack, and
-optionally `minisign` to confirm nothing has been tampered with.
+optionally `minisign` to confirm nothing has been tampered with. For an archive made by another program, it also says
+how to restore it with that program, which is usually what you want instead.
 
 In all cases you will be prompted to enter the passphrase that protects the private key.
 
