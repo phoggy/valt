@@ -245,6 +245,20 @@ While they might not know the specific commands, they can help you get comfortab
 *Senior Centers or Community Centers:* If you're looking for a comfortable, non-intimidating environment, these often
 have volunteer tech helpers who are patient and understanding.
 
+=== An AI Assistant <ai-assistant>
+
+An AI chat assistant (on a phone or computer) can explain each step as you go: how to open a terminal, what a command
+does, what an error message means. It is often the quickest help to hand, at any hour.
+
+- *Tell it what you are doing.* For example: "I'm recovering files encrypted with valt, following printed instructions.
+  I'm on a Mac and have never used a terminal. Please walk me through one step at a time." Then type or describe each
+  step, and paste any error message.
+- *Never give it the passphrase, the key (the QR code or the text on the #link(<paper-key>)[Paper Key] pages), or
+  anything you decrypt.* It doesn't need them to help, and anything you type may be kept.
+- *Prefer the commands in these instructions to ones it invents,* and if it suggests something different, ask it why.
+- *It cannot recover a lost passphrase or break the encryption.* Nothing can, so anyone or anything claiming otherwise
+  is wrong, or a scam.
+
 === Last Resort: Online Help
 
 #callout("warning")[
@@ -289,6 +303,7 @@ Here's some language you can use to protect yourself:
   - Seems evasive about confidentiality agreements
   - Pressures you to rush through the process
   - Asks too many questions about what's in the encrypted file
+  - Asks for your passphrase or private key, whether a person or an AI
 
   Just politely decline and find someone else.
 ]
@@ -306,7 +321,8 @@ nature of what you're working with. Take your time, and don't settle for help th
 = Instructions <instructions>
 
 This section assumes familiarity with the terminal and using command line tools. The tools described here run on macOS
-and Linux, and on Windows in its Linux environment, WSL (see #link(<installing-nix>)[Installing Nix]).
+and Linux, and on Windows in its Linux environment, WSL (see #link(<installing-nix>)[Installing Nix]). If a step is
+unclear, an AI assistant can explain it: see #link(<ai-assistant>)[An AI Assistant].
 
 #callout("warning")[
   #calloutTitle("warning")[If _you_ are helping]
