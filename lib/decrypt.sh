@@ -82,10 +82,10 @@ _assertPassphraseStrength() {
     passwordStrength "$1" file '' _apsScore _apsReport
     case $? in
         0) return 0 ;;
-        2) echo "${_apsReport[0]}" > "${terminalErr}"; return 0 ;;
+        2) echo "${_apsReport[0]}" >&${terminalErrFd}; return 0 ;;
     esac
     for _apsLine in "${_apsReport[@]}"; do
-        echo "${_apsLine}" > "${terminalErr}"
+        echo "${_apsLine}" >&${terminalErrFd}
     done
     fail "${_weakPassphraseMessage}"
 }

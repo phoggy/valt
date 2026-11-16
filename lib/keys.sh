@@ -558,7 +558,7 @@ _init_valt_keys() {
     declare -grx _signingPrivateKeyPrefix='# [minisign.key] '
     declare -grx _valtSigningPublicKeyPrefix='untrusted comment: minisign public key'
     declare -grx _ageEncryptedBegin='age-encryption.org/v1'
-    declare -grx _ageScriptRegex='^-\>[[:space:]]+scrypt[[:space:]]+[A-Za-z0-9+/]+=*[[:space:]]+[0-9]+$'
+    declare -grx _ageScriptRegex='^->[[:space:]]+scrypt[[:space:]]+[A-Za-z0-9+/]+=*[[:space:]]+[0-9]+$'
     declare -grx _agePemBegin='-----BEGIN AGE ENCRYPTED FILE-----'
     declare -grx _agePemEnd='-----END AGE ENCRYPTED FILE-----'
 
