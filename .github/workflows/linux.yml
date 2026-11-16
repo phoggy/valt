@@ -1,0 +1,13 @@
+# Runs the Linux tests of rayvn, valt and wardn (defined in rayvn) with this repo at the commit being tested.
+
+name: Linux tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    uses: phoggy/rayvn/.github/workflows/linux.yml@main
