@@ -1,6 +1,6 @@
-# Runs the Linux tests of rayvn, valt and wardn (defined in rayvn) with this repo at the commit being tested.
+# Runs the tests of rayvn, valt and wardn on Linux and macOS (defined in rayvn) with this repo at the commit being tested.
 
-name: Linux tests
+name: Tests
 
 on:
   push:
@@ -9,5 +9,5 @@ on:
   workflow_dispatch:
 
 jobs:
-  linux:
-    uses: phoggy/rayvn/.github/workflows/linux.yml@main
+  tests:
+    uses: phoggy/rayvn/.github/workflows/tests.yml@main

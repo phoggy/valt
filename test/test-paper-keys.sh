@@ -51,6 +51,7 @@ init() {
 
     declare -g testDir keyFile pubFile incompleteInfoFile completedInfoFile
     testDir="${ makeTempDir; }"
+    testDir="${ cd "${testDir}" && pwd -P; }" # physical, as valt reports paths (e.g. /private/var/... on macOS)
     newValtKeys 'test' "${testDir}" pubFile keyFile
 
     incompleteInfoFile="${testDir}/incomplete.json"
