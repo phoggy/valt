@@ -21,6 +21,10 @@ work, where to keep the passphrase, and what makes a passphrase strong.
 
 ```bash
 brew tap rayvn-central/brew
+brew tap phoggy/mrld
+brew tap sts10/phraze
+brew trust --tap rayvn-central/brew
+brew trust --formula phoggy/mrld/mrld sts10/phraze/phraze
 brew install valt
 ```
 
@@ -30,8 +34,10 @@ To upgrade to the latest version:
 brew upgrade valt
 ```
 
-Homebrew installs valt's dependencies too, including those from other taps, such as
-[mrld](https://github.com/phoggy/mrld) (used for password strength estimation): no separate `brew tap` is needed.
+Homebrew installs formulae from taps other than its own only once you trust them, hence `brew trust`: valt's
+tap, and two of its dependencies from other taps, [mrld](https://github.com/phoggy/mrld) (used for password strength
+estimation) and [phraze](https://github.com/sts10/phraze) (used to generate passphrases). Homebrew installs the rest of
+valt's dependencies with it.
 
 **With Nix:**
 
