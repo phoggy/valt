@@ -49,8 +49,12 @@ See the [CLI reference](/valt/cli/) for every command and option.
 With [Homebrew](https://brew.sh):
 
 ```bash
-brew tap rayvn-central/brew && brew install valt
+brew tap rayvn-central/brew && brew tap phoggy/mrld && brew tap sts10/phraze
+brew trust --tap rayvn-central/brew && brew trust --formula phoggy/mrld/mrld sts10/phraze/phraze
+brew install valt
 ```
+
+Homebrew installs formulae from taps other than its own only once you trust them, hence `brew trust`.
 
 Or with [Nix](https://nixos.org/download/):
 
