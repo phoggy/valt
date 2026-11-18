@@ -549,7 +549,13 @@ testShowRestoreCommands() {
     local output; output="${ showArchiveRestoreCommands "${manifest}" backup.valt '<key>'; }"
     assertContains 'wardn restore backup.valt -i <key>' "${output}"
     assertContains 'nix run github:phoggy/wardn/v0.2.0#restore -- restore backup.valt -i <key>' "${output}"
-    assertContains 'brew install rayvn-central/tap/wardn' "${output}"
+    assertContains $'brew tap rayvn-central/tap\n    brew trust --tap rayvn-central/tap\n    brew install rayvn-central/tap/wardn' \
+        "${output}" "a third-party tap is tapped and trusted before installing from it"
+}
+
+testArchiveBrewTap() {
+    assertEqual 'rayvn-central/tap' "${ _archiveBrewTap rayvn-central/tap/wardn; }"
+    assertEqual '' "${ _archiveBrewTap wardn; }" "a formula from Homebrew's own tap needs no tap"
 }
 
 testReadmeRestoreSection() {

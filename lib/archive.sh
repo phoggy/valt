@@ -443,7 +443,8 @@ archiveRestorePathways() {
 # · ARGS
 #
 #   manifestFile (file)  The archive's manifest.
-#   pathway (string)     'installed', 'nix' or 'brew'.
+#   pathway (string)     'installed', 'nix' or 'brew' (for a formula from a third-party tap, taps and trusts the
+#                        tap first).
 #   archiveFile (file)   The archive to restore.
 #   keyFile (file)       The private key file to restore it with.
 
@@ -455,13 +456,21 @@ runArchiveRestore() {
     case ${pathway} in
         installed) "${tool}" "${args[@]}" ;;
         nix) nix run "${ jq -r '.restore.nix' "${manifestFile}"; }" -- "${args[@]}" ;;
-        brew) brew install "${ jq -r '.restore.brew' "${manifestFile}"; }" && "${tool}" "${args[@]}" ;;
+        brew)
+            local formula; formula="${ jq -r '.restore.brew' "${manifestFile}"; }"
+            local tap; tap="${ _archiveBrewTap "${formula}"; }"
+            if [[ -n ${tap} ]]; then
+                brew tap "${tap}" && brew trust --tap "${tap}" || return 1
+            fi
+            brew install "${formula}" && "${tool}" "${args[@]}"
+            ;;
         *) fail "unknown restore pathway: ${pathway}" ;;
     esac
 }
 
 # ◇ Output the commands to restore an archive the way its manifest says, one way per paragraph (with the program
-#   installed, with Nix, with Homebrew), whether or not each is available here.
+#   installed, with Nix, with Homebrew), whether or not each is available here. For a formula from a third-party tap,
+#   the Homebrew commands tap and trust it first.
 #
 # · ARGS
 #
@@ -483,8 +492,12 @@ showArchiveRestoreCommands() {
     printf '%sWith %s installed:\n\n%s    %s\n' "${pad}" "${tool}" "${pad}" "${command}"
     [[ -n ${nix} ]] && printf '\n%sWith Nix, without installing it:\n\n%s    nix run %s --%s\n' "${pad}" "${pad}" "${nix}" \
         "${ printf ' %s' "${args[@]}"; }"
-    [[ -n ${brew} ]] && printf '\n%sWith Homebrew, installing it first:\n\n%s    brew install %s\n%s    %s\n' "${pad}" \
-        "${pad}" "${brew}" "${pad}" "${command}"
+    if [[ -n ${brew} ]]; then
+        local tap; tap="${ _archiveBrewTap "${brew}"; }"
+        printf '\n%sWith Homebrew, installing it first:\n\n' "${pad}"
+        [[ -n ${tap} ]] && printf '%s    brew tap %s\n%s    brew trust --tap %s\n' "${pad}" "${tap}" "${pad}" "${tap}"
+        printf '%s    brew install %s\n%s    %s\n' "${pad}" "${brew}" "${pad}" "${command}"
+    fi
     return 0
 }
 
@@ -673,6 +686,15 @@ _archiveRestoreArgs() {
     local -n _araArgsRef=$4
     mapfile -t _araArgsRef < <(jq -r --arg archive "${archive}" --arg identity "${keyFile}" \
         '.restore.args[] | gsub("\\{archive\\}"; $archive) | gsub("\\{identity\\}"; $identity)' "${manifestFile}")
+}
+
+# Outputs the tap of a Homebrew formula named by its full name (user/tap/formula), or nothing for a formula from
+# Homebrew's own tap. A third-party tap must be trusted before installing from it: since Homebrew 7, installing a
+# formula by its full name trusts only that formula, so its dependencies from the same tap (e.g. wardn's rayvn and
+# valt) are refused.
+_archiveBrewTap() {
+    [[ $1 == */*/* ]] && echo "${1%/*}"
+    return 0
 }
 
 # Succeeds if a command is available: on the PATH, or listed in rayvnTest_ArchiveCommands when that is set.

@@ -1610,7 +1610,13 @@ handleArchiveManifest() {
         case ${pathway} in
             installed) choices+=("Restore with ${tool} (installed)") ;;
             nix) choices+=("Restore with ${tool}${version:+ ${version}}, run by Nix (installs nothing)") ;;
-            brew) choices+=("Install ${tool} with Homebrew, then restore") ;;
+            brew)
+                if [[ ${ jq -r '.restore.brew' "${manifestFile}"; } == */*/* ]]; then
+                    choices+=("Install ${tool} with Homebrew, trusting its tap, then restore")
+                else
+                    choices+=("Install ${tool} with Homebrew, then restore")
+                fi
+                ;;
         esac
         actions+=("${pathway}")
     done
