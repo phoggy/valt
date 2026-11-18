@@ -445,7 +445,7 @@ newManifestFile() {
     _nmfRef="${ makeTempDir; }/manifest.json"
     cat > "${_nmfRef}" << MANIFEST
 { "kind": "wardn vault backup", "tool": "wardn", "version": "0.2.0", "extract": "discouraged",
-  "restore": { "args": ["restore", "{archive}", "-i", "{identity}"], ${nix} "brew": "rayvn-central/brew/wardn" } }
+  "restore": { "args": ["restore", "{archive}", "-i", "{identity}"], ${nix} "brew": "rayvn-central/tap/wardn" } }
 MANIFEST
 }
 
@@ -549,7 +549,7 @@ testShowRestoreCommands() {
     local output; output="${ showArchiveRestoreCommands "${manifest}" backup.valt '<key>'; }"
     assertContains 'wardn restore backup.valt -i <key>' "${output}"
     assertContains 'nix run github:phoggy/wardn/v0.2.0#restore -- restore backup.valt -i <key>' "${output}"
-    assertContains 'brew install rayvn-central/brew/wardn' "${output}"
+    assertContains 'brew install rayvn-central/tap/wardn' "${output}"
 }
 
 testReadmeRestoreSection() {
