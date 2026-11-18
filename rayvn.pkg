@@ -2,8 +2,8 @@
 
 projectName='valt'
 projectDescription='Public key encryption for files and archives, using age and minisign. Built with rayvn.'
-projectVersion='0.3.5'
-projectReleaseDate='2026-11-18 14:04:40 PST'
+projectVersion='0.3.5+'
+projectReleaseDate=''
 docsWorktree='../valt-pages'
 pagesHook='bin/valt-pages-hook' # adds the guide to keys and passphrases (see writeKeyInfoGuide)
 
