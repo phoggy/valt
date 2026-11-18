@@ -224,7 +224,7 @@ unencrypted export. For example:
       "restore": {
         "args": ["restore", "{archive}", "-i", "{identity}"],
         "nix": "github:phoggy/wardn/v0.2.0#restore",
-        "brew": "rayvn-central/brew/wardn"
+        "brew": "rayvn-central/tap/wardn"
       }
     }
 

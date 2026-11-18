@@ -49,8 +49,8 @@ See the [CLI reference](/valt/cli/) for every command and option.
 With [Homebrew](https://brew.sh):
 
 ```bash
-brew tap rayvn-central/brew && brew tap phoggy/mrld && brew tap sts10/phraze
-brew trust --tap rayvn-central/brew && brew trust --formula phoggy/mrld/mrld sts10/phraze/phraze
+brew tap rayvn-central/tap
+brew trust --tap rayvn-central/tap
 brew install valt
 ```
 
