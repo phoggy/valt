@@ -137,7 +137,7 @@ restoring program's status.
 | | |
 |---|---|
 | `manifestFile` *(file)* | The archive's manifest. |
-| `pathway` *(string)* | 'installed', 'nix' or 'brew'. |
+| `pathway` *(string)* | 'installed', 'nix' or 'brew' (for a formula from a third-party tap, taps and trusts the tap first). |
 | `archiveFile` *(file)* | The archive to restore. |
 | `keyFile` *(file)* | The private key file to restore it with. |
 {: .args-table}
@@ -145,7 +145,8 @@ restoring program's status.
 ### showArchiveRestoreCommands()
 
 Output the commands to restore an archive the way its manifest says, one way per paragraph (with the program
-installed, with Nix, with Homebrew), whether or not each is available here.
+installed, with Nix, with Homebrew), whether or not each is available here. For a formula from a third-party tap,
+the Homebrew commands tap and trust it first.
 
 
 *args*
