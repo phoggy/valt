@@ -170,3 +170,7 @@ computer leaves only the paper key to recover your files with.
 
 To encrypt for someone else as well, add `-r AGE_PUBLIC_KEY` or `-R their.pub` (both can be
 repeated). Use `--no-self` to leave your own key out.
+
+An archive can also include other encrypted files, still encrypted: `valt archive create ... --include PATH` adds a
+`.valt` or `.age` file, or all of them in a directory, under `included/`. Each must be signed by, and openable with,
+your key, so the key that opens the archive opens everything in it.

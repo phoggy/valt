@@ -171,6 +171,20 @@ _age() {
     fi
 }
 
+# Succeeds if an age encrypted file can be decrypted (all of it, so it is also checked to be intact) with a valt key
+# whose passphrase has been prepared (see _prepareKey), without output or errors either way.
+
+_canDecryptWithKey() {
+    local keyFile="$1" file="$2"
+    local passFd
+    exec {passFd}< <(printf '%s' "${rayvnTest_ValtKeyPassphrase}")
+    age --decrypt -i <(AGE_PASSPHRASE_FD="${passFd}" age --decrypt -j batchpass < "${keyFile}" 2> /dev/null) \
+        -o /dev/null "${file}" 2> /dev/null
+    local result=$?
+    exec {passFd}<&-
+    return ${result}
+}
+
 _decryptKey() {
     AGE_PASSPHRASE_FD="${passFd}" assertCommand --transform _ageError _runAge --decrypt -j batchpass < "${keyFile}"
 }

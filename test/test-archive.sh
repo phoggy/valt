@@ -49,8 +49,21 @@ main() {
     testDefaultManifestHandled
     testRestorePathways
     testShowRestoreCommands
+    testArchiveBrewTap
     testReadmeRestoreSection
     testDecryptCommandRestoresInsteadOfExtracting
+
+    # Included files
+    testIncludeDirectory
+    testIncludedFilesOpen
+    testIncludeExtraRecipientAccepted
+    testIncludeRefusesOtherSigner
+    testIncludeRefusesUnopenable
+    testIncludeRequiresSignature
+    testIncludeRejectsOtherFiles
+    testIncludeMaxAge
+    testIncludeRepeatedArchiveNames
+    testIncludeEmptyDirectory
 
     # Validation
     testMissingIdentityFails
@@ -77,6 +90,8 @@ init() {
 
     local testKeyDir; testKeyDir="${ makeTempDir; }"
     newValtKeys 'test' "${testKeyDir}" pubFile keyFile
+    declare -g otherPubFile otherKeyFile # another key pair, for included files that break the rule
+    newValtKeys 'other' "${testKeyDir}" otherPubFile otherKeyFile
 
     testInputDir="${ makeTempDir; }"
     echo 'hello from file1' > "${testInputDir}/file1.txt"
@@ -432,6 +447,168 @@ testMissingInputFails() {
     ( newSecureArchive -i "${keyFile}" -R "${pubFile}" ) 2> /dev/null \
         && fail "must fail without input files"
     return 0
+}
+
+# ─── Included files ──────────────────────────────────────────────────────────
+
+# Writes FILE.age encrypted to the given recipient files and signed with the given key (as valt encrypt does).
+
+newIncludeAgeFile() {
+    local file="$1" signingKey="$2"
+    shift 2
+    local -a recipientArgs=()
+    local recipientFile
+    for recipientFile in "$@"; do recipientArgs+=(-R "${recipientFile}"); done
+    echo "secret in ${file##*/}" > "${file}"
+    encrypt "${file}" "${recipientArgs[@]}" -o "${file}.age" || fail
+    signFile "${signingKey}" "${file}.age" || fail
+    rm "${file}"
+}
+
+# Creates an archive of the test input with the given args (e.g. --include), and opens it, setting the named vars to
+# the inner (decrypted) and payload directories.
+
+newIncludingArchive() {
+    local -n _niaInnerRef=$1
+    local -n _niaPayloadRef=$2
+    shift 2
+    local archive; archive="${ newSecureArchive -C "${testInputDir}" file1.txt -i "${keyFile}" -R "${pubFile}" -n incl \
+        -o "${ makeTempDir; }" "$@" 2> /dev/null; }" || fail "creating an archive with included files failed"
+    _niaInnerRef="${ makeTempDir; }"
+    _niaPayloadRef="${ makeTempDir; }"
+    local outer; outer="${ makeTempDir; }"
+    tar xJf "${archive}" -C "${outer}" || fail
+    decrypt -i "${keyFile}" -o "${_niaInnerRef}/decrypted.tar.xz" "${outer}/${_archiveEncryptedName}" || fail
+    tar xJf "${_niaInnerRef}/decrypted.tar.xz" -C "${_niaInnerRef}" || fail
+    tar xf "${_niaInnerRef}/${_archivePayloadName}" -C "${_niaPayloadRef}" || fail
+}
+
+# Outputs what creating an archive of the test input with the given args says (or fails with), and its status.
+
+includeOutput() {
+    ( newSecureArchive -C "${testInputDir}" file1.txt -i "${keyFile}" -R "${pubFile}" -n incl -o "${ makeTempDir; }" \
+        "$@" > /dev/null ) 2>&1
+}
+
+# A directory's .age and .valt files are included under included/, still encrypted, with each .age file's signature,
+# listed in the manifest and the private README, but not the public one
+
+testIncludeDirectory() {
+    local dir; dir="${ makeTempDir; }"
+    newIncludeAgeFile "${dir}/tokens.2fas" "${keyFile}" "${pubFile}"
+    newSecureArchive -C "${testInputDir}" file2.txt -i "${keyFile}" -R "${pubFile}" -n nested -o "${dir}" > /dev/null || fail
+    echo 'not included' > "${dir}/notes.txt"
+    local inner payload; newIncludingArchive inner payload --include "${dir}"
+
+    assertFile "${payload}/file1.txt"
+    assertFile "${payload}/${_archiveIncludedDirName}/tokens.2fas.age"
+    assertFile "${payload}/${_archiveIncludedDirName}/tokens.2fas.age.minisig"
+    local nested; nested=("${payload}/${_archiveIncludedDirName}"/nested-*.valt)
+    assertFile "${nested[0]}"
+    [[ ! -e ${payload}/${_archiveIncludedDirName}/notes.txt ]] || fail "only .age and .valt files must be included"
+
+    local manifest="${inner}/${_archiveManifestName}"
+    assertEqual 'age valt' "${ jq -r '[.included[].type] | sort | join(" ")' "${manifest}"; }"
+    assertEqual "${_archiveIncludedDirName}/tokens.2fas.age" "${ jq -r '.included[] | select(.type == "age") | .path' \
+        "${manifest}"; }"
+    [[ ${ jq -r '.included[0].modified' "${manifest}"; } =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T ]] || fail "modified must be a time"
+
+    local readme; readFile "${inner}/${_archiveReadMeName}" readme
+    assertContains '▋ Included' "${readme}"
+    assertContains "${_archiveIncludedDirName}/tokens.2fas.age  (age, modified" "${readme}"
+    local outer; outer="${ makeTempDir; }"
+    tar xJf "${ newSecureArchive -C "${testInputDir}" file1.txt -i "${keyFile}" -R "${pubFile}" -n pub -o "${ makeTempDir; }" \
+        --include "${dir}" 2> /dev/null; }" -C "${outer}" || fail
+    readFile "${outer}/${_archiveReadMeName}" readme
+    [[ ${readme} != *'▋ Included'* ]] || fail "the public README must not list the included files"
+}
+
+# Included files open with the archive's key, as they were
+
+testIncludedFilesOpen() {
+    local dir; dir="${ makeTempDir; }"
+    newIncludeAgeFile "${dir}/tokens.2fas" "${keyFile}" "${pubFile}"
+    local inner payload; newIncludingArchive inner payload --include "${dir}/tokens.2fas.age"
+    local included="${payload}/${_archiveIncludedDirName}/tokens.2fas.age"
+    verifyFileSignature "${keyFile}" "${included}"
+    assertEqual 'secret in tokens.2fas' "${ decrypt -i "${keyFile}" "${included}"; }"
+}
+
+# Other recipients are fine, as long as the archive's key is one of them
+
+testIncludeExtraRecipientAccepted() {
+    local dir; dir="${ makeTempDir; }"
+    newIncludeAgeFile "${dir}/shared.txt" "${keyFile}" "${pubFile}" "${otherPubFile}"
+    local inner payload; newIncludingArchive inner payload --include "${dir}/shared.txt.age"
+    assertFile "${payload}/${_archiveIncludedDirName}/shared.txt.age"
+}
+
+# A file signed by another key is refused, though the archive's key can open it: anyone can encrypt to a public key
+
+testIncludeRefusesOtherSigner() {
+    local dir; dir="${ makeTempDir; }"
+    newIncludeAgeFile "${dir}/forged.txt" "${otherKeyFile}" "${pubFile}"
+    local output; output="${ includeOutput --include "${dir}/forged.txt.age"; }" && fail "must fail on another signer"
+    assertContains 'is not signed by this key' "${output}"
+
+    newSecureArchive -C "${testInputDir}" file2.txt -i "${otherKeyFile}" -R "${pubFile}" -n forged -o "${dir}" > /dev/null || fail
+    rm "${dir}"/forged.txt.age*
+    output="${ includeOutput --include "${dir}"; }" && fail "must fail on an archive by another signer"
+    assertContains 'is not signed by this key' "${output}"
+}
+
+# A file the archive's key cannot open is refused, though signed by it
+
+testIncludeRefusesUnopenable() {
+    local dir; dir="${ makeTempDir; }"
+    newIncludeAgeFile "${dir}/elsewhere.txt" "${keyFile}" "${otherPubFile}"
+    local output; output="${ includeOutput --include "${dir}/elsewhere.txt.age"; }" && fail "must fail when it cannot open"
+    assertContains 'cannot be opened with this key' "${output}"
+}
+
+testIncludeRequiresSignature() {
+    local dir; dir="${ makeTempDir; }"
+    newIncludeAgeFile "${dir}/unsigned.txt" "${keyFile}" "${pubFile}"
+    rm "${dir}/unsigned.txt.age.minisig"
+    local output; output="${ includeOutput --include "${dir}"; }" && fail "must fail without a signature"
+    assertContains 'has no signature' "${output}"
+}
+
+testIncludeRejectsOtherFiles() {
+    local file; file="${ makeTempDir; }/plain.txt"
+    echo 'plain' > "${file}"
+    local output; output="${ includeOutput --include "${file}"; }" && fail "must fail on a file that is not encrypted"
+    assertContains 'not a .valt or .age file' "${output}"
+    output="${ includeOutput --include "${file}.missing"; }" && fail "must fail on a missing file"
+    assertContains 'not found' "${output}"
+}
+
+# Says what is included and how long ago it was modified, warning when that is longer ago than --include-max-age
+
+testIncludeMaxAge() {
+    local dir; dir="${ makeTempDir; }"
+    newIncludeAgeFile "${dir}/tokens.2fas" "${keyFile}" "${pubFile}"
+    local output; output="${ includeOutput --include "${dir}" --include-max-age 90; }" || fail "${output}"
+    assertContains 'tokens.2fas.age (modified today)' "${output}"
+    touch -t 202001010000 "${dir}/tokens.2fas.age"
+    output="${ includeOutput --include "${dir}" --include-max-age 90; }" || fail "${output}"
+    assertContains 'is it up to date?' "${output}"
+    output="${ includeOutput --include "${dir}"; }" || fail "${output}"
+    [[ ${output} != *'is it up to date?'* ]] || fail "there is no age limit by default"
+}
+
+testIncludeRepeatedArchiveNames() {
+    local dir; dir="${ makeTempDir; }"
+    newSecureArchive -C "${testInputDir}" file1.txt -i "${keyFile}" -R "${pubFile}" -n tokens -o "${dir}" > /dev/null || fail
+    waitForNewSecond
+    newSecureArchive -C "${testInputDir}" file1.txt -i "${keyFile}" -R "${pubFile}" -n tokens -o "${dir}" > /dev/null || fail
+    local output; output="${ includeOutput --include "${dir}"; }" || fail "${output}"
+    assertContains '2 archives named tokens-*' "${output}"
+}
+
+testIncludeEmptyDirectory() {
+    local output; output="${ includeOutput --include "${ makeTempDir; }"; }" || fail "an empty directory is not an error"
+    assertContains 'no .valt or .age files' "${output}"
 }
 
 # ─── Manifests ───────────────────────────────────────────────────────────────

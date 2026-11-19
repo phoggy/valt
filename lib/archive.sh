@@ -78,6 +78,19 @@
 # Homebrew (installing it first). It extracts the files only if asked to (`--extract`), and warns when the manifest
 # discourages it. Nothing in the archive is run: the manifest only names a published program. Like the rest of the
 # archive, it is only accepted when signed by the key that decrypts it. The archive's README gives the same commands.
+#
+# ### Included files
+#
+# An archive can include other encrypted files, still encrypted: secure archives (`.valt`) and files encrypted with
+# `valt encrypt` (`.age`, with its `.age.minisig` signature), e.g. a wardn vault backup can carry an export of an
+# authenticator app's tokens, so that everything needed to recover is in one place. They are added under `included/`,
+# listed in the manifest (`included`: each file's path, type and modification time) and in the README, and opened
+# with `valt decrypt` like any other.
+#
+# The one rule: an included file must be signed by, and openable with, the archive's key (other recipients are fine).
+# So the key that opens the archive opens everything in it, and a file someone else made cannot be slipped in: a
+# public key is public, so anyone can encrypt to it, but only its owner can sign. A file that breaks the rule fails
+# the archive, rather than being left out unnoticed.
 #@end
 
 # ◇ Create an encrypted, signed archive from one or more files, directories and archives. The archive file path is written to
@@ -87,7 +100,7 @@
 # · USAGE
 #
 #   newSecureArchive ([-C DIR] INPUT...) -i PATH (-r RECIPIENT | -R PATH)... [-f] [-n NAME] [-z ZONE] [-u TEXT] [-o DIR]
-#                    [-m PATH] [--no-mac-metadata] [--no-public]
+#                    [-m PATH] [--include PATH]... [--include-max-age DAYS] [--no-mac-metadata] [--no-public]
 #
 #   -i, --identity PATH        The valt private key file used to sign the archive.
 #   -r, --recipient RECIPIENT  Encrypt to the specified RECIPIENT. See the recipient() function in 'valt/keys'.
@@ -103,6 +116,11 @@
 #   -m, --manifest PATH        A manifest (JSON) saying what the archive is and how to restore it, for an archive made
 #                              by another program, e.g. a wardn vault backup (default: one saying that it is a valt
 #                              secure archive). See Manifests below.
+#   --include PATH             Include an encrypted file, still encrypted: a secure archive (.valt), or a file
+#                              encrypted with valt encrypt (.age, next to its .age.minisig); or every such file in a
+#                              directory (not its subdirectories). Each must be signed by, and openable with, the -i
+#                              key, or the archive is not created. See Included files below. Can be repeated.
+#   --include-max-age DAYS     Warn about included files last modified more than DAYS days ago (default: no warning).
 #   --no-mac-metadata          Do not keep the macOS metadata (extended attributes such as Finder tags, ACLs and file
 #                              flags) of the INPUT files. It is kept by default, but only macOS tar restores it; other
 #                              tars may warn about it. Metadata is never kept for the archive's own files.
@@ -136,6 +154,8 @@ newSecureArchive() {
     local stripMetadata=0
     local createPublic=1
     local manifestFile=''
+    local -a includeFiles=()
+    local includeMaxAge=0
 
     # Parse options
 
@@ -150,6 +170,9 @@ newSecureArchive() {
             -u | --user-text) shift; userReadmeText="$1" ;;
             -o | --output-dir) shift; assertDirectory "$1"; destDir="$1" ;;
             -m | --manifest) shift; _assertArchiveManifest "$1"; manifestFile="$1" ;;
+            --include) shift; _addArchiveIncludes "$1" includeFiles ;;
+            --include-max-age) shift; [[ $1 =~ ^[0-9]+$ ]] || invalidArgs "--include-max-age: not a number of days: $1"
+                               includeMaxAge=$1 ;;
             --no-mac-metadata) stripMetadata=1 ;;
             --no-public) createPublic=0 ;;
             -C ) shift; tarArgs+=(-C "$1"); [[ "$1" == /* ]] && currentDir="$1" || currentDir="${PWD}/$1" ;;
@@ -184,6 +207,10 @@ newSecureArchive() {
     # Create secure work dir sized to hold payload.tar + encrypted.tar simultaneously (2× input)
 
     local inputSizeMb; inputSizeMb=${ du -sm "${inputPaths[@]}" 2> /dev/null | gawk '{sum += $1} END {print int(sum) + 1}'; }
+    if (( ${#includeFiles[@]} )); then # copied into the work dir too, so counted again
+        local includeSizeMb; includeSizeMb=${ du -sm "${includeFiles[@]}" | gawk '{sum += $1} END {print int(sum) + 1}'; }
+        (( inputSizeMb += includeSizeMb * 2 ))
+    fi
     local workDir isRamBacked
     makeSecureTempDir workDir isRamBacked $(( inputSizeMb * 2 + 64 ))
     if (( ! isRamBacked )); then
@@ -211,6 +238,14 @@ newSecureArchive() {
     assertFile "${tempFile}"
     mv "${tempFile}" "${workDir}/${_archiveSigPubName}" || fail
 
+    # Check and copy the included files (see Included files), before anything is written that depends on them
+
+    local -a includedEntries=()
+    if (( ${#includeFiles[@]} )); then
+        _addIncludedFiles "${privateKey}" "${workDir}" ${includeMaxAge} includeFiles includedEntries
+        tarArgs+=(-C "${workDir}" "${_archiveIncludedDirName}")
+    fi
+
     # Write the manifest and sign it: the one given, or a default saying that this is a valt secure archive, either way
     # with the valt and archive format versions it was made with
 
@@ -224,12 +259,18 @@ newSecureArchive() {
            "{kind: \"valt secure archive\", tool: \"valt\", version: \$valtVersion} + ${versions}" \
            > "${workDir}/${_archiveManifestName}" || fail
     fi
+    if (( ${#includedEntries[@]} )); then
+        local withIncluded="${workDir}/${_archiveManifestName}.new"
+        jq --slurpfile included <(printf '%s\n' "${includedEntries[@]}") '. + {included: $included}' \
+           "${workDir}/${_archiveManifestName}" > "${withIncluded}" || fail
+        mv "${withIncluded}" "${workDir}/${_archiveManifestName}" || fail
+    fi
     signFile "${privateKey}" "${workDir}/${_archiveManifestName}" || fail
 
-    # Create the private README file
+    # Create the private README file (the public one does not list the included files)
 
     _privateReadMe "${workDir}/${_archiveReadMeName}" "${archiveName}" "${userReadmeText}" "${timestamp}" \
-                   "${manifestFile}"
+                   "${manifestFile}" "${workDir}/${_archiveManifestName}"
 
     # Create the payload file and sign it
 
@@ -548,6 +589,8 @@ _init_valt_archive() {
     declare -gr _archiveEncryptedName="encrypted.${_tarFileExtension}.${_ageFileExtension}"
     declare -gr _archiveEncryptedSigName="${_archiveEncryptedName}.${_signatureFileSuffix}"
 
+    declare -gr _archiveIncludedDirName="included" # in the payload (see Included files)
+
     # File name lists
 
     declare -gr _archiveEncryptedFiles=("${_archivePayloadName}" "${_archivePayloadSigName}" "${_archiveManifestName}" \
@@ -570,7 +613,7 @@ _publicReadMe() {
 }
 
 _privateReadMe() {
-    _renderArchiveReadMe "archive-readme-private.tmpl" "$1" "$2" "$3" "$4" "${5:-}"
+    _renderArchiveReadMe "archive-readme-private.tmpl" "$1" "$2" "$3" "$4" "${5:-}" "${6:-}"
 }
 
 _renderArchiveReadMe() {
@@ -580,6 +623,7 @@ _renderArchiveReadMe() {
     local userText="$4"
     local created="$5"
     local manifestFile="${6:-}"
+    local builtManifestFile="${7:-}" # the archive's own manifest, which lists any included files
 
     local template; readFile "${valtHome}/etc/${templateName}" template
 
@@ -610,6 +654,20 @@ _renderArchiveReadMe() {
         restoreSection+=$'\n'
     fi
 
+    # The included files, if any (see Included files)
+
+    local includedSection=''
+    if [[ -n ${builtManifestFile} ]] && jq -e '.included // [] | length > 0' "${builtManifestFile}" > /dev/null; then
+        local divider='───────────────────────────────────────────────────────────────────────────────────────────────────'
+        includedSection=$'\n▋ Included\n'"${divider}"$'\n\n'
+        includedSection+="  This archive includes encrypted files, made with the same key, in ${_archiveIncludedDirName}/. They"
+        includedSection+=$'\n'"  stay encrypted when it is extracted:"$'\n\n'
+        includedSection+="${ jq -r '.included[] | "    \(.path)  (\(.type), modified \(.modified[0:10]))"' \
+            "${builtManifestFile}"; }"$'\n\n'
+        includedSection+="  Open each one with the same key, e.g.:"$'\n\n'
+        includedSection+="    valt decrypt ${ jq -r '.included[0].path' "${builtManifestFile}"; } -i <private-key-file>"$'\n'
+    fi
+
     # Recovery with Nix: pinned to the valt release current now, with the latest version as the fallback
 
     local latest="    nix run github:phoggy/valt#recover -- decrypt ${archiveName} -i <private-key-file>"
@@ -632,6 +690,7 @@ _renderArchiveReadMe() {
         "MINISIGN_VERSION:${minisignVersion}"
         "NOTES_SECTION:${notesSection}"
         "RESTORE_SECTION:${restoreSection}"
+        "INCLUDED_SECTION:${includedSection}"
         "ENCRYPTED_NAME:${_archiveEncryptedName}"
         "ENCRYPTED_SIG_NAME:${_archiveEncryptedSigName}"
         "PAYLOAD_NAME:${_archivePayloadName}"
@@ -695,6 +754,137 @@ _archiveRestoreArgs() {
 _archiveBrewTap() {
     [[ $1 == */*/* ]] && echo "${1%/*}"
     return 0
+}
+
+# Adds an --include PATH to the named array: the file, or every .valt and .age file in the directory, sorted (not
+# hidden files, nor those in subdirectories). Warns when a directory has none, or several archives with the same name.
+
+_addArchiveIncludes() {
+    local path="$1"
+    local -n _aaiFilesRef=$2
+    if [[ -d ${path} ]]; then
+        local -a found=()
+        local file
+        for file in "${path%/}"/*; do
+            [[ -f ${file} && ( ${file} == *.valt || ${file} == *.age ) ]] && found+=("${file}")
+        done
+        (( ${#found[@]} )) || warn "--include: no .valt or .age files in ${ tildePath "${path}"; }"
+        _warnRepeatedArchiveNames found "${path}"
+        for file in "${found[@]}"; do
+            _assertIncludeFile "${file}"
+            _aaiFilesRef+=("${file}")
+        done
+    else
+        _assertIncludeFile "${path}"
+        _aaiFilesRef+=("${path}")
+    fi
+}
+
+_assertIncludeFile() {
+    local file="$1"
+    local name; name="${ tildePath "${file}"; }"
+    [[ -f ${file} ]] || invalidArgs "--include: not found: ${name}"
+    case ${file} in
+        *.valt) ;;
+        *.age) [[ -f ${file}.${_signatureFileSuffix} ]] || invalidArgs "--include: ${name} has no signature" \
+                   "(${name}.${_signatureFileSuffix}): encrypt it with valt encrypt, which signs it" ;;
+        *) invalidArgs "--include: not a .valt or .age file: ${name}" ;;
+    esac
+}
+
+# Warns about archives in an included directory that differ only in their timestamp: all are included, though only
+# the newest is likely needed.
+
+_warnRepeatedArchiveNames() {
+    local -n _wranFilesRef=$1
+    local dir="$2"
+    local -A counts=()
+    local file prefix
+    for file in "${_wranFilesRef[@]}"; do
+        [[ ${file##*/} =~ ^(.+)-[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9.]+_[^_]+\.valt$ ]] || continue
+        prefix="${BASH_REMATCH[1]}"
+        counts["${prefix}"]=$(( ${counts["${prefix}"]:-0} + 1 ))
+    done
+    for prefix in "${!counts[@]}"; do
+        (( ${counts["${prefix}"]} > 1 )) && warn "--include: ${counts["${prefix}"]} archives named ${prefix}-* in" \
+            "${ tildePath "${dir}"; }: all are included, but the older ones can probably be removed"
+    done
+    return 0
+}
+
+# Checks each included file (see Included files), failing on the first that breaks the rule, and copies it (and an
+# .age file's signature) into the work dir's included directory, adding its manifest entry (JSON) to the named array.
+# Says what is included, with how long ago each was modified, warning about any older than maxAge days (if not 0).
+
+_addIncludedFiles() {
+    local privateKey="$1" workDir="$2" maxAge=$3
+    local -n _aifFilesRef=$4
+    local -n _aifEntriesRef=$5
+    local dir="${workDir}/${_archiveIncludedDirName}"
+    local checkDir="${workDir}/include-check"
+    mkdir "${dir}" || fail
+    local signingPubFile; publicSigningKeyToTempFile "${privateKey}" signingPubFile || fail
+
+    local file name base type epoch modified days ago
+    for file in "${_aifFilesRef[@]}"; do
+        name="${ tildePath "${file}"; }"
+        base="${file##*/}"
+        [[ -e ${dir}/${base} ]] && fail "--include: more than one file is named ${base}"
+        _checkIncludedFile "${file}" "${privateKey}" "${signingPubFile}" "${checkDir}"
+        cp -p "${file}" "${dir}/" || fail
+        if [[ ${file} == *.valt ]]; then
+            type=valt
+        else
+            type=age
+            cp -p "${file}.${_signatureFileSuffix}" "${dir}/" || fail
+        fi
+
+        epoch="${ _fileModifiedEpoch "${file}"; }"
+        printf -v modified '%(%Y-%m-%dT%H:%M:%S%z)T' "${epoch}"
+        _aifEntriesRef+=("${ jq -c -n --arg path "${_archiveIncludedDirName}/${base}" --arg type "${type}" \
+            --arg modified "${modified}" '{path: $path, type: $type, modified: $modified}'; }")
+
+        days=$(( (EPOCHSECONDS - epoch) / 86400 ))
+        case ${days} in
+            0) ago='today' ;;
+            1) ago='1 day ago' ;;
+            *) ago="${days} days ago" ;;
+        esac
+        if (( maxAge && days > maxAge )); then
+            warn "Including ${name}, last modified ${ago} (more than ${maxAge} days): is it up to date?"
+        else
+            show "Including" bold "${name}" dim "(modified ${ago})" >&2
+        fi
+    done
+    rm -rf "${checkDir}" "${signingPubFile}"
+}
+
+# Fails unless a file to include is signed by, and openable with, the archive's key: for a secure archive, its
+# encrypted part (whose outer signature anyone could check).
+
+_checkIncludedFile() {
+    local file="$1" privateKey="$2" signingPubFile="$3" checkDir="$4"
+    local name; name="${ tildePath "${file}"; }"
+    local keyName; keyName="${ tildePath "${privateKey}"; }"
+    local rule="included files must be signed by, and openable with, the archive's key (${keyName})"
+    local target="${file}" signature="${file}.${_signatureFileSuffix}"
+    if [[ ${file} == *.valt ]]; then
+        rm -rf "${checkDir}"
+        mkdir "${checkDir}" || fail
+        tar -xf "${file}" -C "${checkDir}" "${_archiveEncryptedName}" "${_archiveEncryptedSigName}" 2> /dev/null ||
+            fail "--include: ${name} is not a valt secure archive"
+        target="${checkDir}/${_archiveEncryptedName}"
+        signature="${checkDir}/${_archiveEncryptedSigName}"
+    fi
+    minisign -V -q -p "${signingPubFile}" -x "${signature}" -m "${target}" > /dev/null 2>&1 ||
+        fail "--include: ${name} is not signed by this key: ${rule}"
+    _canDecryptWithKey "${privateKey}" "${target}" || fail "--include: ${name} cannot be opened with this key: ${rule}"
+}
+
+# Outputs a file's modification time, in epoch seconds (GNU stat, else BSD stat).
+
+_fileModifiedEpoch() {
+    stat -c %Y "$1" 2> /dev/null || stat -f %m "$1"
 }
 
 # Succeeds if a command is available: on the PATH, or listed in rayvnTest_ArchiveCommands when that is set.

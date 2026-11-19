@@ -51,6 +51,7 @@ _valt() {
                                     '(--force -f)'{--force,-f}'[Overwrite an existing archive.]' \
                                     '(--help -h)'{--help,-h}'[Print this help message.]' \
                                     '(--identity -i)'{--identity,-i}'[Your private key file, used to sign and to find your public key (the .pub file next to it); default: the default key (see '\''valt default-key'\'').]:identity:_files' \
+                                    '*'--include'[Include an encrypted file, still encrypted: a secure archive (.valt) or a file encrypted with '\''valt encrypt'\'' (.age); or every such file in a directory. Each must be signed by, and openable with, your key. Can be repeated.]:include:' \
                                     '(--name -n)'{--name,-n}'[The archive file name prefix (default: your user name).]:name:' \
                                     '(--no-mac-metadata)'--no-mac-metadata'[Do not keep the macOS metadata (extended attributes such as Finder tags, ACLs and file flags) of the files added. It is kept by default, but only macOS tar restores it; other tars, e.g. on Linux, may warn about it.]' \
                                     '(--no-self)'--no-self'[Do not include your own public key as a recipient.]' \

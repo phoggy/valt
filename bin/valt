@@ -179,12 +179,13 @@ declare -gA cliSpec=(
     #   --output-dir      The directory to write the archive to (default: the current directory).
     #   --force           Overwrite an existing archive.
     #   --no-mac-metadata  Do not keep the macOS metadata (extended attributes such as Finder tags, ACLs and file flags) of the files added. It is kept by default, but only macOS tar restores it; other tars, e.g. on Linux, may warn about it.
+    #   --include         Include an encrypted file, still encrypted: a secure archive (.valt) or a file encrypted with 'valt encrypt' (.age); or every such file in a directory. Each must be signed by, and openable with, your key. Can be repeated.
     #
     # The public companion holds no secrets, only the archive's signature, public keys and README, so it
     # is safe to share. With it, anyone can confirm that a copy of the archive is authentic and
     # unchanged, without a key. Keep it apart from the archive (e.g. with your paper key), so that an
     # archive replaced by one signed with another key would not match it.
-    ['archive create']='archiveCreate(--identity|-i:file --recipient|-r:str+ --recipient-file|-R:file+ --no-self --name|-n:str --zone|-z:str --user-text|-u:str --output-dir|-o:dir --force|-f --no-mac-metadata --help|-h *)'
+    ['archive create']='archiveCreate(--identity|-i:file --recipient|-r:str+ --recipient-file|-R:file+ --no-self --name|-n:str --zone|-z:str --user-text|-u:str --output-dir|-o:dir --force|-f --no-mac-metadata --include:str+ --help|-h *)'
 
     # Verify both signatures of a secure archive (.valt) without extracting it.
     # The inner signature is checked after decrypting, so you will be prompted for the passphrase that
@@ -313,6 +314,7 @@ archiveCmdUsage() {
 }
 
 parseArchiveCreateArgs() {
+    declare -g _optListInclude=()
     declare -g _optListRecipient=()
     declare -g _optListRecipientFile=()
     local _prevFailHandler="${_failHandler}"
@@ -324,23 +326,25 @@ parseArchiveCreateArgs() {
             --force=*) fail "--force does not accept a value" ;;
             --help | -h) _opts+=(['help']="1"); shift ;;
             --help=*) fail "--help does not accept a value" ;;
-            --identity | -i) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --identity"; assertFile "$2"; _opts+=(['identity']="$2"); shift 2 ;;
+            --identity | -i) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--include|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --identity"; assertFile "$2"; _opts+=(['identity']="$2"); shift 2 ;;
             --identity=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --identity"; assertFile "${_value}"; _opts+=(['identity']="${_value}"); shift ;;
-            --name | -n) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --name"; _opts+=(['name']="$2"); shift 2 ;;
+            --include) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--include|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --include"; _optListInclude+=("$2"); _opts+=(['include']="1"); shift 2 ;;
+            --include=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --include"; _optListInclude+=("${_value}"); _opts+=(['include']="1"); shift ;;
+            --name | -n) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--include|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --name"; _opts+=(['name']="$2"); shift 2 ;;
             --name=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --name"; _opts+=(['name']="${_value}"); shift ;;
             --no-mac-metadata) _opts+=(['no-mac-metadata']="1"); shift ;;
             --no-mac-metadata=*) fail "--no-mac-metadata does not accept a value" ;;
             --no-self) _opts+=(['no-self']="1"); shift ;;
             --no-self=*) fail "--no-self does not accept a value" ;;
-            --output-dir | -o) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --output-dir"; assertDirectory "$2"; _opts+=(['output-dir']="$2"); shift 2 ;;
+            --output-dir | -o) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--include|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --output-dir"; assertDirectory "$2"; _opts+=(['output-dir']="$2"); shift 2 ;;
             --output-dir=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --output-dir"; assertDirectory "${_value}"; _opts+=(['output-dir']="${_value}"); shift ;;
-            --recipient | -r) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --recipient"; _optListRecipient+=("$2"); _opts+=(['recipient']="1"); shift 2 ;;
+            --recipient | -r) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--include|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --recipient"; _optListRecipient+=("$2"); _opts+=(['recipient']="1"); shift 2 ;;
             --recipient=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --recipient"; _optListRecipient+=("${_value}"); _opts+=(['recipient']="1"); shift ;;
-            --recipient-file | -R) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --recipient-file"; assertFile "$2"; _optListRecipientFile+=("$2"); _opts+=(['recipient-file']="1"); shift 2 ;;
+            --recipient-file | -R) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--include|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --recipient-file"; assertFile "$2"; _optListRecipientFile+=("$2"); _opts+=(['recipient-file']="1"); shift 2 ;;
             --recipient-file=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --recipient-file"; assertFile "${_value}"; _optListRecipientFile+=("${_value}"); _opts+=(['recipient-file']="1"); shift ;;
-            --user-text | -u) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --user-text"; _opts+=(['user-text']="$2"); shift 2 ;;
+            --user-text | -u) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--include|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --user-text"; _opts+=(['user-text']="$2"); shift 2 ;;
             --user-text=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --user-text"; _opts+=(['user-text']="${_value}"); shift ;;
-            --zone | -z) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --zone"; _opts+=(['zone']="$2"); shift 2 ;;
+            --zone | -z) [[ -z "$2" || ( "$2" == -* && "$2" =~ ^(--user-text|--output-dir|--recipient|--identity|--recipient-file|-u|-r|-z|-f|-n|-o|-h|-i|-R|--include|--zone|--name|--help|--no-mac-metadata|--no-self|--force)$ ) ]] && fail "missing value for --zone"; _opts+=(['zone']="$2"); shift 2 ;;
             --zone=*) _value="${1#*=}"; [[ -n "${_value}" ]] || fail "missing value for --zone"; _opts+=(['zone']="${_value}"); shift ;;
             --) shift; _args+=("$@"); break ;;
             *) _args+=("$1"); shift ;;
@@ -355,9 +359,9 @@ archiveCreateCmdUsage() {
     show bold "companion (.valt.pub). Your own public key is always a recipient unless --no-self is given. You will"
     show bold "be prompted for the passphrase that protects your private key."
     echo
-    show "Usage:" bold blue "valt archive create" "[INPUT...] [-f] [-i IDENTITY] [-n NAME] [--no-mac-metadata] [--no-self]"
-    echo "                           [-o OUTPUT-DIR] [-r RECIPIENT]... [-R RECIPIENT-FILE]... [-u USER-TEXT]"
-    echo "                           [-z ZONE]"
+    show "Usage:" bold blue "valt archive create" "[INPUT...] [-f] [-i IDENTITY] [--include INCLUDE]... [-n NAME]"
+    echo "                           [--no-mac-metadata] [--no-self] [-o OUTPUT-DIR] [-r RECIPIENT]..."
+    echo "                           [-R RECIPIENT-FILE]... [-u USER-TEXT] [-z ZONE]"
     echo
     option "INPUT..." "Files and directories to add. '-C DIR' changes to DIR" 41
     option "" "before processing the inputs that follow it; an '@'" 41
@@ -382,6 +386,10 @@ archiveCreateCmdUsage() {
     option "" "Finder tags, ACLs and file flags) of the files added. It is" 41
     option "" "kept by default, but only macOS tar restores it; other" 41
     option "" "tars, e.g. on Linux, may warn about it." 41
+    option "--include INCLUDE" "Include an encrypted file, still encrypted: a secure" 41
+    option "" "archive (.valt) or a file encrypted with 'valt encrypt'" 41
+    option "" "(.age); or every such file in a directory. Each must be" 41
+    option "" "signed by, and openable with, your key. Can be repeated." 41
     option "-h, --help" "Print this help message." 41
     echo
     echo "The public companion holds no secrets, only the archive's signature, public keys and README, so it"
@@ -1195,6 +1203,8 @@ archiveCreateCmd() {
     [[ -n ${_opts['output-dir']} ]] && args+=(-o "${_opts['output-dir']}")
     (( _opts['force'] )) && args+=(-f)
     (( _opts['no-mac-metadata'] )) && args+=(--no-mac-metadata)
+    local include
+    for include in "${_optListInclude[@]}"; do args+=(--include "${include}"); done
 
     local archive; archive="${ newSecureArchive "${args[@]}"; }" || fail
     show "Created secure archive" bold "${ tildePath "${archive}"; }"
