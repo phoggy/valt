@@ -197,4 +197,6 @@ repeated). Use `--no-self` to leave your own key out.
 
 An archive can also include other encrypted files, still encrypted: `valt archive create ... --include PATH` adds a
 `.valt` or `.age` file, or all of them in a directory, under `included/`. Each must be signed by, and openable with,
-your key, so the key that opens the archive opens everything in it.
+your key, so the key that opens the archive opens everything in it. A text file of the same name plus `.note` (e.g.
+`tokens.2fas.age.note`) is included as its note, saying how to recover from it: `valt decrypt` shows it when it
+extracts the archive.

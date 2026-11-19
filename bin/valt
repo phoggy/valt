@@ -179,7 +179,7 @@ declare -gA cliSpec=(
     #   --output-dir      The directory to write the archive to (default: the current directory).
     #   --force           Overwrite an existing archive.
     #   --no-mac-metadata  Do not keep the macOS metadata (extended attributes such as Finder tags, ACLs and file flags) of the files added. It is kept by default, but only macOS tar restores it; other tars, e.g. on Linux, may warn about it.
-    #   --include         Include an encrypted file, still encrypted: a secure archive (.valt) or a file encrypted with 'valt encrypt' (.age); or every such file in a directory. Each must be signed by, and openable with, your key. Can be repeated.
+    #   --include         Include an encrypted file, still encrypted: a secure archive (.valt) or a file encrypted with 'valt encrypt' (.age); or every such file in a directory. Each must be signed by, and openable with, your key. A FILE.note next to one is included as its note, saying how to recover from it. Can be repeated.
     #
     # The public companion holds no secrets, only the archive's signature, public keys and README, so it
     # is safe to share. With it, anyone can confirm that a copy of the archive is authentic and
@@ -389,7 +389,9 @@ archiveCreateCmdUsage() {
     option "--include INCLUDE" "Include an encrypted file, still encrypted: a secure" 41
     option "" "archive (.valt) or a file encrypted with 'valt encrypt'" 41
     option "" "(.age); or every such file in a directory. Each must be" 41
-    option "" "signed by, and openable with, your key. Can be repeated." 41
+    option "" "signed by, and openable with, your key. A FILE.note next to" 41
+    option "" "one is included as its note, saying how to recover from it." 41
+    option "" "Can be repeated." 41
     option "-h, --help" "Print this help message." 41
     echo
     echo "The public companion holds no secrets, only the archive's signature, public keys and README, so it"
@@ -1570,7 +1572,14 @@ extractArchive() {
     show "Verifying and extracting secure archive" cyan "${ tildePath "${file}"; }"
     declare -g _manifestArchiveFile="${file}" _manifestKeyFile="${keyFile}" _manifestExtract=0
     extractSecureArchive "${file}" -i "${keyFile}" -o "${destDir}" --manifest-handler handleArchiveManifest || fail
-    (( _manifestExtract )) && show "Extracted to" bold "${ tildePath "${destDir}"; }"
+    if (( _manifestExtract )); then
+        show "Extracted to" bold "${ tildePath "${destDir}"; }"
+        local includedDir="${destDir}/${_archiveIncludedDirName}"
+        if [[ -d ${includedDir} ]]; then
+            show "The archive includes these files, still encrypted, in" bold "${ tildePath "${includedDir}"; }" glue ":"
+            showIncludedFiles "${includedDir}"
+        fi
+    fi
     return 0
 }
 

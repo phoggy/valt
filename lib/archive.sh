@@ -91,6 +91,11 @@
 # So the key that opens the archive opens everything in it, and a file someone else made cannot be slipped in: a
 # public key is public, so anyone can encrypt to it, but only its owner can sign. A file that breaks the rule fails
 # the archive, rather than being left out unnoticed.
+#
+# A file can have a note: plain text in a file of the same name plus `.note` (e.g. `tokens.age.note`), saying what it
+# is and how to recover from it, e.g. how to import the tokens and where to find the export's password. The note is
+# included with it, and shown in the README, by `valt decrypt` when it extracts the archive, and by programs that
+# restore it (see showIncludedFiles). It is inside the encrypted part, but should still never hold a secret itself.
 #@end
 
 # ◇ Create an encrypted, signed archive from one or more files, directories and archives. The archive file path is written to
@@ -119,7 +124,8 @@
 #   --include PATH             Include an encrypted file, still encrypted: a secure archive (.valt), or a file
 #                              encrypted with valt encrypt (.age, next to its .age.minisig); or every such file in a
 #                              directory (not its subdirectories). Each must be signed by, and openable with, the -i
-#                              key, or the archive is not created. See Included files below. Can be repeated.
+#                              key, or the archive is not created. A FILE.note next to one is included as its note.
+#                              See Included files below. Can be repeated.
 #   --include-max-age DAYS     Warn about included files last modified more than DAYS days ago (default: no warning).
 #   --no-mac-metadata          Do not keep the macOS metadata (extended attributes such as Finder tags, ACLs and file
 #                              flags) of the INPUT files. It is kept by default, but only macOS tar restores it; other
@@ -542,6 +548,34 @@ showArchiveRestoreCommands() {
     return 0
 }
 
+# ◇ Show the files an archive includes (see Included files), extracted to a directory: each one's name, followed by
+#   its note, if it has one, then how to open them. Shows nothing if the directory has no included files.
+#
+# · ARGS
+#
+#   dir (dir)  The directory holding the included files, e.g. an extracted archive's included/.
+
+showIncludedFiles() {
+    local dir="$1"
+    local -a files=()
+    local file note line
+    for file in "${dir}"/*.valt "${dir}"/*.age; do
+        [[ -f ${file} ]] && files+=("${file}")
+    done
+    (( ${#files[@]} )) || return 0
+    for file in "${files[@]}"; do
+        show "   " bold "${file##*/}"
+        if [[ -f ${file}.${_archiveNoteSuffix} ]]; then
+            readFile "${file}.${_archiveNoteSuffix}" note
+            while IFS= read -r line; do
+                show "       " "${line}"
+            done <<< "${note%$'\n'}"
+            echo
+        fi
+    done
+    show "Open each with" blue "valt decrypt FILE" glue ", following its note if it has one."
+}
+
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/archive' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
 
 
@@ -590,6 +624,7 @@ _init_valt_archive() {
     declare -gr _archiveEncryptedSigName="${_archiveEncryptedName}.${_signatureFileSuffix}"
 
     declare -gr _archiveIncludedDirName="included" # in the payload (see Included files)
+    declare -gr _archiveNoteSuffix="note"          # an included file's note: FILE.note
 
     # File name lists
 
@@ -662,9 +697,12 @@ _renderArchiveReadMe() {
         includedSection=$'\n▋ Included\n'"${divider}"$'\n\n'
         includedSection+="  This archive includes encrypted files, made with the same key, in ${_archiveIncludedDirName}/. They"
         includedSection+=$'\n'"  stay encrypted when it is extracted:"$'\n\n'
-        includedSection+="${ jq -r '.included[] | "    \(.path)  (\(.type), modified \(.modified[0:10]))"' \
-            "${builtManifestFile}"; }"$'\n\n'
-        includedSection+="  Open each one with the same key, e.g.:"$'\n\n'
+        # Each file, then its note (if any) indented below it
+        local listFiles='.included[] | "    \(.path)  (\(.type), modified \(.modified[0:10]))"'
+        listFiles+=' + if .note then "\n\n" + (.note | split("\n") | map("        " + . | rtrimstr(" ")) | join("\n"))'
+        listFiles+=' + "\n" else "" end'
+        includedSection+="${ jq -r "${listFiles}" "${builtManifestFile}"; }"$'\n\n'
+        includedSection+="  Open each one with the same key, following its note if it has one, e.g.:"$'\n\n'
         includedSection+="    valt decrypt ${ jq -r '.included[0].path' "${builtManifestFile}"; } -i <private-key-file>"$'\n'
     fi
 
@@ -825,26 +863,38 @@ _addIncludedFiles() {
     mkdir "${dir}" || fail
     local signingPubFile; publicSigningKeyToTempFile "${privateKey}" signingPubFile || fail
 
-    local file name base type epoch modified days ago signed
+    local file name base type epoch modified days ago with note
+    local -a parts
     for file in "${_aifFilesRef[@]}"; do
         name="${ tildePath "${file}"; }"
         base="${file##*/}"
         [[ -e ${dir}/${base} ]] && fail "--include: more than one file is named ${base}"
         _checkIncludedFile "${file}" "${privateKey}" "${signingPubFile}" "${checkDir}"
         cp -p "${file}" "${dir}/" || fail
+        parts=()
         if [[ ${file} == *.valt ]]; then
             type=valt
-            signed=
         else
             type=age
-            signed=' with its signature'
+            parts+=(signature)
             cp -p "${file}.${_signatureFileSuffix}" "${dir}/" || fail
         fi
+        note=''
+        if [[ -f ${file}.${_archiveNoteSuffix} ]]; then
+            readFile "${file}.${_archiveNoteSuffix}" note
+            [[ -n ${note//[[:space:]]/} ]] || fail "--include: ${name}.${_archiveNoteSuffix} is empty"
+            cp -p "${file}.${_archiveNoteSuffix}" "${dir}/" || fail
+            parts+=(note)
+        fi
+        with="${parts[*]}"
+        with="${with// / and }"
+        with="${with:+with its ${with}}"
 
         epoch="${ _fileModifiedEpoch "${file}"; }"
         printf -v modified '%(%Y-%m-%dT%H:%M:%S%z)T' "${epoch}"
         _aifEntriesRef+=("${ jq -c -n --arg path "${_archiveIncludedDirName}/${base}" --arg type "${type}" \
-            --arg modified "${modified}" '{path: $path, type: $type, modified: $modified}'; }")
+            --arg modified "${modified}" --arg note "${note}" \
+            '{path: $path, type: $type, modified: $modified} + (if $note == "" then {} else {note: $note} end)'; }")
 
         days=$(( (EPOCHSECONDS - epoch) / 86400 ))
         case ${days} in
@@ -853,9 +903,9 @@ _addIncludedFiles() {
             *) ago="${days} days ago" ;;
         esac
         if (( maxAge && days > maxAge )); then
-            warn "Including ${name}${signed}, last modified ${ago} (more than ${maxAge} days): is it up to date?"
+            warn "Including ${name}${with:+ ${with}}, last modified ${ago} (more than ${maxAge} days): is it up to date?"
         else
-            show "Including" bold "${name}" dim "(${signed# }${signed:+, }modified ${ago})" >&2
+            show "Including" bold "${name}" dim "(${with}${with:+, }modified ${ago})" >&2
         fi
     done
     rm -rf "${checkDir}" "${signingPubFile}"

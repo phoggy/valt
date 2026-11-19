@@ -64,6 +64,8 @@ main() {
     testIncludeMaxAge
     testIncludeRepeatedArchiveNames
     testIncludeEmptyDirectory
+    testIncludeNote
+    testIncludeEmptyNoteFails
 
     # Validation
     testMissingIdentityFails
@@ -609,6 +611,44 @@ testIncludeRepeatedArchiveNames() {
 testIncludeEmptyDirectory() {
     local output; output="${ includeOutput --include "${ makeTempDir; }"; }" || fail "an empty directory is not an error"
     assertContains 'no .valt or .age files' "${output}"
+}
+
+# A FILE.note is included with the file, in the manifest and the README, and shown by showIncludedFiles
+
+testIncludeNote() {
+    local dir; dir="${ makeTempDir; }"
+    newIncludeAgeFile "${dir}/tokens.2fas" "${keyFile}" "${pubFile}"
+    newIncludeAgeFile "${dir}/other.txt" "${keyFile}" "${pubFile}"
+    printf 'Authenticator tokens.\nImport them in the app.\n' > "${dir}/tokens.2fas.age.note"
+    local output; output="${ includeOutput --include "${dir}"; }" || fail "${output}"
+    assertContains 'tokens.2fas.age (with its signature and note, modified today)' "${output}"
+    assertContains 'other.txt.age (with its signature, modified today)' "${output}"
+
+    local inner payload; newIncludingArchive inner payload --include "${dir}"
+    local included="${payload}/${_archiveIncludedDirName}"
+    assertFile "${included}/tokens.2fas.age.note"
+    local manifest="${inner}/${_archiveManifestName}"
+    assertEqual $'Authenticator tokens.\nImport them in the app.' "${ jq -j '.included[] | select(.path |
+        endswith("tokens.2fas.age")) | .note' "${manifest}"; }"
+    assertEqual 'null' "${ jq -r '.included[] | select(.path | endswith("other.txt.age")) | .note' "${manifest}"; }"
+
+    local readme; readFile "${inner}/${_archiveReadMeName}" readme
+    assertContains $'tokens.2fas.age  (age, modified' "${readme}"
+    assertContains $'        Authenticator tokens.\n        Import them in the app.' "${readme}"
+
+    output="${ showIncludedFiles "${included}" 2>&1; }"
+    assertContains 'tokens.2fas.age' "${output}"
+    assertContains 'Import them in the app.' "${output}"
+    assertContains 'other.txt.age' "${output}"
+    assertEqual '' "${ showIncludedFiles "${ makeTempDir; }"; }"
+}
+
+testIncludeEmptyNoteFails() {
+    local dir; dir="${ makeTempDir; }"
+    newIncludeAgeFile "${dir}/tokens.2fas" "${keyFile}" "${pubFile}"
+    printf '\n' > "${dir}/tokens.2fas.age.note"
+    local output; output="${ includeOutput --include "${dir}"; }" && fail "must fail on an empty note"
+    assertContains 'is empty' "${output}"
 }
 
 # ─── Manifests ───────────────────────────────────────────────────────────────

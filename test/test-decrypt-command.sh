@@ -16,6 +16,7 @@ main() {
 
     # Archives
     testDecryptExtractsArchive
+    testDecryptShowsIncludedNotes
 
     return 0
 }
@@ -129,6 +130,25 @@ testDecryptExtractsArchive() {
     assertEqual 0 $? "archive decrypt must succeed: ${output}"
     assertContains "secure archive" "${output}"
     assertEqual 'archived content' "${ cat "${destDir}/file1.txt"; }"
+}
+
+# Extracting an archive that includes files shows them, with their notes
+
+testDecryptShowsIncludedNotes() {
+    local inputDir; inputDir="${ makeTempDir; }"
+    echo 'archived content' > "${inputDir}/file1.txt"
+    local includeDir; includeDir="${ makeTempDir; }"
+    echo 'tokens' > "${includeDir}/tokens"
+    valt encrypt -i "${keyFile}" -o "${includeDir}/tokens.age" "${includeDir}/tokens" > /dev/null 2>&1 || fail "encrypt failed"
+    rm "${includeDir}/tokens"
+    echo 'Import these tokens in the app.' > "${includeDir}/tokens.age.note"
+    local archive; archive="${ newSecureArchive -C "${inputDir}" file1.txt -i "${keyFile}" -R "${pubFile}" -n test \
+        -o "${ makeTempDir; }" --include "${includeDir}" 2> /dev/null; }" || fail "archive failed"
+    local destDir; destDir="${ makeTempDir; }"
+    local output; output="${ valt decrypt -i "${keyFile}" -o "${destDir}" "${archive}" 2>&1; }" || fail "${output}"
+    assertContains 'The archive includes these files' "${output}"
+    assertContains 'tokens.age' "${output}"
+    assertContains 'Import these tokens in the app.' "${output}"
 }
 
 source rayvn.up 'rayvn/test' 'valt/keys' 'valt/archive'
