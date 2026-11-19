@@ -825,7 +825,7 @@ _addIncludedFiles() {
     mkdir "${dir}" || fail
     local signingPubFile; publicSigningKeyToTempFile "${privateKey}" signingPubFile || fail
 
-    local file name base type epoch modified days ago
+    local file name base type epoch modified days ago signed
     for file in "${_aifFilesRef[@]}"; do
         name="${ tildePath "${file}"; }"
         base="${file##*/}"
@@ -834,8 +834,10 @@ _addIncludedFiles() {
         cp -p "${file}" "${dir}/" || fail
         if [[ ${file} == *.valt ]]; then
             type=valt
+            signed=
         else
             type=age
+            signed=' with its signature'
             cp -p "${file}.${_signatureFileSuffix}" "${dir}/" || fail
         fi
 
@@ -851,9 +853,9 @@ _addIncludedFiles() {
             *) ago="${days} days ago" ;;
         esac
         if (( maxAge && days > maxAge )); then
-            warn "Including ${name}, last modified ${ago} (more than ${maxAge} days): is it up to date?"
+            warn "Including ${name}${signed}, last modified ${ago} (more than ${maxAge} days): is it up to date?"
         else
-            show "Including" bold "${name}" dim "(modified ${ago})" >&2
+            show "Including" bold "${name}" dim "(${signed# }${signed:+, }modified ${ago})" >&2
         fi
     done
     rm -rf "${checkDir}" "${signingPubFile}"

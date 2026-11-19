@@ -589,7 +589,7 @@ testIncludeMaxAge() {
     local dir; dir="${ makeTempDir; }"
     newIncludeAgeFile "${dir}/tokens.2fas" "${keyFile}" "${pubFile}"
     local output; output="${ includeOutput --include "${dir}" --include-max-age 90; }" || fail "${output}"
-    assertContains 'tokens.2fas.age (modified today)' "${output}"
+    assertContains 'tokens.2fas.age (with its signature, modified today)' "${output}"
     touch -t 202001010000 "${dir}/tokens.2fas.age"
     output="${ includeOutput --include "${dir}" --include-max-age 90; }" || fail "${output}"
     assertContains 'is it up to date?' "${output}"
