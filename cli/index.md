@@ -294,9 +294,9 @@ Create a signed, encrypted secure archive (.valt) from files and directories, an
 companion (.valt.pub). Your own public key is always a recipient unless --no-self is given. You will
 be prompted for the passphrase that protects your private key.
 
-Usage: valt archive create [INPUT...] [-f] [-i IDENTITY] [-n NAME] [--no-mac-metadata] [--no-self]
-                           [-o OUTPUT-DIR] [-r RECIPIENT]... [-R RECIPIENT-FILE]... [-u USER-TEXT]
-                           [-z ZONE]
+Usage: valt archive create [INPUT...] [-f] [-i IDENTITY] [--include INCLUDE]... [-n NAME]
+                           [--no-mac-metadata] [--no-self] [-o OUTPUT-DIR] [-r RECIPIENT]...
+                           [-R RECIPIENT-FILE]... [-u USER-TEXT] [-z ZONE]
 
     INPUT...                             Files and directories to add. '-C DIR' changes to DIR
                                          before processing the inputs that follow it; an '@'
@@ -321,6 +321,10 @@ Usage: valt archive create [INPUT...] [-f] [-i IDENTITY] [-n NAME] [--no-mac-met
                                          Finder tags, ACLs and file flags) of the files added. It is
                                          kept by default, but only macOS tar restores it; other
                                          tars, e.g. on Linux, may warn about it.
+    --include INCLUDE                    Include an encrypted file, still encrypted: a secure
+                                         archive (.valt) or a file encrypted with 'valt encrypt'
+                                         (.age); or every such file in a directory. Each must be
+                                         signed by, and openable with, your key. Can be repeated.
     -h, --help                           Print this help message.
 
 The public companion holds no secrets, only the archive's signature, public keys and README, so it

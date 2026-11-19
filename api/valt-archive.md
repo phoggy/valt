@@ -37,6 +37,8 @@ Secure Archives below for details.
 | `-u, --user-text TEXT` | User text to include in readme. Can contain '\n'. |
 | `-o, --output-dir DIR` | Specify the archive destination directory path (default: ${PWD}). |
 | `-m, --manifest PATH` | A manifest (JSON) saying what the archive is and how to restore it, for an archive made by another program, e.g. a wardn vault backup (default: one saying that it is a valt secure archive). See Manifests below. |
+| `--include PATH` | Include an encrypted file, still encrypted: a secure archive (.valt), or a file encrypted with valt encrypt (.age, next to its .age.minisig); or every such file in a directory (not its subdirectories). Each must be signed by, and openable with, the `-i` key, or the archive is not created. See Included files below. Can be repeated. |
+| `--include-max-age DAYS` | Warn about included files last modified more than DAYS days ago (default: no warning). |
 | `--no-mac-metadata` | Do not keep the macOS metadata (extended attributes such as Finder tags, ACLs and file flags) of the INPUT files. It is kept by default, but only macOS tar restores it; other tars may warn about it. Metadata is never kept for the archive's own files. |
 | `--no-public` | Do not create the public companion (ARCHIVE.pub). |
 | `-C DIR` | Change to the specified directory before processing the remaining relative INPUT paths. |
@@ -234,3 +236,16 @@ ways this computer can: the program if it is installed, Nix (running the pinned 
 Homebrew (installing it first). It extracts the files only if asked to (`--extract`), and warns when the manifest
 discourages it. Nothing in the archive is run: the manifest only names a published program. Like the rest of the
 archive, it is only accepted when signed by the key that decrypts it. The archive's README gives the same commands.
+
+### Included files
+
+An archive can include other encrypted files, still encrypted: secure archives (`.valt`) and files encrypted with
+`valt encrypt` (`.age`, with its `.age.minisig` signature), e.g. a wardn vault backup can carry an export of an
+authenticator app's tokens, so that everything needed to recover is in one place. They are added under `included/`,
+listed in the manifest (`included`: each file's path, type and modification time) and in the README, and opened
+with `valt decrypt` like any other.
+
+The one rule: an included file must be signed by, and openable with, the archive's key (other recipients are fine).
+So the key that opens the archive opens everything in it, and a file someone else made cannot be slipped in: a
+public key is public, so anyone can encrypt to it, but only its owner can sign. A file that breaks the rule fails
+the archive, rather than being left out unnoticed.
