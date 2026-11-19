@@ -37,7 +37,7 @@ Secure Archives below for details.
 | `-u, --user-text TEXT` | User text to include in readme. Can contain '\n'. |
 | `-o, --output-dir DIR` | Specify the archive destination directory path (default: ${PWD}). |
 | `-m, --manifest PATH` | A manifest (JSON) saying what the archive is and how to restore it, for an archive made by another program, e.g. a wardn vault backup (default: one saying that it is a valt secure archive). See Manifests below. |
-| `--include PATH` | Include an encrypted file, still encrypted: a secure archive (.valt), or a file encrypted with valt encrypt (.age, next to its .age.minisig); or every such file in a directory (not its subdirectories). Each must be signed by, and openable with, the `-i` key, or the archive is not created. See Included files below. Can be repeated. |
+| `--include PATH` | Include an encrypted file, still encrypted: a secure archive (.valt), or a file encrypted with valt encrypt (.age, next to its .age.minisig); or every such file in a directory (not its subdirectories). Each must be signed by, and openable with, the `-i` key, or the archive is not created. A FILE.note next to one is included as its note. See Included files below. Can be repeated. |
 | `--include-max-age DAYS` | Warn about included files last modified more than DAYS days ago (default: no warning). |
 | `--no-mac-metadata` | Do not keep the macOS metadata (extended attributes such as Finder tags, ACLs and file flags) of the INPUT files. It is kept by default, but only macOS tar restores it; other tars may warn about it. Metadata is never kept for the archive's own files. |
 | `--no-public` | Do not create the public companion (ARCHIVE.pub). |
@@ -161,6 +161,19 @@ the Homebrew commands tap and trust it first.
 | `[indent]` *(int)* | Spaces to indent by (default: 0). |
 {: .args-table}
 
+### showIncludedFiles()
+
+Show the files an archive includes (see Included files), extracted to a directory: each one's name, followed by
+its note, if it has one, then how to open them. Shows nothing if the directory has no included files.
+
+
+*args*
+
+| | |
+|---|---|
+| `dir` *(dir)* | The directory holding the included files, e.g. an extracted archive's included/. |
+{: .args-table}
+
 
 ## Secure Archives
 
@@ -249,3 +262,8 @@ The one rule: an included file must be signed by, and openable with, the archive
 So the key that opens the archive opens everything in it, and a file someone else made cannot be slipped in: a
 public key is public, so anyone can encrypt to it, but only its owner can sign. A file that breaks the rule fails
 the archive, rather than being left out unnoticed.
+
+A file can have a note: plain text in a file of the same name plus `.note` (e.g. `tokens.age.note`), saying what it
+is and how to recover from it, e.g. how to import the tokens and where to find the export's password. The note is
+included with it, and shown in the README, by `valt decrypt` when it extracts the archive, and by programs that
+restore it (see showIncludedFiles). It is inside the encrypted part, but should still never hold a secret itself.

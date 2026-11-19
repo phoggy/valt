@@ -324,7 +324,9 @@ Usage: valt archive create [INPUT...] [-f] [-i IDENTITY] [--include INCLUDE]... 
     --include INCLUDE                    Include an encrypted file, still encrypted: a secure
                                          archive (.valt) or a file encrypted with 'valt encrypt'
                                          (.age); or every such file in a directory. Each must be
-                                         signed by, and openable with, your key. Can be repeated.
+                                         signed by, and openable with, your key. A FILE.note next to
+                                         one is included as its note, saying how to recover from it.
+                                         Can be repeated.
     -h, --help                           Print this help message.
 
 The public companion holds no secrets, only the archive's signature, public keys and README, so it
