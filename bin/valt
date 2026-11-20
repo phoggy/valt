@@ -1754,11 +1754,23 @@ assertCanWrite() {
     (( _opts['force'] )) || fail "${ tildePath "$1"; } already exists; use --force to overwrite."
 }
 
+# Makes secure temp storage for decrypted data, setting the named var to its path, and warns if it is not RAM-backed
+# (see makeSecureTempDir), saying what is put there, e.g. 'your key info is decrypted'.
+
+_makeDecryptDir() {
+    local -n _mddDirRef=$1
+    local what="$2" isRamBacked
+    makeSecureTempDir _mddDirRef isRamBacked
+    (( isRamBacked )) || warn "Could not create secure RAM backed temp storage: ${what} in a temporary directory on" \
+        "disk, deleted on exit, which is not quite as secure as RAM."
+    return 0
+}
+
 # Decrypts encryptedFile with keyFile and fails unless the result matches originalFile.
 
 verifyEncryptedFile() {
     local originalFile="$1" encryptedFile="$2" keyFile="$3"
-    local workDir; makeSecureTempDir workDir
+    local workDir; _makeDecryptDir workDir 'the file is decrypted, to verify it,'
     decrypt -i "${keyFile}" -o "${workDir}/decrypted" "${encryptedFile}" || fail
     local originalHash; originalHash="${ sha256sum < "${originalFile}"; }"
     local decryptedHash; decryptedHash="${ sha256sum < "${workDir}/decrypted"; }"
@@ -1827,7 +1839,7 @@ keyInfoCmd() {
     fi
     stopSpinner spinnerId " ${successCheckMark}"
 
-    local secureDir; makeSecureTempDir secureDir
+    local secureDir; _makeDecryptDir secureDir 'your key info is decrypted'
     local decrypted="${secureDir}/key-info.json"
     decryptKeyInfoDownload "${download}" "${pageKeys}" "${decrypted}"
     if isKeyInfoCancel "${decrypted}"; then
@@ -1935,7 +1947,7 @@ editKeyInfo() {
     [[ -t 0 && -t 1 ]] || fail "editing the key info needs a terminal; or edit ${ tildePath "${keyInfoFile}"; } by hand"
     require 'rayvn/prompt'
     local editor editorName; editorCommand editor editorName
-    local secureDir; makeSecureTempDir secureDir
+    local secureDir; _makeDecryptDir secureDir 'your key info is edited'
     local draft="${secureDir}/key-info.json"
     newKeyInfoDraft "${keyInfoFile}" "${draft}"
 

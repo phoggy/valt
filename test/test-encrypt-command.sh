@@ -21,6 +21,7 @@ main() {
     testEncryptStandardOutputRequiresNoSign
     testEncryptArmor
     testEncryptVerifyAndDelete
+    testEncryptVerifyWarnsOnDisk
     testEncryptDeleteRequiresVerify
     testEncryptVerifyRejectsNoSelf
 
@@ -225,6 +226,16 @@ testEncryptVerifyAndDelete() {
     assertContains "Verified" "${output}"
     assertFileDoesNotExist "${file}"
     assertTrue "verified output must decrypt" decryptsWith "${keyFile}" "${file}.age"
+}
+
+# Without RAM-backed temp storage, --verify warns that it decrypts the file on disk
+
+testEncryptVerifyWarnsOnDisk() {
+    local file; newPlainFile file
+    local output; output="${ env rayvnTest_NoRamTemp=1 valt encrypt -i "${keyFile}" --verify "${file}" 2>&1; }"
+    assertEqual 0 $? "encrypt --verify must succeed: ${output}"
+    assertContains 'the file is decrypted, to verify it, in a temporary directory on disk' "${output}"
+    assertContains "Verified" "${output}"
 }
 
 testEncryptDeleteRequiresVerify() {

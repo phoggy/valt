@@ -458,12 +458,7 @@ testDiskTempWarns() {
     local archive; archive="${ newSecureArchive -C "${testInputDir}" file1.txt -i "${keyFile}" -R "${pubFile}" -n disk \
         -o "${ makeTempDir; }" 2> /dev/null; }" || fail "creating the archive failed"
     local output; output="${ (
-        makeSecureTempDir() {
-            local -n _dirRef=$1
-            _dirRef="${ makeTempDir; }"
-            [[ -n ${2:-} ]] && { local -n _ramRef=$2; _ramRef=0; }
-            return 0
-        }
+        local rayvnTest_NoRamTemp=1
         extractSecureArchive -i "${keyFile}" -o "${ makeTempDir; }" "${archive}" > /dev/null
         verifySecureArchive -i "${keyFile}" "${archive}" > /dev/null
     ) 2>&1; }" || fail "extracting with disk temp storage failed: ${output}"
@@ -830,6 +825,5 @@ testDecryptCommandRestoresInsteadOfExtracting() {
     assertFile "${outputDir}/file1.txt"
 }
 
-rayvnTest_ModifiableFunctions=1 # testDiskTempWarns replaces makeSecureTempDir
 source rayvn.up 'rayvn/test' 'valt/archive' 'valt/decrypt'
 main "$@"
