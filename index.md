@@ -7,16 +7,29 @@ nav_order: 1
 # valt
 
 Public key encryption for files and archives, using [age](https://age-encryption.org/) and
-[minisign](https://jedisct1.github.io/minisign/). Built on [rayvn](/rayvn).
+[minisign](https://jedisct1.github.io/minisign/), designed so that what you encrypt today can still be opened years, or
+decades, from now: by you, or by the people who come after you, such as your heirs, your executor and whoever helps
+them. Built on [rayvn](/rayvn).
 
-valt creates a passphrase-protected key pair, plus a printable *paper key*: a PDF that backs up the key and explains to
-your successors, step by step, how to use it ([see a sample](/valt/assets/sample-paper-key.pdf)). Files are encrypted to your own key (and optionally to others), and signed
-so that tampering is detected on decryption. Any number of files and directories can be kept together in a signed,
-encrypted [*secure archive*](/valt/api/valt-archive#secure-archives).
+That goal shapes the design:
 
-Keys are always post-quantum: age's hybrid of ML-KEM-768 and X25519, so files encrypted today stay protected against
-future quantum computers, even if recorded now and attacked later (see the
-[design notes](/valt/api/valt-keys#design-notes)).
+- **A paper key for your successors.** valt creates a passphrase-protected key pair, plus a printable *paper key*: a
+  PDF that backs up the key and explains, step by step, how to use it
+  ([see a sample](/valt/assets/sample-paper-key.pdf)).
+- **Recovery without valt, or expertise.** One [Nix](https://nixos.org/download/) command recovers your files, with
+  the versions of valt and its tools that were tested together, and installs nothing (see [Recovery](#recovery)). The
+  paper key also explains how to recover with `age` and `tar` alone.
+- **Standard, long-lived tools.** Files are encrypted with age and signed with minisign, open formats with more than
+  one implementation, and archives are tar files. valt itself is written in bash: ubiquitous, stable and small,
+  maintained and improved for decades, and almost elemental in computing, so it should be around long into the future.
+  As a script, valt is also readable: anyone can check what it does, or ask an AI assistant to explain it (they are
+  fluent in bash).
+- **Post-quantum from the start.** Keys are always age's hybrid of ML-KEM-768 and X25519, so files encrypted today stay
+  protected against future quantum computers, even if recorded now and attacked later (see the
+  [design notes](/valt/api/valt-keys#design-notes)).
+- **Tampering is detected.** Files are encrypted to your own key (and optionally to others), and signed, so that any
+  change is detected on decryption. Any number of files and directories can be kept together in a signed, encrypted
+  [*secure archive*](/valt/api/valt-archive#secure-archives).
 
 ## First Look
 
