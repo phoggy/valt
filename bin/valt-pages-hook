@@ -15,10 +15,7 @@ usage() {
     echo "Writes guide/index.html: the guide to keys and passphrases, from the key info page's explanatory tabs. And"
     echo "assets/sample-paper-key.pdf, the sample paper key, from samples/ (when it, the template, fonts or rayvn.pkg"
     echo "change). The CLI page's help is refreshed by 'rayvn pages' itself."
-    echo
-    echo "Options:"
-    echo
-    showCommonOptions 21 true # description column, show debug options
+    showCommonOptions --header
     bye "$@"
 }
 

@@ -66,6 +66,7 @@ main() {
     testIncludeEmptyDirectory
     testIncludeNote
     testIncludeEmptyNoteFails
+    testDiskTempWarns
 
     # Validation
     testMissingIdentityFails
@@ -451,6 +452,28 @@ testMissingInputFails() {
     return 0
 }
 
+# Verifying or extracting without RAM-backed temp storage warns that the archive is decrypted on disk
+
+testDiskTempWarns() {
+    local archive; archive="${ newSecureArchive -C "${testInputDir}" file1.txt -i "${keyFile}" -R "${pubFile}" -n disk \
+        -o "${ makeTempDir; }" 2> /dev/null; }" || fail "creating the archive failed"
+    local output; output="${ (
+        makeSecureTempDir() {
+            local -n _dirRef=$1
+            _dirRef="${ makeTempDir; }"
+            [[ -n ${2:-} ]] && { local -n _ramRef=$2; _ramRef=0; }
+            return 0
+        }
+        extractSecureArchive -i "${keyFile}" -o "${ makeTempDir; }" "${archive}" > /dev/null
+        verifySecureArchive -i "${keyFile}" "${archive}" > /dev/null
+    ) 2>&1; }" || fail "extracting with disk temp storage failed: ${output}"
+    assertContains 'the archive is decrypted in a temporary directory on disk' "${output}"
+    (( ${ grep -c 'decrypted in a temporary directory on disk' <<< "${output}"; } == 2 )) ||
+        fail "both extract and verify must warn: ${output}"
+    output="${ extractSecureArchive -i "${keyFile}" -o "${ makeTempDir; }" "${archive}" 2>&1 > /dev/null; }"
+    [[ ${output} != *'on disk'* ]] || fail "RAM-backed storage must not warn"
+}
+
 # ─── Included files ──────────────────────────────────────────────────────────
 
 # Writes FILE.age encrypted to the given recipient files and signed with the given key (as valt encrypt does).
@@ -807,5 +830,6 @@ testDecryptCommandRestoresInsteadOfExtracting() {
     assertFile "${outputDir}/file1.txt"
 }
 
+rayvnTest_ModifiableFunctions=1 # testDiskTempWarns replaces makeSecureTempDir
 source rayvn.up 'rayvn/test' 'valt/archive' 'valt/decrypt'
 main "$@"

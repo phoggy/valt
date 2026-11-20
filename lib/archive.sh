@@ -354,7 +354,7 @@ verifySecureArchive() {
 
     # Decrypt and expand inner archive to a secure temp dir
 
-    local innerDir; makeSecureTempDir innerDir "" "${ _innerDirSizeMb "${archiveFile}"; }"
+    local innerDir; _makeInnerDir "${archiveFile}" innerDir
     decrypt -i "${keyFile}" -o "${innerDir}/decrypted.tar.xz" "${outerDir}/${_archiveEncryptedName}" || fail
     tar xJf "${innerDir}/decrypted.tar.xz" -C "${innerDir}" || fail
 
@@ -416,7 +416,7 @@ extractSecureArchive() {
 
     # Decrypt and expand inner archive to a secure temp dir
 
-    local innerDir; makeSecureTempDir innerDir "" "${ _innerDirSizeMb "${archiveFile}"; }"
+    local innerDir; _makeInnerDir "${archiveFile}" innerDir
     decrypt -i "${keyFile}" -o "${innerDir}/decrypted.tar.xz" "${outerDir}/${_archiveEncryptedName}" || fail
     tar xJf "${innerDir}/decrypted.tar.xz" -C "${innerDir}" || fail
 
@@ -995,4 +995,17 @@ _tarCreate() {
 _innerDirSizeMb() {
     local archiveMb; archiveMb=${ du -sm "$1" | gawk '{print $1}'; }
     echo $(( archiveMb * 2 + 64 ))
+}
+
+# Makes the secure temp dir that an archive's inner (decrypted) part is expanded in, setting the named var to its path,
+# and warns if it is not RAM-backed (see makeSecureTempDir).
+
+_makeInnerDir() {
+    local archiveFile="$1"
+    local -n _midDirRef=$2
+    local isRamBacked
+    makeSecureTempDir _midDirRef isRamBacked "${ _innerDirSizeMb "${archiveFile}"; }"
+    (( isRamBacked )) || warn "Could not create secure RAM backed temp storage: the archive is decrypted in a temporary" \
+        "directory on disk, deleted on exit, which is not quite as secure as RAM."
+    return 0
 }

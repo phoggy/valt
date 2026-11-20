@@ -1,158 +1,44 @@
 # valt
 
 Public key encryption for files and archives, using [age](https://age-encryption.org/) and
-[minisign](https://jedisct1.github.io/minisign/).
+[minisign](https://jedisct1.github.io/minisign/), designed so that what you encrypt today can still be opened years, or
+decades, from now: by you, or by the people who come after you, such as your heirs, your executor and whoever helps
+them.
 
-valt creates a passphrase-protected key pair, plus a printable "paper key" PDF that backs up the key
-and explains to your successors how to use it
-([see a sample](https://rayvn.ink/valt/assets/sample-paper-key.pdf)). Files are encrypted to your own
-key (and optionally to others), and signed so that tampering is detected on decryption.
+That goal shapes the design:
 
-Keys are always post-quantum: age's hybrid of ML-KEM-768 and X25519, so files encrypted today stay protected against
-future quantum computers, even if recorded now and attacked later (see the
-[design notes](https://rayvn.ink/valt/api/valt-keys#design-notes)).
+- **A paper key for your successors.** valt creates a passphrase-protected key pair, plus a printable "paper key" PDF
+  that backs up the key and explains, step by step, how to use it
+  ([see a sample](https://rayvn.ink/valt/assets/sample-paper-key.pdf)).
+- **Recovery without valt, or expertise.** One [Nix](#install-with-nix) command recovers your files, with the versions of
+  valt and its tools that were tested together, and installs nothing (see [Recovery](#recovery)). The paper key also
+  explains how to recover with `age` and `tar` alone.
+- **Standard, long-lived tools.** Files are encrypted with age and signed with minisign, open formats with more than
+  one implementation, and archives are tar files. valt itself is written in bash: ubiquitous, stable and small,
+  maintained and improved for decades, and almost elemental in computing, so it should be around long into the future.
+  As a script, valt is also readable: anyone can check what it does, or ask an AI assistant to explain it (they are
+  fluent in bash).
+- **Post-quantum from the start.** Keys are always age's hybrid of ML-KEM-768 and X25519, so files encrypted today stay
+  protected against future quantum computers, even if recorded now and attacked later (see the
+  [design notes](https://rayvn.ink/valt/api/valt-keys#design-notes)).
+- **Tampering is detected.** Files are encrypted to your own key (and optionally to others), and signed, so that any
+  change is detected on decryption. Any number of files and directories can be kept together in a signed, encrypted
+  [secure archive](https://rayvn.ink/valt/api/valt-archive#secure-archives).
 
 New to keys and passphrases? The [guide](https://rayvn.ink/valt/guide/) explains how valt's keys and paper key
 work, where to keep the passphrase, and what makes a passphrase strong.
 
 ## Installation
 
-valt can be installed with [Homebrew](https://brew.sh) or [Nix](https://nixos.org/).
-
-### Homebrew
-
-```bash
-brew tap rayvn-central/tap
-brew trust --tap rayvn-central/tap
-brew install valt
-```
-
-Homebrew installs formulae from taps other than its own only once you trust them, hence `brew trust`. The tap also has
-two of valt's dependencies, [mrld](https://github.com/phoggy/mrld) (used for password strength estimation) and
-[phraze](https://github.com/sts10/phraze) (used to generate passphrases); Homebrew installs the rest of valt's
-dependencies with it.
-
-To upgrade to the latest version:
-
-```bash
-brew upgrade valt
-```
-
-### Nix
-
-If you don't have Nix yet, install it first (see [Installing Nix](#installing-nix)), then:
-
-```bash
-nix profile add github:phoggy/valt
-```
-
-To install a specific version:
-
-```bash
-nix profile add github:phoggy/valt/v0.2.0
-```
-
-To upgrade to the latest version:
-
-```bash
-nix profile upgrade valt
-```
-
-To run without installing:
-
-```bash
-nix run github:phoggy/valt
-```
-
-All dependencies are declared in the `flake.nix` file in the `runtimeDeps` list. New dependencies must be added there.
-
-#### Installing Nix
-
-**Mac with Apple silicon:** Download and run the [Determinate Nix installer](https://dtr.mn/determinate-nix).
-
-**Mac x86:**
-
-```bash
-curl -L https://nixos.org/nix/install | sh
-```
-
-**Linux:**
-
-```bash
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
-```
-
-**Windows:** Nix runs in Windows' own Linux environment, WSL. In PowerShell as administrator, run `wsl --install`,
-restart, open Ubuntu from the Start menu, and follow the Linux step above inside it (see
-[Install WSL](https://learn.microsoft.com/windows/wsl/install)). Windows files are under `/mnt/c` there.
-
-All installers create a `/nix` volume and take a few minutes to complete. Answer yes to any prompts and allow any
-system dialogs that pop up. Once complete, open a new terminal before continuing.
-
-If you used the Mac x86 installer, enable flakes:
-
-```bash
-mkdir -p ~/.config/nix
-echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
-```
-
-To remove Nix later: after the Determinate installer, run `/nix/nix-installer uninstall`; after the Mac x86 one, see
-[Uninstalling Nix](https://nix.dev/manual/nix/latest/installation/uninstall).
-
-### Recovery
-
-*Recovery* is what someone else does to get at your files when you can't: typically an heir, an executor or a person
-helping them, using your paper key (or your private key file) and its passphrase to decrypt a file or extract an archive
-you left. They don't need valt installed, and shouldn't have to learn it. With [Nix](https://nixos.org/download/), one
-command does it:
-
-```bash
-nix run github:phoggy/valt#recover -- decrypt FILE -i KEY_FILE
-```
-
-The first run downloads what it needs (about 1 GB), so it can take several minutes; later runs start at once.
-
-We suggest this for recovery, rather than installing valt, because:
-
-- **It doesn't depend on what the computer has.** Nix runs valt with exactly the versions of age and its other tools
-  that this repository pins and has tested together, whatever Homebrew or a system ships by then.
-- **It installs nothing.** It is fetched, run and done: nothing to set up beforehand, or clean up after.
-- **It does only what recovery needs:** decrypting files and extracting archives (and decoding the paper key's QR code),
-  without valt's prompts about the owner's own paper key.
-
-The paper key ([sample](https://rayvn.ink/valt/assets/sample-paper-key.pdf)) explains all of this step by step, how to rebuild the key file from its QR code or printed text, and how
-to recover without Nix, using `age` and `tar` directly.
-
-## Best Practices
-
-Your files stay private as long as no one gets all three of: the encrypted files (archives, `.age` files, backups),
-your private key (the key file, or the paper key) and its passphrase. Any two are not enough. These practices keep
-the three apart, while making sure the right people can still bring them together.
-
-- **Keep encrypted files apart from the paper key.** For example, archives and backups on a NAS or in cloud storage,
-  and the paper key in a fire safe or a safe deposit box, so that no single theft or loss gets both.
-- **A paper key with the passphrase written on it is a complete key.** If you write the passphrase on a copy (see
-  [where to keep the passphrase](https://rayvn.ink/valt/guide/#where-to-keep)), keep that copy in your most secure
-  place, never with your encrypted files, and give out copies with a note saying where to find it instead.
-- **Use a strong passphrase:** one from `valt passphrase`, or checked with `valt pass-check`. Keep it in your head, or
-  somewhere apart from the paper key.
-- **A password manager is a good place for the passphrase, but not the only one.** Its emergency access can let
-  someone you choose reach it. But a disaster that takes your computer may take the password manager too, e.g. if its
-  two-step login is on a lost phone, so keep another copy you can reach without it: memorized, or in a sealed envelope.
-- **Type the passphrase only on a computer you trust.** Malware that captures it, and finds your key file and encrypted
-  files on the same computer, gets everything. To recover, use your own computer, or that of someone you trust, not a
-  shared or public one.
-- **Practice a recovery.** Once in a while, say yearly, open an archive using only a paper key and its passphrase, the
-  way someone else would (see Recovery). It shows that the passphrase still works, the QR code still scans and the
-  instructions still make sense, while you can still fix them.
-- **Regenerate the paper key when its information changes** (`valt paper`), and destroy the old copies.
+valt can be installed with [Homebrew](https://brew.sh) or [Nix](https://nixos.org/): see
+[Install with Homebrew](#install-with-homebrew) or [Install with Nix](#install-with-nix) below.
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
 | `valt keys` | Create a key pair with an encrypted private key and a paper key as backup. |
-| `valt paper` | Create or regenerate the paper key for an existing key pair. |
+| `valt paper` | Create or regenerate the paper key ([sample](https://rayvn.ink/valt/assets/sample-paper-key.pdf)) for an existing key pair. |
 | `valt key-info` | Fill in the paper key's personal information (`key-info.json`) in a web page, or your editor. |
 | `valt encrypt FILE` | Encrypt and sign a single file. |
 | `valt decrypt FILE` | Decrypt a file, or verify and extract a [secure archive](https://rayvn.ink/valt/api/valt-archive#secure-archives). |
@@ -201,3 +87,172 @@ An archive can also include other encrypted files, still encrypted: `valt archiv
 your key, so the key that opens the archive opens everything in it. A text file of the same name plus `.note` (e.g.
 `tokens.2fas.age.note`) is included as its note, saying how to recover from it: `valt decrypt` shows it when it
 extracts the archive.
+
+## Recovery
+
+*Recovery* is what someone else does to get at your files when you can't: typically an heir, an executor or a person
+helping them, using your paper key (or your private key file) and its passphrase to decrypt a file or extract an archive
+you left. They don't need valt installed, and shouldn't have to learn it. With [Nix](https://nixos.org/download/), one
+command does it:
+
+```bash
+nix run github:phoggy/valt#recover -- decrypt FILE -i KEY_FILE
+```
+
+The first run downloads what it needs (about 1 GB), so it can take several minutes; later runs start at once.
+
+We suggest this for recovery, rather than installing valt, because:
+
+- **It doesn't depend on what the computer has.** Nix runs valt with exactly the versions of age and its other tools
+  that this repository pins and has tested together, whatever Homebrew or a system ships by then.
+- **It installs nothing.** It is fetched, run and done: nothing to set up beforehand, or clean up after.
+- **It does only what recovery needs:** decrypting files and extracting archives (and decoding the paper key's QR code),
+  without valt's prompts about the owner's own paper key.
+
+The paper key ([sample](https://rayvn.ink/valt/assets/sample-paper-key.pdf)) explains all of this step by step, how to rebuild the key file from its QR code or printed text, and how
+to recover without Nix, using `age` and `tar` directly.
+
+## Best Practices
+
+Your files stay private as long as no one gets all three of: the encrypted files (archives, `.age` files, backups),
+your private key (the key file, or the paper key) and its passphrase. Any two are not enough. These practices keep
+the three apart, while making sure the right people can still bring them together.
+
+- **Keep encrypted files apart from the paper key.** For example, archives and backups on a NAS or in cloud storage,
+  and the paper key in a fire safe or a safe deposit box, so that no single theft or loss gets both.
+- **A paper key with the passphrase written on it is a complete key.** If you write the passphrase on a copy (see
+  [where to keep the passphrase](https://rayvn.ink/valt/guide/#where-to-keep)), keep that copy in your most secure
+  place, never with your encrypted files, and give out copies with a note saying where to find it instead.
+- **Use a strong passphrase:** one from `valt passphrase`, or checked with `valt pass-check`. Keep it in your head, or
+  somewhere apart from the paper key.
+- **A password manager is a good place for the passphrase, but not the only one.** Its emergency access can let
+  someone you choose reach it. But a disaster that takes your computer may take the password manager too, e.g. if its
+  two-step login is on a lost phone, so keep another copy you can reach without it: memorized, or in a sealed envelope.
+- **Type the passphrase only on a computer you trust.** Malware that captures it, and finds your key file and encrypted
+  files on the same computer, gets everything. To recover, use your own computer, or that of someone you trust, not a
+  shared or public one.
+- **Practice a recovery.** Once in a while, say yearly, open an archive using only a paper key and its passphrase, the
+  way someone else would (see Recovery). It shows that the passphrase still works, the QR code still scans and the
+  instructions still make sense, while you can still fix them.
+- **Regenerate the paper key when its information changes** (`valt paper`), and destroy the old copies.
+
+## Install with Homebrew
+
+If you don't have Homebrew yet, install it first (see [Installing Homebrew](#installing-homebrew)), then:
+
+```bash
+brew tap rayvn-central/tap
+brew trust --tap rayvn-central/tap
+brew install valt
+```
+
+Homebrew installs formulae from taps other than its own only once you trust them, hence `brew trust`. The tap also has
+two of valt's dependencies, [mrld](https://github.com/phoggy/mrld) (used for password strength estimation) and
+[phraze](https://github.com/sts10/phraze) (used to generate passphrases); Homebrew installs the rest of valt's
+dependencies with it.
+
+To upgrade to the latest version:
+
+```bash
+brew upgrade valt
+```
+
+### Installing Homebrew
+
+**Mac and Linux:**
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+On a Mac, this also installs Apple's Command Line Tools if they are missing; or download and run the `.pkg` installer
+from [Homebrew's latest release](https://github.com/Homebrew/brew/releases/latest) instead. On Linux, first install the
+tools it needs, e.g. on Debian or Ubuntu: `sudo apt-get install build-essential procps curl file git`.
+
+**Windows:** Homebrew runs in Windows' own Linux environment, WSL. In PowerShell as administrator, run `wsl --install`,
+restart, open Ubuntu from the Start menu, and follow the Linux step above inside it (see
+[Install WSL](https://learn.microsoft.com/windows/wsl/install)). Windows files are under `/mnt/c` there.
+
+When it finishes, the installer shows **Next steps**: run the commands it gives to add `brew` to your PATH, then open a
+new terminal before continuing.
+
+To remove Homebrew later, see [How do I uninstall Homebrew?](https://docs.brew.sh/FAQ#how-do-i-uninstall-homebrew).
+
+## Install with Nix
+
+If you don't have Nix yet, install it first (see [Installing Nix](#installing-nix)), then:
+
+```bash
+nix profile add github:phoggy/valt
+```
+
+To install a specific version:
+
+```bash
+nix profile add github:phoggy/valt/v0.2.0
+```
+
+To upgrade to the latest version:
+
+```bash
+nix profile upgrade valt
+```
+
+To run without installing:
+
+```bash
+nix run github:phoggy/valt
+```
+
+All dependencies are declared in the `flake.nix` file in the `runtimeDeps` list. New dependencies must be added there.
+
+### Installing Nix
+
+**Mac with Apple silicon:** Download and run the [Determinate Nix installer](https://dtr.mn/determinate-nix).
+
+**Mac x86:**
+
+```bash
+curl -L https://nixos.org/nix/install | sh
+```
+
+**Linux:**
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+```
+
+**Windows:** Nix runs in Windows' own Linux environment, WSL. In PowerShell as administrator, run `wsl --install`,
+restart, open Ubuntu from the Start menu, and follow the Linux step above inside it (see
+[Install WSL](https://learn.microsoft.com/windows/wsl/install)). Windows files are under `/mnt/c` there.
+
+All installers create a `/nix` volume and take a few minutes to complete. Answer yes to any prompts and allow any
+system dialogs that pop up. Once complete, open a new terminal before continuing.
+
+If you used the Mac x86 installer, enable flakes:
+
+```bash
+mkdir -p ~/.config/nix
+echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
+```
+
+To remove Nix later: after the Determinate installer, run `/nix/nix-installer uninstall`; after the Mac x86 one, see
+[Uninstalling Nix](https://nix.dev/manual/nix/latest/installation/uninstall).
+
+## Optional: RAM-backed Temp Storage
+
+valt keeps unencrypted data, such as the files going into an archive or a decrypted passphrase, only in RAM-backed
+temporary storage, so that nothing it deletes can be recovered from the disk:
+
+- **Linux:** `/dev/shm` is used automatically: nothing to configure.
+- **macOS 10.15+:** a RAM disk is created each time one is needed, which takes a second or two. To skip that, set up a
+  tmpfs mount once, with `rayvn-tmp` (installed with valt):
+
+```bash
+rayvn-tmp status     # show current strategy and instructions
+rayvn-tmp install    # install a LaunchDaemon to mount it at boot (requires sudo)
+rayvn-tmp uninstall  # remove the LaunchDaemon (requires sudo)
+```
+
+If none is available, valt uses the disk instead: it asks first when it creates an archive, and warns you when it
+verifies or extracts one.

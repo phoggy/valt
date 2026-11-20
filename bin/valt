@@ -24,10 +24,7 @@ usage() {
     echo "    pass-check   Check a password or passphrase: its strength, and whether it is in a known breach."
     echo
     echo "Use COMMAND --help for additional details."
-    echo
-    echo "Options"
-    echo
-    showCommonOptions 21 true true valtEnvVars
+    showCommonOptions --header --env-vars valtEnvVars
     bye "$@"
 }
 
