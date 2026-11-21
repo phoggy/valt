@@ -564,8 +564,9 @@ showIncludedFiles() {
     done
     (( ${#files[@]} )) || return 0
     for file in "${files[@]}"; do
-        show "   " bold "${file##*/}"
+        show nl "   " bold "${file##*/}"
         if [[ -f ${file}.${_archiveNoteSuffix} ]]; then
+            echo
             readFile "${file}.${_archiveNoteSuffix}" note
             while IFS= read -r line; do
                 show "       " "${line}"
