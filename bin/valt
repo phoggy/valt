@@ -1573,8 +1573,8 @@ extractArchive() {
         show "Extracted to" bold "${ tildePath "${destDir}"; }"
         local includedDir="${destDir}/${_archiveIncludedDirName}"
         if [[ -d ${includedDir} ]]; then
-            show "The archive includes these files, still encrypted, in" bold "${ tildePath "${includedDir}"; }" glue ":"
-            showIncludedFiles "${includedDir}"
+            showIncludedFiles "${includedDir}" "${ show "The archive includes these files, still encrypted, in" \
+                                                        bold blue "${ tildePath "${includedDir}"; }" glue ":"; }"
         fi
     fi
     return 0

@@ -609,7 +609,7 @@ testIncludeMaxAge() {
     local dir; dir="${ makeTempDir; }"
     newIncludeAgeFile "${dir}/tokens.2fas" "${keyFile}" "${pubFile}"
     local output; output="${ includeOutput --include "${dir}" --include-max-age 90; }" || fail "${output}"
-    assertContains 'tokens.2fas.age (with its signature, modified today)' "${output}"
+    assertContains 'tokens.2fas.age (with its signature, without a note, modified today)' "${output}"
     touch -t 202001010000 "${dir}/tokens.2fas.age"
     output="${ includeOutput --include "${dir}" --include-max-age 90; }" || fail "${output}"
     assertContains 'is it up to date?' "${output}"
@@ -640,7 +640,7 @@ testIncludeNote() {
     printf 'Authenticator tokens.\nImport them in the app.\n' > "${dir}/tokens.2fas.age.note"
     local output; output="${ includeOutput --include "${dir}"; }" || fail "${output}"
     assertContains 'tokens.2fas.age (with its signature and note, modified today)' "${output}"
-    assertContains 'other.txt.age (with its signature, modified today)' "${output}"
+    assertContains 'other.txt.age (with its signature, without a note, modified today)' "${output}"
 
     local inner payload; newIncludingArchive inner payload --include "${dir}"
     local included="${payload}/${_archiveIncludedDirName}"
@@ -654,10 +654,15 @@ testIncludeNote() {
     assertContains $'tokens.2fas.age  (age, modified' "${readme}"
     assertContains $'        Authenticator tokens.\n        Import them in the app.' "${readme}"
 
-    output="${ showIncludedFiles "${included}" 2>&1; }"
-    assertContains 'tokens.2fas.age' "${output}"
+    output="${ stripAnsi "${ showIncludedFiles "${included}" 'Where they are:' 2>&1; }"; }"
+    assertContains 'Included Files Found' "${output}"
+    assertContains 'Where they are:' "${output}"
+    assertContains 'tokens.2fas.age (note follows)' "${output}"
     assertContains 'Import them in the app.' "${output}"
-    assertContains 'other.txt.age' "${output}"
+    assertContains 'other.txt.age (no note)' "${output}"
+    assertContains 'Open it with the same key: valt decrypt other.txt.age' "${output}" # instead of a note
+    [[ ${output} != *'Open each'* ]] || fail "every file says how to open it, so no closing line: ${output}"
+    [[ ${output%%tokens.2fas.age*} == *other.txt.age* ]] || fail "files must be in name order: ${output}"
     assertEqual '' "${ showIncludedFiles "${ makeTempDir; }"; }"
 }
 

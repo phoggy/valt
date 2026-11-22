@@ -93,9 +93,10 @@
 # the archive, rather than being left out unnoticed.
 #
 # A file can have a note: plain text in a file of the same name plus `.note` (e.g. `tokens.age.note`), saying what it
-# is and how to recover from it, e.g. how to import the tokens and where to find the export's password. The note is
-# included with it, and shown in the README, by `valt decrypt` when it extracts the archive, and by programs that
-# restore it (see showIncludedFiles). It is inside the encrypted part, but should still never hold a secret itself.
+# is and how to recover from it: how to open it (`valt decrypt tokens.age`), then e.g. how to import the tokens and
+# where to find the export's password. The note is included with it, and shown in the README, by `valt decrypt` when
+# it extracts the archive, and by programs that restore it (see showIncludedFiles), which show how to open a file
+# that has none. It is inside the encrypted part, but should still never hold a secret itself.
 #@end
 
 # ◇ Create an encrypted, signed archive from one or more files, directories and archives. The archive file path is written to
@@ -548,33 +549,39 @@ showArchiveRestoreCommands() {
     return 0
 }
 
-# ◇ Show the files an archive includes (see Included files), extracted to a directory: each one's name, followed by
-#   its note, if it has one, then how to open them. Shows nothing if the directory has no included files.
+# ◇ Show the files an archive includes (see Included files), extracted to a directory: a header, then the given
+#   intro (e.g. where they are), then, in name order, each one's name, followed by its note, or, if it has none, how to
+#   open it. Shows nothing if the directory has no included files.
 #
 # · ARGS
 #
-#   dir (dir)  The directory holding the included files, e.g. an extracted archive's included/.
+#   dir (dir)          The directory holding the included files, e.g. an extracted archive's included/.
+#   [intro] (string)   Text to show after the header, e.g. where the files are.
 
 showIncludedFiles() {
-    local dir="$1"
+    local dir="$1" intro="${2:-}"
     local -a files=()
     local file note line
     for file in "${dir}"/*.valt "${dir}"/*.age; do
         [[ -f ${file} ]] && files+=("${file}")
     done
     (( ${#files[@]} )) || return 0
+    mapfile -t files < <(printf '%s\n' "${files[@]}" | sort) # in name order, whatever their type
+    header "Included Files Found" "Still encrypted: open each one to finish the restore."
+    [[ -n ${intro} ]] && echo "${intro}"
     for file in "${files[@]}"; do
-        show nl "   " bold "${file##*/}"
         if [[ -f ${file}.${_archiveNoteSuffix} ]]; then
-            echo
+            show nl bold blue "    ${file##*/}" dim italic "(note follows)" nl
             readFile "${file}.${_archiveNoteSuffix}" note
             while IFS= read -r line; do
                 show "       " "${line}"
             done <<< "${note%$'\n'}"
-            echo
+        else
+            show nl bold blue "    ${file##*/}" dim italic "(no note)" nl
+            show "        Open it with the same key:" blue "valt decrypt ${file##*/}"
         fi
     done
-    show "Open each with" blue "valt decrypt FILE" glue ", following its note if it has one."
+    return 0
 }
 
 PRIVATE_CODE="--+-+-----+-++(-++(---++++(---+( ⚠️ BEGIN 'valt/archive' PRIVATE ⚠️ )+---)++++---)++-)++-+------+-+--"
@@ -890,6 +897,7 @@ _addIncludedFiles() {
         with="${parts[*]}"
         with="${with// / and }"
         with="${with:+with its ${with}}"
+        [[ -z ${note} ]] && with+="${with:+, }without a note"
 
         epoch="${ _fileModifiedEpoch "${file}"; }"
         printf -v modified '%(%Y-%m-%dT%H:%M:%S%z)T' "${epoch}"
